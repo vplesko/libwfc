@@ -1,4 +1,5 @@
 #include <SDL.h>
+#include <SDL_image.h>
 
 void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
@@ -14,6 +15,13 @@ int main(int argc, char *argv[]) {
         logError(SDL_GetError());
         ret = 1;
         goto exit_sdl_init;
+    }
+
+    int sdlImgInitFlags = IMG_INIT_PNG;
+    if ((IMG_Init(sdlImgInitFlags) & sdlImgInitFlags) != sdlImgInitFlags) {
+        logError(SDL_GetError());
+        ret = 1;
+        goto exit_img_init;
     }
 
     SDL_Window *window = SDL_CreateWindow("Demo",
@@ -57,6 +65,8 @@ int main(int argc, char *argv[]) {
 exit_sdl_create_renderer:
     if (window != NULL) SDL_DestroyWindow(window);
 exit_sdl_create_window:
+    IMG_Quit();
+exit_img_init:
     SDL_Quit();
 exit_sdl_init:
 

@@ -5,6 +5,37 @@ void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
 }
 
+SDL_Surface* loadSurface(const char *path) {
+    SDL_Surface *surface = IMG_Load(path);
+    if (surface == NULL) {
+        logError(SDL_GetError());
+    }
+    return surface;
+}
+
+SDL_Texture* loadTexture(SDL_Renderer *renderer, const char *path) {
+    SDL_Surface *surface = loadSurface(path);
+    if (surface == NULL) return NULL;
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (texture == NULL) {
+        logError(SDL_GetError());
+    }
+
+    SDL_FreeSurface(surface);
+
+    return texture;
+}
+
+void renderTexture(SDL_Renderer *renderer, SDL_Texture *texture, int x, int y) {
+    SDL_Rect rect;
+    rect.x = x;
+    rect.y = y;
+    SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
+
+    SDL_RenderCopy(renderer, texture, NULL, &rect);
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -41,6 +72,13 @@ int main(int argc, char *argv[]) {
         goto exit_sdl_create_renderer;
     }
 
+    SDL_Texture *texture = loadTexture(renderer, "coin.png");
+    if (texture == NULL) {
+        logError(SDL_GetError());
+        ret = 1;
+        goto exit_load_texture;
+    }
+
     int quit = 0;
     while (!quit) {
         // input
@@ -60,9 +98,14 @@ int main(int argc, char *argv[]) {
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff);
         SDL_RenderClear(renderer);
+
+        renderTexture(renderer, texture, 0, 0);
+
         SDL_RenderPresent(renderer);
     }
 
+    if (texture != NULL) SDL_DestroyTexture(texture);
+exit_load_texture:
     if (renderer != NULL) SDL_DestroyRenderer(renderer);
 exit_sdl_create_renderer:
     if (window != NULL) SDL_DestroyWindow(window);

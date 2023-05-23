@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
         goto exit_sdl_create_renderer;
     }
 
-    SDL_Texture *texture = loadTexture(renderer, "coin.png");
+    SDL_Texture *texture = loadTexture(renderer, "samples/3Bricks.png");
     if (texture == NULL) {
         logError(SDL_GetError());
         ret = 1;

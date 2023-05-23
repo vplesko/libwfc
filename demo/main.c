@@ -1,6 +1,8 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+#include "wfc.h"
+
 void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
 }
@@ -36,6 +38,7 @@ void renderTexture(SDL_Renderer *renderer, SDL_Texture *texture, int x, int y) {
     SDL_RenderCopy(renderer, texture, NULL, &rect);
 }
 
+// @TODO call wfc() with surface info, call SDL_CreateRGBSurfaceFrom to create another surface
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;

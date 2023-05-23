@@ -38,48 +38,55 @@ void renderTexture(SDL_Renderer *renderer, SDL_Texture *texture, int x, int y) {
     SDL_RenderCopy(renderer, texture, NULL, &rect);
 }
 
-// @TODO call wfc() with surface info, call SDL_CreateRGBSurfaceFrom to create another surface
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
 
     int ret = 0;
 
+    int calledSdlInit = 0;
+    int calledImgInit = 0;
+    SDL_Window *window = NULL;
+    SDL_Renderer *renderer = NULL;
+    SDL_Texture *texture = NULL;
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         logError(SDL_GetError());
         ret = 1;
-        goto exit_sdl_init;
+        goto cleanup;
     }
+    calledSdlInit = 1;
 
     int sdlImgInitFlags = IMG_INIT_PNG;
     if ((IMG_Init(sdlImgInitFlags) & sdlImgInitFlags) != sdlImgInitFlags) {
         logError(SDL_GetError());
         ret = 1;
-        goto exit_img_init;
+        goto cleanup;
     }
+    calledImgInit = 1;
 
-    SDL_Window *window = SDL_CreateWindow("Demo",
+    window = SDL_CreateWindow("Demo",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         640, 480,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     if (window == NULL) {
         logError(SDL_GetError());
         ret = 1;
-        goto exit_sdl_create_window;
+        goto cleanup;
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
     if (renderer == NULL) {
         logError(SDL_GetError());
         ret = 1;
-        goto exit_sdl_create_renderer;
+        goto cleanup;
     }
 
-    SDL_Texture *texture = loadTexture(renderer, "samples/3Bricks.png");
+    texture = loadTexture(renderer, "samples/3Bricks.png");
     if (texture == NULL) {
         logError(SDL_GetError());
         ret = 1;
-        goto exit_load_texture;
+        goto cleanup;
     }
 
     int quit = 0;
@@ -107,16 +114,12 @@ int main(int argc, char *argv[]) {
         SDL_RenderPresent(renderer);
     }
 
+cleanup:
     if (texture != NULL) SDL_DestroyTexture(texture);
-exit_load_texture:
     if (renderer != NULL) SDL_DestroyRenderer(renderer);
-exit_sdl_create_renderer:
     if (window != NULL) SDL_DestroyWindow(window);
-exit_sdl_create_window:
-    IMG_Quit();
-exit_img_init:
-    SDL_Quit();
-exit_sdl_init:
+    if (calledImgInit) IMG_Quit();
+    if (calledSdlInit) SDL_Quit();
 
     return ret;
 }

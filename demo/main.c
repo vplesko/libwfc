@@ -147,6 +147,8 @@ int main(int argc, char *argv[]) {
         ret = 1;
         goto cleanup;
     }
+    int texLoadedW;
+    SDL_QueryTexture(texLoaded, NULL, NULL, &texLoadedW, NULL);
 
     int quit = 0;
     while (!quit) {
@@ -168,7 +170,7 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff);
         SDL_RenderClear(renderer);
 
-        renderTexture(renderer, texGenerated, 0, 0);
+        renderTexture(renderer, texGenerated, texLoadedW, 0);
         renderTexture(renderer, texLoaded, 0, 0);
 
         SDL_RenderPresent(renderer);

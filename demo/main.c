@@ -39,8 +39,8 @@ int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
         srcSurface = converted;
     }
 
-    int srcW = srcSurface->w, srcH = srcSurface->h;
-    int srcBytesPerPixel = srcSurface->format->BytesPerPixel;
+    const int srcW = srcSurface->w, srcH = srcSurface->h;
+    const int srcBytesPerPixel = srcSurface->format->BytesPerPixel;
     const int srcSize = srcW * srcH * srcBytesPerPixel;
     srcPixels = malloc(srcSize);
     {

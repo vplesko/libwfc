@@ -82,8 +82,8 @@ int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
 cleanup:
     if (dstSurface != NULL) SDL_FreeSurface(dstSurface);
     if (srcSurface != NULL) SDL_FreeSurface(srcSurface);
-    if (dstPixels != NULL) free(dstPixels);
-    if (srcPixels != NULL) free(srcPixels);
+    free(dstPixels);
+    free(srcPixels);
 
     return ret;
 }
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    if (loadAndWfcGenerateTextures("samples/3Bricks.png", 320, 320,
+    if (loadAndWfcGenerateTextures("samples/3Bricks.png", 256, 256,
             renderer, &texLoaded, &texGenerated) != 0) {
         ret = 1;
         goto cleanup;

@@ -1,16 +1,62 @@
+#include <stdlib.h>
+#include <string.h>
+
 // @TODO implement
+
+int wfc_generate(
+    int srcW, int srcH, const int *src,
+    int dstW, int dstH, int *dst) {
+    int ind = 0;
+    for (int px = 0; px < dstW * dstH; ++px) {
+        dst[px] = src[ind];
+
+        ++ind;
+        if (ind == srcW * srcH) ind = 0;
+    }
+
+    return 0;
+}
 
 int wfc_generatePixels(
     int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
-    (void)srcW;
-    (void)srcH;
-    (void)src;
+    int ret = 0;
 
-    for (int i = 0; i < dstW * dstH * bytesPerPixel; ++i) {
-        dst[i] = 0x7f;
+    int *srcI = NULL;
+    int *dstI = NULL;
+
+    // @TODO if bytesPerPixel <= sizeof(int), each pixel can be simply cast to int
+    srcI = malloc(srcW * srcH * sizeof(*srcI));
+    for (int px = 0; px < srcW * srcH; ++px) {
+        srcI[px] = px;
+        for (int pxPrev = 0; pxPrev < px; ++pxPrev) {
+            if (memcmp(
+                    src + px * bytesPerPixel,
+                    src + pxPrev * bytesPerPixel,
+                    bytesPerPixel) == 0) {
+                srcI[px] = pxPrev;
+                break;
+            }
+        }
     }
 
-    return 0;
+    dstI = malloc(dstW * dstH * sizeof(*dstI));
+    if (wfc_generate(srcW, srcH, srcI, dstW, dstH, dstI) != 0) {
+        ret = 1;
+        goto cleanup;
+    }
+
+    for (int px = 0; px < dstW * dstH; ++px) {
+        memcpy(
+            dst + px * bytesPerPixel,
+            src + dstI[px] * bytesPerPixel,
+            bytesPerPixel);
+    }
+
+cleanup:
+    free(dstI);
+    free(srcI);
+
+    return ret;
 }

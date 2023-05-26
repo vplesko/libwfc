@@ -10,6 +10,7 @@ void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
 }
 
+// @TODO are all these SDL calls necessary or am I being too careful?
 int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
     SDL_Renderer *renderer, SDL_Texture **texLoaded, SDL_Texture **texGenerated) {
     int ret = 0;
@@ -28,9 +29,12 @@ int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
 
     const SDL_PixelFormat *format = srcSurface->format;
     const int bytesPerPixel = format->BytesPerPixel;
-    uint32_t mask = (uint32_t)-1;
+    uint32_t mask;
     if (bytesPerPixel > 1) {
         mask = format->Rmask | format->Gmask | format->Bmask | format->Amask;
+    } else {
+        // SDL_Surface uses a palette with 1 byte indexes
+        mask = (uint32_t)-1;
     }
 
     const int srcW = srcSurface->w, srcH = srcSurface->h;

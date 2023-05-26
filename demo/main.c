@@ -51,7 +51,7 @@ int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
     }
 
     const int srcW = srcSurface->w, srcH = srcSurface->h;
-    const int srcSize = srcW * srcSurface->pitch;
+    const int srcSize = srcSurface->pitch * srcH;
 
     srcPixels = malloc(srcSize);
     {

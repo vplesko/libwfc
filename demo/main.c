@@ -26,22 +26,16 @@ int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
         goto cleanup;
     }
 
-    {
-        SDL_Surface *converted = SDL_ConvertSurfaceFormat(srcSurface,
-            SDL_PIXELFORMAT_RGBA32, 0);
-        if (converted == NULL) {
-            logError(SDL_GetError());
-            ret = 1;
-            goto cleanup;
-        }
-
-        SDL_FreeSurface(srcSurface);
-        srcSurface = converted;
+    const SDL_PixelFormat *format = srcSurface->format;
+    const int bytesPerPixel = format->BytesPerPixel;
+    uint32_t mask = (uint32_t)-1;
+    if (bytesPerPixel > 1) {
+        mask = format->Rmask | format->Gmask | format->Bmask | format->Amask;
     }
 
     const int srcW = srcSurface->w, srcH = srcSurface->h;
-    const int srcBytesPerPixel = srcSurface->format->BytesPerPixel;
-    const int srcSize = srcW * srcH * srcBytesPerPixel;
+    const int srcSize = srcW * srcSurface->pitch;
+
     srcPixels = malloc(srcSize);
     {
         SDL_LockSurface(srcSurface);
@@ -49,20 +43,25 @@ int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
         SDL_UnlockSurface(srcSurface);
     }
 
-    dstPixels = malloc(dstW * dstH * srcBytesPerPixel);
-    if (wfc_generatePixels(srcBytesPerPixel,
-            srcW, srcH, srcPixels, dstW, dstH, dstPixels) != 0) {
+    dstPixels = malloc(dstW * dstH * bytesPerPixel);
+    if (wfc_generatePixels(
+            bytesPerPixel, mask,
+            srcW, srcH, srcSurface->pitch, srcPixels,
+            dstW, dstH, dstW * bytesPerPixel, dstPixels) != 0) {
         ret = 1;
         goto cleanup;
     }
 
     dstSurface = SDL_CreateRGBSurfaceWithFormatFrom(
         dstPixels, dstW, dstH,
-        8 * srcBytesPerPixel, dstW * srcBytesPerPixel, SDL_PIXELFORMAT_RGBA32);
+        8 * bytesPerPixel, dstW * bytesPerPixel, format->format);
     if (dstSurface == NULL) {
         logError(SDL_GetError());
         ret = 1;
         goto cleanup;
+    }
+    if (format->palette != NULL) {
+        SDL_SetSurfacePalette(dstSurface, format->palette);
     }
 
     *texLoaded = SDL_CreateTextureFromSurface(renderer, srcSurface);

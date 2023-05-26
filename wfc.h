@@ -22,9 +22,9 @@ int wfc_generate(
 }
 
 int wfc_generatePixels(
-    int bytesPerPixel,
-    int srcW, int srcH, const unsigned char *src,
-    int dstW, int dstH, unsigned char *dst) {
+    int bytesPerPixel, uint32_t mask,
+    int srcW, int srcH, int srcPitch, const unsigned char *src,
+    int dstW, int dstH, int dstPitch, unsigned char *dst) {
     assert(bytesPerPixel >= 1 && bytesPerPixel <= 4);
 
     int ret = 0;
@@ -33,10 +33,16 @@ int wfc_generatePixels(
     uint32_t *dstU32 = NULL;
 
     srcU32 = malloc(srcW * srcH * sizeof(*srcU32));
-    for (int px = 0; px < srcW * srcH; ++px) {
-        srcU32[px] = 0;
-        // @TODO cover the big-endian case
-        memcpy(srcU32 + px, src + px * bytesPerPixel, bytesPerPixel);
+    for (int r = 0; r < srcH; ++r) {
+        for (int c = 0; c < srcW; ++c) {
+            int px = r * srcW + c;
+            int srcInd = r * srcPitch + c * bytesPerPixel;
+
+            srcU32[px] = 0;
+            // @TODO cover the big-endian case
+            memcpy(srcU32 + px, src + srcInd, bytesPerPixel);
+            srcU32[px] &= mask;
+        }
     }
 
     dstU32 = malloc(dstW * dstH * sizeof(*dstU32));
@@ -45,8 +51,13 @@ int wfc_generatePixels(
         goto cleanup;
     }
 
-    for (int px = 0; px < dstW * dstH; ++px) {
-        memcpy(dst + px * bytesPerPixel, dstU32 + px, bytesPerPixel);
+    for (int r = 0; r < dstH; ++r) {
+        for (int c = 0; c < dstW; ++c) {
+            int px = r * dstW + c;
+            int dstInd = r * dstPitch + c * bytesPerPixel;
+
+            memcpy(dst + dstInd, dstU32 + px, bytesPerPixel);
+        }
     }
 
 cleanup:

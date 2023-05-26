@@ -6,12 +6,18 @@
 
 #include "wfc.h"
 
+const int screenW = 640, screenH = 480;
+
+const char *image = "samples/3Bricks.png";
+const int wfcN = 3;
+const int genW = 256, genH = 256;
+
 void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
 }
 
 // @TODO are all these SDL calls necessary or am I being too careful?
-int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
+int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
     SDL_Renderer *renderer, SDL_Texture **texLoaded, SDL_Texture **texGenerated) {
     int ret = 0;
 
@@ -62,7 +68,7 @@ int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
 
     dstPixels = malloc(dstW * dstH * bytesPerPixel);
     if (wfc_generatePixels(
-            3,
+            n,
             bytesPerPixel, mask,
             srcW, srcH, srcSurface->pitch, srcPixels,
             dstW, dstH, dstW * bytesPerPixel, dstPixels) != 0) {
@@ -144,7 +150,7 @@ int main(int argc, char *argv[]) {
 
     window = SDL_CreateWindow("Demo",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        640, 480,
+        screenW, screenH,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     if (window == NULL) {
         logError(SDL_GetError());
@@ -159,7 +165,7 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    if (loadAndWfcGenerateTextures("samples/3Bricks.png", 256, 256,
+    if (loadAndWfcGenerateTextures(image, wfcN, genW, genH,
             renderer, &texLoaded, &texGenerated) != 0) {
         ret = 1;
         goto cleanup;

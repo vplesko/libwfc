@@ -1,11 +1,12 @@
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 // @TODO implement
 
 int wfc_generate(
-    int srcW, int srcH, const int *src,
-    int dstW, int dstH, int *dst) {
+    int srcW, int srcH, const uint32_t *src,
+    int dstW, int dstH, uint32_t *dst) {
     int ind = 0;
     for (int px = 0; px < dstW * dstH; ++px) {
         dst[px] = src[ind];
@@ -23,8 +24,8 @@ int wfc_generatePixels(
     int dstW, int dstH, unsigned char *dst) {
     int ret = 0;
 
-    int *srcI = NULL;
-    int *dstI = NULL;
+    uint32_t *srcI = NULL;
+    uint32_t *dstI = NULL;
 
     // @TODO if bytesPerPixel <= sizeof(int), each pixel can be simply cast to int
     srcI = malloc(srcW * srcH * sizeof(*srcI));

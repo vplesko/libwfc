@@ -27,6 +27,19 @@ int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
         goto cleanup;
     }
 
+    {
+        SDL_Surface *converted = SDL_ConvertSurfaceFormat(srcSurface,
+            SDL_PIXELFORMAT_RGBA32, 0);
+        if (converted == NULL) {
+            logError(SDL_GetError());
+            ret = 1;
+            goto cleanup;
+        }
+
+        SDL_FreeSurface(srcSurface);
+        srcSurface = converted;
+    }
+
     const SDL_PixelFormat *format = srcSurface->format;
     const int bytesPerPixel = format->BytesPerPixel;
     uint32_t mask;
@@ -49,6 +62,7 @@ int loadAndWfcGenerateTextures(const char *path, int dstW, int dstH,
 
     dstPixels = malloc(dstW * dstH * bytesPerPixel);
     if (wfc_generatePixels(
+            3,
             bytesPerPixel, mask,
             srcW, srcH, srcSurface->pitch, srcPixels,
             dstW, dstH, dstW * bytesPerPixel, dstPixels) != 0) {

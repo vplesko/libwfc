@@ -9,7 +9,7 @@
 const int screenW = 640, screenH = 480;
 
 const char *image = "samples/3Bricks.png";
-const int wfcN = 3;
+const int wfcN = 1;
 const int genW = 256, genH = 256;
 
 void logError(const char *msg) {

@@ -1,4 +1,4 @@
-.DEFAULT_GOAL = build
+.DEFAULT_GOAL = all
 
 CC = clang
 
@@ -9,6 +9,8 @@ SRCS = $(wildcard *.c)
 
 BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -g -I../
 LINK_FLAGS = `sdl2-config --cflags --libs` -lSDL2_image
+
+all: build build_asan
 
 build: $(BIN_DIR)/main
 

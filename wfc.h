@@ -12,59 +12,55 @@ int wfc__indWrap(int ind, int sz) {
     return sz + ind % sz;
 }
 
-struct wfc__MatView {
+struct wfc__Mat2d_cu32 {
     const uint32_t *m;
     int w, h;
 };
 
-int wfc__matRcToInd(int w, int r, int c) {
+int wfc__mat2dRcToInd(int w, int r, int c) {
     return r * w + c;
 }
 
-void wfc__matIndToRc(int w, int ind, int *r, int *c) {
+void wfc__mat2dIndToRc(int w, int ind, int *r, int *c) {
     *r = ind / w;
     *c = ind % w;
 }
 
-uint32_t wfc__matGet(struct wfc__MatView m, int r, int c) {
-    return m.m[wfc__matRcToInd(m.w, r, c)];
-}
+#define WFC__MAT2DGET(m, r, c) (m.m[wfc__mat2dRcToInd(m.w, r, c)])
 
-uint32_t wfc__matGetWrap(struct wfc__MatView m, int r, int c) {
-    r = wfc__indWrap(r, m.h);
-    c = wfc__indWrap(c, m.w);
-    return wfc__matGet(m, r, c);
-}
+#define WFC__MAT2DGETWRAP(m, r, c) \
+    (m.m[wfc__mat2dRcToInd(m.w, wfc__indWrap(r, m.h), wfc__indWrap(c, m.w))])
 
 struct wfc__Pattern {
     int t, l;
     int freq;
 };
 
-int wfc__patternsEq(int n, struct wfc__MatView m,
+int wfc__patternsEq(int n, struct wfc__Mat2d_cu32 m,
     struct wfc__Pattern patt1, struct wfc__Pattern patt2) {
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            uint32_t a = wfc__matGetWrap(m, patt1.t + i, patt1.l + j);
-            uint32_t b = wfc__matGetWrap(m, patt2.t + i, patt2.l + j);
+            uint32_t a = WFC__MAT2DGETWRAP(m, patt1.t + i, patt1.l + j);
+            uint32_t b = WFC__MAT2DGETWRAP(m, patt2.t + i, patt2.l + j);
             if (a != b) return 0;
         }
     }
     return 1;
 }
 
-struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__MatView m, int *cnt) {
+struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mat2d_cu32 m,
+    int *cnt) {
     struct wfc__Pattern *patts = NULL;
 
     int pattCnt = 0;
     for (int px = 0; px < m.w * m.h; ++px) {
         struct wfc__Pattern patt = {0};
-        wfc__matIndToRc(m.w, px, &patt.t, &patt.l);
+        wfc__mat2dIndToRc(m.w, px, &patt.t, &patt.l);
 
         int seenBefore = 0;
         for (int px1 = 0; !seenBefore && px1 < px; ++px1) {
             struct wfc__Pattern patt1 = {0};
-            wfc__matIndToRc(m.w, px1, &patt1.t, &patt1.l);
+            wfc__mat2dIndToRc(m.w, px1, &patt1.t, &patt1.l);
 
             if (wfc__patternsEq(n, m, patt, patt1)) seenBefore = 1;
         }
@@ -76,7 +72,7 @@ struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__MatView m, int *cnt)
     pattCnt = 0;
     for (int px = 0; px < m.w * m.h; ++px) {
         struct wfc__Pattern patt = {0};
-        wfc__matIndToRc(m.w, px, &patt.t, &patt.l);
+        wfc__mat2dIndToRc(m.w, px, &patt.t, &patt.l);
         patt.freq = 1;
 
         int seenBefore = 0;
@@ -100,7 +96,7 @@ int wfc_generate(
     int dstW, int dstH, uint32_t *dst) {
     struct wfc__Pattern *patts = NULL;
 
-    struct wfc__MatView srcMat = {src, srcW, srcH};
+    struct wfc__Mat2d_cu32 srcMat = {src, srcW, srcH};
 
     int pattCnt;
     patts = wfc__gatherPatterns(n, srcMat, &pattCnt);
@@ -120,7 +116,7 @@ int wfc_generate(
             for (int i = 0; i < pattCnt; ++i) {
                 if (wfc__patternsEq(n, srcMat, patt, patts[i])) {
                     int red = patts[i].freq * 255 / mostCommonPatt;
-                    dst[wfc__matRcToInd(dstW, r, c)] = 0xff000000 + red;
+                    dst[wfc__mat2dRcToInd(dstW, r, c)] = 0xff000000 + red;
                 }
             }
         }

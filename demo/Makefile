@@ -4,17 +4,24 @@ CC = clang
 
 BIN_DIR = bin
 
+HDRS = $(wildcard *.h) ../wfc.h
+SRCS = $(wildcard *.c)
+
 BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -g -I../
 LINK_FLAGS = `sdl2-config --cflags --libs` -lSDL2_image
 
-build:
+build: $(BIN_DIR)/main
+
+$(BIN_DIR)/main: $(HDRS) $(SRCS)
 	mkdir -p $(BIN_DIR)
-	$(CC) $(BUILD_FLAGS) -O2 main.c -o $(BIN_DIR)/main $(LINK_FLAGS)
+	$(CC) $(BUILD_FLAGS) -O2 $(SRCS) -o $(BIN_DIR)/main $(LINK_FLAGS)
+
+build_asan: $(BIN_DIR)/main_asan
 
 # MSan requires that libs are compiled with it and -fsanitize-ignorelist doesn't seem able to filter .so files
-build_asan:
+$(BIN_DIR)/main_asan: $(HDRS) $(SRCS)
 	mkdir -p $(BIN_DIR)
-	$(CC) $(BUILD_FLAGS) -O1 -fsanitize=address,undefined -fno-omit-frame-pointer main.c -o $(BIN_DIR)/main $(LINK_FLAGS)
+	$(CC) $(BUILD_FLAGS) -O1 -fsanitize=address,undefined -fno-omit-frame-pointer $(SRCS) -o $(BIN_DIR)/main_asan $(LINK_FLAGS)
 
 clean:
 	rm -rf $(BIN_DIR)

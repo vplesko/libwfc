@@ -18,22 +18,22 @@ int wfc__indWrap(int ind, int sz) {
         int w, h; \
     }
 
-int wfc__mat2dRcToInd(int w, int r, int c) {
-    return r * w + c;
+int wfc__mat2dXyToInd(int w, int x, int y) {
+    return y * w + x;
 }
 
-void wfc__mat2dIndToRc(int w, int ind, int *r, int *c) {
-    *r = ind / w;
-    *c = ind % w;
+void wfc__mat2dIndToXy(int w, int ind, int *x, int *y) {
+    *y = ind / w;
+    *x = ind % w;
 }
 
-#define WFC__MAT2DGET(m, r, c) (m.m[wfc__mat2dRcToInd(m.w, r, c)])
+#define WFC__MAT2DGET(m, x, y) (m.m[wfc__mat2dXyToInd(m.w, x, y)])
 
-#define WFC__MAT2DGETWRAP(m, r, c) \
-    (m.m[wfc__mat2dRcToInd(m.w, wfc__indWrap(r, m.h), wfc__indWrap(c, m.w))])
+#define WFC__MAT2DGETWRAP(m, x, y) \
+    (m.m[wfc__mat2dXyToInd(m.w, wfc__indWrap(x, m.w), wfc__indWrap(y, m.h))])
 
 struct wfc__Pattern {
-    int t, l;
+    int l, t;
     int freq;
 };
 
@@ -43,8 +43,8 @@ int wfc__patternsEq(int n, struct wfc__Mat2d_cu32 m,
     struct wfc__Pattern patt1, struct wfc__Pattern patt2) {
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            uint32_t a = WFC__MAT2DGETWRAP(m, patt1.t + i, patt1.l + j);
-            uint32_t b = WFC__MAT2DGETWRAP(m, patt2.t + i, patt2.l + j);
+            uint32_t a = WFC__MAT2DGETWRAP(m, patt1.l + i, patt1.t + j);
+            uint32_t b = WFC__MAT2DGETWRAP(m, patt2.l + i, patt2.t + j);
             if (a != b) return 0;
         }
     }
@@ -58,12 +58,12 @@ struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mat2d_cu32 m,
     int pattCnt = 0;
     for (int px = 0; px < m.w * m.h; ++px) {
         struct wfc__Pattern patt = {0};
-        wfc__mat2dIndToRc(m.w, px, &patt.t, &patt.l);
+        wfc__mat2dIndToXy(m.w, px, &patt.l, &patt.t);
 
         int seenBefore = 0;
         for (int px1 = 0; !seenBefore && px1 < px; ++px1) {
             struct wfc__Pattern patt1 = {0};
-            wfc__mat2dIndToRc(m.w, px1, &patt1.t, &patt1.l);
+            wfc__mat2dIndToXy(m.w, px1, &patt1.l, &patt1.t);
 
             if (wfc__patternsEq(n, m, patt, patt1)) seenBefore = 1;
         }
@@ -75,7 +75,7 @@ struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mat2d_cu32 m,
     pattCnt = 0;
     for (int px = 0; px < m.w * m.h; ++px) {
         struct wfc__Pattern patt = {0};
-        wfc__mat2dIndToRc(m.w, px, &patt.t, &patt.l);
+        wfc__mat2dIndToXy(m.w, px, &patt.l, &patt.t);
         patt.freq = 1;
 
         int seenBefore = 0;
@@ -112,14 +112,14 @@ int wfc_generate(
     for (int i = 0; i < pattCnt; ++i) {
         if (patts[i].freq > mostCommonPatt) mostCommonPatt = patts[i].freq;
     }
-    for (int r = 0; r < srcH; ++r) {
-        for (int c = 0; c < srcW; ++c) {
-            struct wfc__Pattern patt = {r, c, 0};
+    for (int x = 0; x < srcW; ++x) {
+        for (int y = 0; y < srcH; ++y) {
+            struct wfc__Pattern patt = {x, y, 0};
 
             for (int i = 0; i < pattCnt; ++i) {
                 if (wfc__patternsEq(n, srcMat, patt, patts[i])) {
                     int red = patts[i].freq * 255 / mostCommonPatt;
-                    dst[wfc__mat2dRcToInd(dstW, r, c)] = 0xff000000 + red;
+                    dst[wfc__mat2dXyToInd(dstW, x, y)] = 0xff000000 + red;
                 }
             }
         }
@@ -144,10 +144,10 @@ int wfc_generatePixels(
     uint32_t *dstU32 = NULL;
 
     srcU32 = malloc(srcW * srcH * sizeof(*srcU32));
-    for (int r = 0; r < srcH; ++r) {
-        for (int c = 0; c < srcW; ++c) {
-            int px = r * srcW + c;
-            int srcInd = r * srcPitch + c * bytesPerPixel;
+    for (int x = 0; x < srcW; ++x) {
+        for (int y = 0; y < srcH; ++y) {
+            int px = y * srcW + x;
+            int srcInd = y * srcPitch + x * bytesPerPixel;
 
             srcU32[px] = 0;
             // @TODO cover the big-endian case
@@ -162,10 +162,10 @@ int wfc_generatePixels(
         goto cleanup;
     }
 
-    for (int r = 0; r < dstH; ++r) {
-        for (int c = 0; c < dstW; ++c) {
-            int px = r * dstW + c;
-            int dstInd = r * dstPitch + c * bytesPerPixel;
+    for (int x = 0; x < dstW; ++x) {
+        for (int y = 0; y < dstH; ++y) {
+            int px = y * dstW + x;
+            int dstInd = y * dstPitch + x * bytesPerPixel;
 
             memcpy(dst + dstInd, dstU32 + px, bytesPerPixel);
         }

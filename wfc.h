@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,14 +24,48 @@ int wfc__mat2dXyToInd(int w, int x, int y) {
 }
 
 void wfc__mat2dIndToXy(int w, int ind, int *x, int *y) {
-    *y = ind / w;
-    *x = ind % w;
+    int yy = ind / w;
+    ind -= yy * w;
+    int xx = ind;
+
+    *x = xx;
+    *y = yy;
 }
 
-#define WFC__MAT2DGET(m, x, y) (m.m[wfc__mat2dXyToInd(m.w, x, y)])
+#define WFC__MAT2DGET(mat, x, y) \
+    (mat.m[wfc__mat2dXyToInd(mat.w, x, y)])
 
-#define WFC__MAT2DGETWRAP(m, x, y) \
-    (m.m[wfc__mat2dXyToInd(m.w, wfc__indWrap(x, m.w), wfc__indWrap(y, m.h))])
+#define WFC__MAT2DGETWRAP(mat, x, y) \
+    (mat.m[wfc__mat2dXyToInd( \
+        mat.w, \
+        wfc__indWrap(x, mat.w), \
+        wfc__indWrap(y, mat.h))\
+    ])
+
+#define WFC__DEF_MAT3D(type, abbrv) \
+    struct wfc__Mat3d_##abbrv { \
+        type *m; \
+        int w, h, d; \
+    }
+
+int wfc__mat3dXyzToInd(int w, int h, int x, int y, int z) {
+    return z * w * h + y * w + x;
+}
+
+void wfc__mat3dIndToXyz(int w, int h, int ind, int *x, int *y, int *z) {
+    int zz = ind / (w * h);
+    ind -= zz * (w * h);
+    int yy = ind / w;
+    ind -= yy;
+    int xx = ind;
+
+    *x = xx;
+    *y = yy;
+    *z = zz;
+}
+
+#define WFC__MAT3DGET(mat, x, y, z) \
+    (mat.m[wfc__mat3dXyzToInd(mat.w, mat.h, x, y, z)])
 
 struct wfc__Pattern {
     int l, t;
@@ -38,6 +73,9 @@ struct wfc__Pattern {
 };
 
 WFC__DEF_MAT2D(const uint32_t, cu32);
+// @TODO allow users to use double instead
+WFC__DEF_MAT2D(float, f);
+WFC__DEF_MAT3D(uint8_t, u8);
 
 int wfc__patternsEq(int n, struct wfc__Mat2d_cu32 m,
     struct wfc__Pattern patt1, struct wfc__Pattern patt2) {
@@ -93,16 +131,55 @@ struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mat2d_cu32 m,
     return patts;
 }
 
+void wfc__calcEntropies(
+    struct wfc__Pattern *patts,
+    const struct wfc__Mat3d_u8 wave,
+    struct wfc__Mat2d_f entropies) {
+    for (int x = 0; x < entropies.w; ++x) {
+        for (int y = 0; y < entropies.h; ++y) {
+            int totalFreq = 0;
+            for (int z = 0; z < wave.d; ++z) {
+                if (WFC__MAT3DGET(wave, x, y, z)) {
+                    totalFreq += patts[z].freq;
+                }
+            }
+
+            float entropy = 0.0f;
+            for (int z = 0; z < wave.d; ++z) {
+                if (WFC__MAT3DGET(wave, x, y, z)) {
+                    float prob = 1.0f * patts[z].freq / totalFreq;
+                    entropy -= prob * log2f(prob);
+                }
+            }
+
+            WFC__MAT2DGET(entropies, x, y) = entropy;
+        }
+    }
+}
+
 int wfc_generate(
     int n,
     int srcW, int srcH, const uint32_t *src,
     int dstW, int dstH, uint32_t *dst) {
     struct wfc__Pattern *patts = NULL;
+    struct wfc__Mat3d_u8 wave = {0};
+    struct wfc__Mat2d_f entropies = {0};
 
     struct wfc__Mat2d_cu32 srcMat = {src, srcW, srcH};
 
     int pattCnt;
     patts = wfc__gatherPatterns(n, srcMat, &pattCnt);
+
+    wave.w = dstW;
+    wave.h = dstH;
+    wave.d = pattCnt;
+    wave.m = malloc(wave.w * wave.h * wave.d * sizeof(*wave.m));
+    for (int i = 0; i < wave.w * wave.h * wave.d; ++i) wave.m[i] = 1;
+
+    entropies.w = dstW;
+    entropies.h = dstH;
+    entropies.m = malloc(entropies.w * entropies.h * sizeof(*entropies.m));
+    wfc__calcEntropies(patts, wave, entropies);
 
     // dummy impl
     for (int px = 0; px < dstW * dstH; ++px) {
@@ -111,6 +188,18 @@ int wfc_generate(
     int mostCommonPatt = 0;
     for (int i = 0; i < pattCnt; ++i) {
         if (patts[i].freq > mostCommonPatt) mostCommonPatt = patts[i].freq;
+    }
+    for (int x = 0; x < dstW; ++x) {
+        for (int y = 0; y < dstH; ++y) {
+            float entropy = WFC__MAT2DGET(entropies, x, y);
+
+            const float xMid = 1;
+            const float k = logf(2) / xMid;
+            float fx = 1 - exp(-k * entropy);
+
+            int blue = (int)(fx * 256.0f);
+            dst[wfc__mat2dXyToInd(dstW, x, y)] = 0xff000000 + (blue << 16);
+        }
     }
     for (int x = 0; x < srcW; ++x) {
         for (int y = 0; y < srcH; ++y) {
@@ -126,6 +215,8 @@ int wfc_generate(
     }
 
 //cleanup:
+    free(entropies.m);
+    free(wave.m);
     free(patts);
 
     return 0;

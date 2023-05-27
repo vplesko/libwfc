@@ -8,7 +8,7 @@ HDRS = $(wildcard *.h) ../wfc.h
 SRCS = $(wildcard *.c)
 
 BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -g -I../
-LINK_FLAGS = `sdl2-config --cflags --libs` -lSDL2_image
+LINK_FLAGS = -lm `sdl2-config --cflags --libs` -lSDL2_image
 
 all: build build_asan
 

@@ -18,8 +18,6 @@ int wfc__indWrap(int ind, int sz) {
         int w, h; \
     }
 
-WFC__DEF_MAT2D(const uint32_t, cu32);
-
 int wfc__mat2dRcToInd(int w, int r, int c) {
     return r * w + c;
 }
@@ -38,6 +36,8 @@ struct wfc__Pattern {
     int t, l;
     int freq;
 };
+
+WFC__DEF_MAT2D(const uint32_t, cu32);
 
 int wfc__patternsEq(int n, struct wfc__Mat2d_cu32 m,
     struct wfc__Pattern patt1, struct wfc__Pattern patt2) {

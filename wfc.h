@@ -12,10 +12,13 @@ int wfc__indWrap(int ind, int sz) {
     return sz + ind % sz;
 }
 
-struct wfc__Mat2d_cu32 {
-    const uint32_t *m;
-    int w, h;
-};
+#define WFC__DEF_MAT2D(type, abbrv) \
+    struct wfc__Mat2d_##abbrv { \
+        type *m; \
+        int w, h; \
+    }
+
+WFC__DEF_MAT2D(const uint32_t, cu32);
 
 int wfc__mat2dRcToInd(int w, int r, int c) {
     return r * w + c;

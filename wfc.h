@@ -229,6 +229,14 @@ int wfc_generatePixels(
     int dstW, int dstH, int dstPitch, unsigned char *dst) {
     assert(bytesPerPixel >= 1 && bytesPerPixel <= 4);
 
+    if (bytesPerPixel == 4 && mask == (uint32_t)-1 &&
+        srcPitch == srcW * bytesPerPixel && dstPitch == dstW * bytesPerPixel) {
+        return wfc_generate(
+            n,
+            srcW, srcH, (uint32_t*)src,
+            dstW, dstH, (uint32_t*)dst);
+    }
+
     int ret = 0;
 
     uint32_t *srcU32 = NULL;

@@ -7,6 +7,7 @@
 // @TODO implement
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.
+// @TODO does this API suffer from issues related to strict aliasing?
 
 int wfc__indWrap(int ind, int sz) {
     if (ind >= 0) return ind % sz;

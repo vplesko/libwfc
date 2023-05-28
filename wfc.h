@@ -77,39 +77,33 @@ WFC__DEF_MAT2D(const uint32_t, cu32);
 WFC__DEF_MAT2D(float, f);
 WFC__DEF_MAT3D(uint8_t, u8);
 
-int wfc__patternsEq(int n, struct wfc__Mat2d_cu32 srcM,
+int wfc__patternsEq(int n, struct wfc__Mat2d_cu32 m,
     struct wfc__Pattern patt1, struct wfc__Pattern patt2) {
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            // type punning as we can't guarantee what types the user passed in
-            uint32_t a;
-            memcpy(&a,
-                &WFC__MAT2DGETWRAP(srcM, patt1.l + i, patt1.t + j), sizeof(a));
-            uint32_t b;
-            memcpy(&b,
-                &WFC__MAT2DGETWRAP(srcM, patt2.l + i, patt2.t + j), sizeof(b));
-
+            uint32_t a = WFC__MAT2DGETWRAP(m, patt1.l + i, patt1.t + j);
+            uint32_t b = WFC__MAT2DGETWRAP(m, patt2.l + i, patt2.t + j);
             if (a != b) return 0;
         }
     }
     return 1;
 }
 
-struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mat2d_cu32 srcM,
+struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mat2d_cu32 m,
     int *cnt) {
     struct wfc__Pattern *patts = NULL;
 
     int pattCnt = 0;
-    for (int px = 0; px < srcM.w * srcM.h; ++px) {
+    for (int px = 0; px < m.w * m.h; ++px) {
         struct wfc__Pattern patt = {0};
-        wfc__mat2dIndToXy(srcM.w, px, &patt.l, &patt.t);
+        wfc__mat2dIndToXy(m.w, px, &patt.l, &patt.t);
 
         int seenBefore = 0;
         for (int px1 = 0; !seenBefore && px1 < px; ++px1) {
             struct wfc__Pattern patt1 = {0};
-            wfc__mat2dIndToXy(srcM.w, px1, &patt1.l, &patt1.t);
+            wfc__mat2dIndToXy(m.w, px1, &patt1.l, &patt1.t);
 
-            if (wfc__patternsEq(n, srcM, patt, patt1)) seenBefore = 1;
+            if (wfc__patternsEq(n, m, patt, patt1)) seenBefore = 1;
         }
 
         if (!seenBefore) ++pattCnt;
@@ -117,14 +111,14 @@ struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mat2d_cu32 srcM,
 
     patts = malloc(pattCnt * sizeof(*patts));
     pattCnt = 0;
-    for (int px = 0; px < srcM.w * srcM.h; ++px) {
+    for (int px = 0; px < m.w * m.h; ++px) {
         struct wfc__Pattern patt = {0};
-        wfc__mat2dIndToXy(srcM.w, px, &patt.l, &patt.t);
+        wfc__mat2dIndToXy(m.w, px, &patt.l, &patt.t);
         patt.freq = 1;
 
         int seenBefore = 0;
         for (int i = 0; !seenBefore && i < pattCnt; ++i) {
-            if (wfc__patternsEq(n, srcM, patt, patts[i])) {
+            if (wfc__patternsEq(n, m, patt, patts[i])) {
                 ++patts[i].freq;
                 seenBefore = 1;
             }
@@ -171,10 +165,10 @@ int wfc_generate(
     struct wfc__Mat3d_u8 wave = {0};
     struct wfc__Mat2d_f entropies = {0};
 
-    struct wfc__Mat2d_cu32 srcM = {src, srcW, srcH};
+    struct wfc__Mat2d_cu32 srcMat = {src, srcW, srcH};
 
     int pattCnt;
-    patts = wfc__gatherPatterns(n, srcM, &pattCnt);
+    patts = wfc__gatherPatterns(n, srcMat, &pattCnt);
 
     wave.w = dstW;
     wave.h = dstH;
@@ -188,6 +182,9 @@ int wfc_generate(
     wfc__calcEntropies(patts, wave, entropies);
 
     // dummy impl
+    for (int px = 0; px < dstW * dstH; ++px) {
+        dst[px] = 0xff7f7f7f;
+    }
     int mostCommonPatt = 0;
     for (int i = 0; i < pattCnt; ++i) {
         if (patts[i].freq > mostCommonPatt) mostCommonPatt = patts[i].freq;
@@ -201,8 +198,7 @@ int wfc_generate(
             float fx = 1 - exp(-k * entropy);
 
             int blue = (int)(fx * 256.0f);
-            uint32_t color = 0xff000000 + (blue << 16);
-            memcpy(dst + wfc__mat2dXyToInd(dstW, x, y), &color, sizeof(*dst));
+            dst[wfc__mat2dXyToInd(dstW, x, y)] = 0xff000000 + (blue << 16);
         }
     }
     for (int x = 0; x < srcW; ++x) {
@@ -210,11 +206,9 @@ int wfc_generate(
             struct wfc__Pattern patt = {x, y, 0};
 
             for (int i = 0; i < pattCnt; ++i) {
-                if (wfc__patternsEq(n, srcM, patt, patts[i])) {
+                if (wfc__patternsEq(n, srcMat, patt, patts[i])) {
                     int red = patts[i].freq * 255 / mostCommonPatt;
-                    uint32_t color = 0xff000000 + red;
-                    memcpy(dst + wfc__mat2dXyToInd(dstW, x, y),
-                        &color, sizeof(*dst));
+                    dst[wfc__mat2dXyToInd(dstW, x, y)] = 0xff000000 + red;
                 }
             }
         }
@@ -254,12 +248,10 @@ int wfc_generatePixels(
             int px = y * srcW + x;
             int srcInd = y * srcPitch + x * bytesPerPixel;
 
-            uint32_t u32 = 0;
+            srcU32[px] = 0;
             // @TODO cover the big-endian case
-            memcpy(&u32, src + srcInd, bytesPerPixel);
-            u32 &= mask;
-
-            srcU32[px] = u32;
+            memcpy(srcU32 + px, src + srcInd, bytesPerPixel);
+            srcU32[px] &= mask;
         }
     }
 

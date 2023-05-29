@@ -160,17 +160,22 @@ void wfc__calcEntropies(
     for (int x = 0; x < entropies->w; ++x) {
         for (int y = 0; y < entropies->h; ++y) {
             int totalFreq = 0;
+            int availPatts = 0;
             for (int z = 0; z < wave.d; ++z) {
                 if (WFC__MAT3DGET(wave, x, y, z)) {
                     totalFreq += patts[z].freq;
+                    ++availPatts;
                 }
             }
 
             float entropy = 0;
-            for (int z = 0; z < wave.d; ++z) {
-                if (WFC__MAT3DGET(wave, x, y, z)) {
-                    float prob = 1.0f * patts[z].freq / totalFreq;
-                    entropy -= prob * log2f(prob);
+            // check is here to ensure entropy of observed points becomes 0
+            if (availPatts > 1) {
+                for (int z = 0; z < wave.d; ++z) {
+                    if (WFC__MAT3DGET(wave, x, y, z)) {
+                        float prob = 1.0f * patts[z].freq / totalFreq;
+                        entropy -= prob * log2f(prob);
+                    }
                 }
             }
 

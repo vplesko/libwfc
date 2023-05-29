@@ -7,7 +7,31 @@
 // @TODO implement
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.
+// @TODO allow users to supply their own rand
 // @TODO does this API suffer from issues related to strict aliasing?
+
+// [0, 1)
+float wfc__rand_f(void) {
+    return 1.0f * rand() / ((float)RAND_MAX + 1);
+}
+
+// [0, n)
+int wfc__rand_i(int n) {
+    return wfc__rand_f() * n;
+}
+
+int wfc__approxEq_f(float a, float b) {
+    const int ulpsDiff = 16384;
+
+    int32_t ia, ib;
+    memcpy(&ia, &a, sizeof(a));
+    memcpy(&ib, &b, sizeof(b));
+
+    if (ia < 0) ia = 0x80000000 - ia;
+    if (ib < 0) ib = 0x80000000 - ib;
+
+    return abs(ia - ib) < ulpsDiff;
+}
 
 int wfc__indWrap(int ind, int sz) {
     if (ind >= 0) return ind % sz;
@@ -145,7 +169,7 @@ void wfc__calcEntropies(
                 }
             }
 
-            float entropy = 0.0f;
+            float entropy = 0;
             for (int z = 0; z < wave.d; ++z) {
                 if (WFC__MAT3DGET(wave, x, y, z)) {
                     float prob = 1.0f * patts[z].freq / totalFreq;
@@ -156,6 +180,65 @@ void wfc__calcEntropies(
             WFC__MAT2DGET(entropies, x, y) = entropy;
         }
     }
+}
+
+void wfc__observeOne(
+    int pattCnt, struct wfc__Pattern *patts,
+    struct wfc__Mat2d_f entropies,
+    struct wfc__Mat3d_u8 wave) {
+    float smallest = WFC__MAT2DGET(entropies, 0, 0);
+    int smallestCnt = 1;
+    for (int i = 1; i < entropies.w * entropies.h; ++i) {
+        // skip observed points
+        if (entropies.m[i] == 0) continue;
+
+        if (wfc__approxEq_f(entropies.m[i], smallest)) {
+            ++smallestCnt;
+        } else if (entropies.m[i] < smallest) {
+            smallest = entropies.m[i];
+            smallestCnt = 1;
+        }
+    }
+
+    int chosenX, chosenY;
+    {
+        int chosenPnt = 0;
+        int chosenSmallestPnt = wfc__rand_i(smallestCnt);
+        for (int i = 0; i < entropies.w * entropies.h; ++i) {
+            if (wfc__approxEq_f(entropies.m[i], smallest)) {
+                chosenPnt = i;
+                if (chosenSmallestPnt == 0) break;
+                --chosenSmallestPnt;
+            }
+        }
+        wfc__mat2dIndToXy(entropies.w, chosenPnt, &chosenX, &chosenY);
+    }
+
+    int chosenPatt = 0;
+    {
+        int totalFreq = 0;
+        for (int i = 0; i < pattCnt; ++i) {
+            if (WFC__MAT3DGET(wave, chosenX, chosenY, i)) {
+                totalFreq += patts[i].freq;
+            }
+        }
+        int chosenInst = wfc__rand_i(totalFreq);
+
+        for (int i = 0; i < pattCnt; ++i) {
+            if (WFC__MAT3DGET(wave, chosenX, chosenY, i)) {
+                if (chosenInst < patts[i].freq) {
+                    chosenPatt = i;
+                    break;
+                }
+                chosenInst -= patts[i].freq;
+            }
+        }
+    }
+
+    for (int i = 0; i < pattCnt; ++i) {
+        WFC__MAT3DGET(wave, chosenX, chosenY, i) = 0;
+    }
+    WFC__MAT3DGET(wave, chosenX, chosenY, chosenPatt) = 1;
 }
 
 int wfc_generate(
@@ -182,10 +265,12 @@ int wfc_generate(
     entropies.m = malloc(entropies.w * entropies.h * sizeof(*entropies.m));
     wfc__calcEntropies(patts, wave, entropies);
 
-    // dummy impl
-    for (int px = 0; px < dstW * dstH; ++px) {
-        dst[px] = 0xff7f7f7f;
+    for (int i = 0; i < 1000; ++i) {
+        wfc__observeOne(pattCnt, patts, entropies, wave);
+        wfc__calcEntropies(patts, wave, entropies);
     }
+
+    // dummy impl
     int mostCommonPatt = 0;
     for (int i = 0; i < pattCnt; ++i) {
         if (patts[i].freq > mostCommonPatt) mostCommonPatt = patts[i].freq;

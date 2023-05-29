@@ -11,13 +11,13 @@
 // @TODO does this API suffer from issues related to strict aliasing?
 
 // [0, 1)
-float wfc__rand_f(void) {
+float wfc__rand(void) {
     return 1.0f * rand() / ((float)RAND_MAX + 1);
 }
 
 // [0, n)
 int wfc__rand_i(int n) {
-    return wfc__rand_f() * n;
+    return wfc__rand() * n;
 }
 
 int wfc__approxEq_f(float a, float b) {
@@ -58,13 +58,13 @@ void wfc__mat2dIndToXy(int w, int ind, int *x, int *y) {
 }
 
 #define WFC__MAT2DGET(mat, x, y) \
-    (mat.m[wfc__mat2dXyToInd(mat.w, x, y)])
+    ((mat).m[wfc__mat2dXyToInd((mat).w, x, y)])
 
 #define WFC__MAT2DGETWRAP(mat, x, y) \
-    (mat.m[wfc__mat2dXyToInd( \
-        mat.w, \
-        wfc__indWrap(x, mat.w), \
-        wfc__indWrap(y, mat.h))\
+    ((mat).m[wfc__mat2dXyToInd( \
+        (mat).w, \
+        wfc__indWrap(x, (mat).w), \
+        wfc__indWrap(y, (mat).h))\
     ])
 
 #define WFC__DEF_MAT3D(type, abbrv) \
@@ -90,7 +90,7 @@ void wfc__mat3dIndToXyz(int w, int h, int ind, int *x, int *y, int *z) {
 }
 
 #define WFC__MAT3DGET(mat, x, y, z) \
-    (mat.m[wfc__mat3dXyzToInd(mat.w, mat.h, x, y, z)])
+    ((mat).m[wfc__mat3dXyzToInd((mat).w, (mat).h, x, y, z)])
 
 struct wfc__Pattern {
     int l, t;
@@ -157,11 +157,11 @@ struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mat2d_cu32 m,
 }
 
 void wfc__calcEntropies(
-    struct wfc__Pattern *patts,
-    const struct wfc__Mat3d_u8 wave,
-    struct wfc__Mat2d_f entropies) {
-    for (int x = 0; x < entropies.w; ++x) {
-        for (int y = 0; y < entropies.h; ++y) {
+    const struct wfc__Pattern *patts,
+    struct wfc__Mat3d_u8 wave,
+    struct wfc__Mat2d_f *entropies) {
+    for (int x = 0; x < entropies->w; ++x) {
+        for (int y = 0; y < entropies->h; ++y) {
             int totalFreq = 0;
             for (int z = 0; z < wave.d; ++z) {
                 if (WFC__MAT3DGET(wave, x, y, z)) {
@@ -177,15 +177,15 @@ void wfc__calcEntropies(
                 }
             }
 
-            WFC__MAT2DGET(entropies, x, y) = entropy;
+            WFC__MAT2DGET(*entropies, x, y) = entropy;
         }
     }
 }
 
 void wfc__observeOne(
-    int pattCnt, struct wfc__Pattern *patts,
+    int pattCnt, const struct wfc__Pattern *patts,
     struct wfc__Mat2d_f entropies,
-    struct wfc__Mat3d_u8 wave) {
+    struct wfc__Mat3d_u8 *wave) {
     float smallest = WFC__MAT2DGET(entropies, 0, 0);
     int smallestCnt = 1;
     for (int i = 1; i < entropies.w * entropies.h; ++i) {
@@ -218,14 +218,14 @@ void wfc__observeOne(
     {
         int totalFreq = 0;
         for (int i = 0; i < pattCnt; ++i) {
-            if (WFC__MAT3DGET(wave, chosenX, chosenY, i)) {
+            if (WFC__MAT3DGET(*wave, chosenX, chosenY, i)) {
                 totalFreq += patts[i].freq;
             }
         }
         int chosenInst = wfc__rand_i(totalFreq);
 
         for (int i = 0; i < pattCnt; ++i) {
-            if (WFC__MAT3DGET(wave, chosenX, chosenY, i)) {
+            if (WFC__MAT3DGET(*wave, chosenX, chosenY, i)) {
                 if (chosenInst < patts[i].freq) {
                     chosenPatt = i;
                     break;
@@ -236,9 +236,9 @@ void wfc__observeOne(
     }
 
     for (int i = 0; i < pattCnt; ++i) {
-        WFC__MAT3DGET(wave, chosenX, chosenY, i) = 0;
+        WFC__MAT3DGET(*wave, chosenX, chosenY, i) = 0;
     }
-    WFC__MAT3DGET(wave, chosenX, chosenY, chosenPatt) = 1;
+    WFC__MAT3DGET(*wave, chosenX, chosenY, chosenPatt) = 1;
 }
 
 int wfc_generate(
@@ -263,11 +263,11 @@ int wfc_generate(
     entropies.w = dstW;
     entropies.h = dstH;
     entropies.m = malloc(entropies.w * entropies.h * sizeof(*entropies.m));
-    wfc__calcEntropies(patts, wave, entropies);
+    wfc__calcEntropies(patts, wave, &entropies);
 
-    for (int i = 0; i < 1000; ++i) {
-        wfc__observeOne(pattCnt, patts, entropies, wave);
-        wfc__calcEntropies(patts, wave, entropies);
+    for (int i = 0; i < 100; ++i) {
+        wfc__observeOne(pattCnt, patts, entropies, &wave);
+        wfc__calcEntropies(patts, wave, &entropies);
     }
 
     // dummy impl

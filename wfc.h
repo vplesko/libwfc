@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -8,7 +9,6 @@
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.
 // @TODO allow users to supply their own rand
-// @TODO does this API suffer from issues related to strict aliasing?
 
 // [0, 1)
 float wfc__rand(void) {
@@ -21,16 +21,13 @@ int wfc__rand_i(int n) {
 }
 
 int wfc__approxEq_f(float a, float b) {
-    const int ulpsDiff = 16384;
+    const float absDiff = 0.001f;
+    const float relDiff = FLT_EPSILON;
 
-    int32_t ia, ib;
-    memcpy(&ia, &a, sizeof(a));
-    memcpy(&ib, &b, sizeof(b));
+    if (fabsf(a - b) < absDiff) return 1;
 
-    if (ia < 0) ia = 0x80000000 - ia;
-    if (ib < 0) ib = 0x80000000 - ib;
-
-    return abs(ia - ib) < ulpsDiff;
+    if (fabsf(a) < fabsf(b)) return fabsf((a - b) / b) < relDiff;
+    return fabsf((a - b) / a) < relDiff;
 }
 
 int wfc__indWrap(int ind, int sz) {

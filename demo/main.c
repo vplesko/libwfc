@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -17,13 +18,11 @@ void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
 }
 
-// @TODO are all these SDL calls necessary or am I being too careful?
 int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
     SDL_Renderer *renderer, SDL_Texture **texLoaded, SDL_Texture **texGenerated) {
     int ret = 0;
 
-    unsigned char *srcPixels = NULL;
-    unsigned char *dstPixels = NULL;
+    void *dstPixels = NULL;
     SDL_Surface *srcSurface = NULL;
     SDL_Surface *dstSurface = NULL;
 
@@ -47,46 +46,27 @@ int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
         srcSurface = converted;
     }
 
-    const SDL_PixelFormat *format = srcSurface->format;
-    const int bytesPerPixel = format->BytesPerPixel;
-    uint32_t mask;
-    if (bytesPerPixel > 1) {
-        mask = format->Rmask | format->Gmask | format->Bmask | format->Amask;
-    } else {
-        // SDL_Surface uses a palette with 1 byte indexes
-        mask = (uint32_t)-1;
-    }
-
+    const int bytesPerPixel = srcSurface->format->BytesPerPixel;
     const int srcW = srcSurface->w, srcH = srcSurface->h;
-    const int srcSize = srcSurface->pitch * srcH;
 
-    srcPixels = malloc(srcSize);
-    {
-        SDL_LockSurface(srcSurface);
-        memcpy(srcPixels, srcSurface->pixels, srcSize);
-        SDL_UnlockSurface(srcSurface);
-    }
+    assert(SDL_MUSTLOCK(srcSurface) == 0);
 
     dstPixels = malloc(dstW * dstH * bytesPerPixel);
-    if (wfc_generatePixels(
+    if (wfc_generate(
             n,
-            bytesPerPixel, mask,
-            srcW, srcH, srcSurface->pitch, srcPixels,
-            dstW, dstH, dstW * bytesPerPixel, dstPixels) != 0) {
+            srcW, srcH, srcSurface->pixels,
+            dstW, dstH, dstPixels) != 0) {
         ret = 1;
         goto cleanup;
     }
 
     dstSurface = SDL_CreateRGBSurfaceWithFormatFrom(
         dstPixels, dstW, dstH,
-        8 * bytesPerPixel, dstW * bytesPerPixel, format->format);
+        8 * bytesPerPixel, dstW * bytesPerPixel, srcSurface->format->format);
     if (dstSurface == NULL) {
         logError(SDL_GetError());
         ret = 1;
         goto cleanup;
-    }
-    if (format->palette != NULL) {
-        SDL_SetSurfacePalette(dstSurface, format->palette);
     }
 
     *texLoaded = SDL_CreateTextureFromSurface(renderer, srcSurface);
@@ -107,7 +87,6 @@ cleanup:
     if (dstSurface != NULL) SDL_FreeSurface(dstSurface);
     if (srcSurface != NULL) SDL_FreeSurface(srcSurface);
     free(dstPixels);
-    free(srcPixels);
 
     return ret;
 }

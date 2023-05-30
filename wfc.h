@@ -436,36 +436,23 @@ int wfc_generate(
         wfc__propagate(n, srcM, pattCnt, patts, obsX, obsY, &ripple, &wave);
     }
 
-    // dummy impl
-    int mostCommonPatt = 0;
-    for (int i = 0; i < pattCnt; ++i) {
-        if (patts[i].freq > mostCommonPatt) mostCommonPatt = patts[i].freq;
-    }
-    wfc__calcEntropies(patts, wave, &entropies);
     for (int x = 0; x < dstW; ++x) {
         for (int y = 0; y < dstH; ++y) {
-            float entropy = WFC__MAT2DGET(entropies, x, y);
-
-            const float xMid = 1.0f;
-            const float k = logf(2.0f) / xMid;
-            float fx = 1.0f - exp(-k * entropy);
-
-            int blue = (int)(fx * 256.0f);
-            dst[wfc__mat2dXyToInd(dstW, x, y)] = 0xff000000 + (blue << 16);
-        }
-    }
-    /*for (int x = 0; x < srcW; ++x) {
-        for (int y = 0; y < srcH; ++y) {
-            struct wfc__Pattern patt = {x, y, 0};
-
-            for (int i = 0; i < pattCnt; ++i) {
-                if (wfc__patternsEq(n, srcM, patt, patts[i])) {
-                    int red = patts[i].freq * 255 / mostCommonPatt;
-                    dst[wfc__mat2dXyToInd(dstW, x, y)] = 0xff000000 + red;
+            int patt = 0;
+            for (int z = 0; z < pattCnt; ++z) {
+                if (WFC__MAT3DGET(wave, x, y, z)) {
+                    patt = z;
+                    break;
                 }
             }
+
+            int mx = patts[patt].l;
+            int my = patts[patt].t;
+            uint32_t col = src[wfc__mat2dXyToInd(srcW, mx, my)];
+
+            dst[wfc__mat2dXyToInd(dstW, x, y)] = col;
         }
-    }*/
+    }
 
 cleanup:
     free(ripple.m);

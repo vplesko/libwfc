@@ -11,8 +11,8 @@
 const int screenW = 640, screenH = 480;
 
 const char *image = "samples/3Bricks.png";
-const int wfcN = 1;
-const int genW = 256, genH = 256;
+const int wfcN = 3;
+const int genW = 64, genH = 64;
 
 void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);

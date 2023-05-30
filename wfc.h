@@ -333,7 +333,6 @@ void wfc__propagate(
     int pattCnt, const struct wfc__Pattern *patts,
     int seedX, int seedY, struct wfc__Mat2d_u8 *ripple,
     struct wfc__Mat3d_u8 *wave) {
-    // @TODO create a macro for mat size
     memset(ripple->m, 0, WFC__MAT2DSIZE(*ripple));
     WFC__MAT2DGET(*ripple, seedX, seedY) = 1;
 

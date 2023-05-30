@@ -12,7 +12,7 @@
 
 // [0, 1)
 float wfc__rand(void) {
-    return 1.0f * rand() / ((float)RAND_MAX + 1);
+    return 1.0f * rand() / ((float)RAND_MAX + 1.0f);
 }
 
 // [0, n)
@@ -181,7 +181,7 @@ void wfc__calcEntropies(
                 }
             }
 
-            float entropy = 0;
+            float entropy = 0.0f;
             // check is here to ensure entropy of observed points becomes 0
             if (availPatts > 1) {
                 for (int z = 0; z < wave.d; ++z) {
@@ -205,7 +205,7 @@ void wfc__observeOne(
     int smallestCnt = 1;
     for (int i = 1; i < entropies.w * entropies.h; ++i) {
         // skip observed points
-        if (entropies.m[i] == 0) continue;
+        if (entropies.m[i] == 0.0f) continue;
 
         if (wfc__approxEq_f(entropies.m[i], smallest)) {
             ++smallestCnt;
@@ -424,9 +424,9 @@ int wfc_generate(
         for (int y = 0; y < dstH; ++y) {
             float entropy = WFC__MAT2DGET(entropies, x, y);
 
-            const float xMid = 1;
-            const float k = logf(2) / xMid;
-            float fx = 1 - exp(-k * entropy);
+            const float xMid = 1.0f;
+            const float k = logf(2.0f) / xMid;
+            float fx = 1.0f - exp(-k * entropy);
 
             int blue = (int)(fx * 256.0f);
             dst[wfc__mat2dXyToInd(dstW, x, y)] = 0xff000000 + (blue << 16);

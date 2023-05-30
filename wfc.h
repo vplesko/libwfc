@@ -104,6 +104,7 @@ struct wfc__Pattern {
 };
 
 WFC__DEF_MAT2D(const uint32_t, cu32);
+WFC__DEF_MAT2D(uint8_t, u8);
 WFC__DEF_MAT2D(float, f);
 WFC__DEF_MAT3D(uint8_t, u8);
 
@@ -195,7 +196,7 @@ void wfc__calcEntropies(
 void wfc__observeOne(
     int pattCnt, const struct wfc__Pattern *patts,
     struct wfc__Mat2d_f entropies,
-    struct wfc__Mat3d_u8 *wave) {
+    int *obsX, int *obsY, struct wfc__Mat3d_u8 *wave) {
     float smallest = WFC__MAT2DGET(entropies, 0, 0);
     int smallestCnt = 1;
     for (int i = 1; i < entropies.w * entropies.h; ++i) {
@@ -245,12 +246,15 @@ void wfc__observeOne(
         }
     }
 
+    *obsX = chosenX;
+    *obsY = chosenY;
     for (int i = 0; i < pattCnt; ++i) {
         WFC__MAT3DGET(*wave, chosenX, chosenY, i) = 0;
     }
     WFC__MAT3DGET(*wave, chosenX, chosenY, chosenPatt) = 1;
 }
 
+// @TODO pass dx and dy to make it clearer they are supposed to be close
 int wfc__overlapMatches(
     int n, struct wfc__Mat2d_cu32 srcM,
     int x1, int y1, int x2, int y2,
@@ -291,11 +295,13 @@ int wfc__overlapMatches(
     return 1;
 }
 
-void wfc__propagateSingle(
+int wfc__propagateSingle(
     int n, struct wfc__Mat2d_cu32 srcM,
     int x, int y, int xN, int yN,
     int pattCnt, const struct wfc__Pattern *patts,
     struct wfc__Mat3d_u8 *wave) {
+    int changed = 0;
+
     for (int p = 0; p < pattCnt; ++p) {
         if (WFC__MAT3DGETWRAP(*wave, x, y, p)) {
             int mayKeep = 0;
@@ -311,28 +317,57 @@ void wfc__propagateSingle(
 
             if (!mayKeep) {
                 WFC__MAT3DGETWRAP(*wave, x, y, p) = 0;
+                changed = 1;
             }
         }
     }
+
+    return changed;
 }
 
 void wfc__propagate(
     int n, struct wfc__Mat2d_cu32 srcM,
     int pattCnt, const struct wfc__Pattern *patts,
+    int seedX, int seedY, struct wfc__Mat2d_u8 *ripple,
     struct wfc__Mat3d_u8 *wave) {
-    // @TODO repeat until no changes are made
-    for (int x = 0; x < wave->w; ++x) {
-        for (int y = 0; y < wave->h; ++y) {
-            for (int dx = -(n - 1); dx <= n - 1; ++dx) {
-                for (int dy = -(n - 1); dy <= n - 1; ++dy) {
-                    int xN = x + dx;
-                    int yN = y + dy;
+    // @TODO create a macro for mat size
+    memset(ripple->m, 0, ripple->w * ripple->h * sizeof(*ripple->m));
+    WFC__MAT2DGET(*ripple, seedX, seedY) = 1;
 
-                    wfc__propagateSingle(n, srcM,
-                        x, y, xN, yN, pattCnt, patts, wave);
+    uint8_t oddEven = 0;
+
+    // @TODO repeat until no changes are made
+    {
+        uint8_t oddEvenMask = 1 << oddEven;
+        uint8_t oddEvenMaskNext = 1 << (1 - oddEven);
+
+        for (int x = 0; x < ripple->w; ++x) {
+            for (int y = 0; y < ripple->h; ++y) {
+                WFC__MAT2DGET(*ripple, x, y) &= ~oddEvenMaskNext;
+            }
+        }
+
+        for (int xN = 0; xN < wave->w; ++xN) {
+            for (int yN = 0; yN < wave->h; ++yN) {
+                if (!(WFC__MAT2DGET(*ripple, xN, yN) & oddEvenMask)) continue;
+
+                for (int dx = -(n - 1); dx <= n - 1; ++dx) {
+                    for (int dy = -(n - 1); dy <= n - 1; ++dy) {
+                        int x = xN + dx;
+                        int y = yN + dy;
+
+                        if (wfc__propagateSingle(n, srcM,
+                                x, y, xN, yN, pattCnt, patts, wave)) {
+                            // @TODO uncomment this when repeat prop implemented
+                            //WFC__MAT2DGETWRAP(*ripple, x, y) |= oddEvenMask;
+                            WFC__MAT2DGETWRAP(*ripple, x, y) |= oddEvenMaskNext;
+                        }
+                    }
                 }
             }
         }
+
+        oddEven = 1 - oddEven;
     }
 }
 
@@ -343,6 +378,7 @@ int wfc_generate(
     struct wfc__Pattern *patts = NULL;
     struct wfc__Mat3d_u8 wave = {0};
     struct wfc__Mat2d_f entropies = {0};
+    struct wfc__Mat2d_u8 ripple = {0};
 
     struct wfc__Mat2d_cu32 srcM = {src, srcW, srcH};
 
@@ -359,11 +395,20 @@ int wfc_generate(
     entropies.h = dstH;
     entropies.m = malloc(entropies.w * entropies.h * sizeof(*entropies.m));
 
-    // @TODO repeat until all have single pattern or contradiction reached
-    wfc__calcEntropies(patts, wave, &entropies);
-    wfc__observeOne(pattCnt, patts, entropies, &wave);
-    // @TODO detect contradictions
-    wfc__propagate(n, srcM, pattCnt, patts, &wave);
+    ripple.w = dstW;
+    ripple.h = dstH;
+    ripple.m = malloc(ripple.w * ripple.h * sizeof(*ripple.m));
+
+    {
+        // @TODO repeat until all have single pattern or contradiction reached
+        wfc__calcEntropies(patts, wave, &entropies);
+
+        int obsX, obsY;
+        wfc__observeOne(pattCnt, patts, entropies, &obsX, &obsY, &wave);
+
+        // @TODO detect contradictions
+        wfc__propagate(n, srcM, pattCnt, patts, obsX, obsY, &ripple, &wave);
+    }
 
     // dummy impl
     int mostCommonPatt = 0;
@@ -397,6 +442,7 @@ int wfc_generate(
     }*/
 
 //cleanup:
+    free(ripple.m);
     free(entropies.m);
     free(wave.m);
     free(patts);

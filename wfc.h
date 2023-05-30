@@ -338,16 +338,19 @@ void wfc__propagate(
 
     uint8_t oddEven = 0;
 
-    // @TODO repeat until no changes are made
-    {
+    while (1) {
         uint8_t oddEvenMask = 1 << oddEven;
         uint8_t oddEvenMaskNext = 1 << (1 - oddEven);
 
+        int done = 1;
         for (int x = 0; x < ripple->w; ++x) {
             for (int y = 0; y < ripple->h; ++y) {
+                if (WFC__MAT2DGET(*ripple, x, y) & oddEvenMask) done = 0;
                 WFC__MAT2DGET(*ripple, x, y) &= ~oddEvenMaskNext;
             }
         }
+
+        if (done) break;
 
         for (int xN = 0; xN < wave->w; ++xN) {
             for (int yN = 0; yN < wave->h; ++yN) {
@@ -360,8 +363,7 @@ void wfc__propagate(
 
                         if (wfc__propagateSingle(n, srcM,
                                 x, y, xN, yN, pattCnt, patts, wave)) {
-                            // @TODO uncomment this when repeat prop implemented
-                            //WFC__MAT2DGETWRAP(*ripple, x, y) |= oddEvenMask;
+                            WFC__MAT2DGETWRAP(*ripple, x, y) |= oddEvenMask;
                             WFC__MAT2DGETWRAP(*ripple, x, y) |= oddEvenMaskNext;
                         }
                     }

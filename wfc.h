@@ -41,6 +41,8 @@ int wfc__indWrap(int ind, int sz) {
         int w, h; \
     }
 
+#define WFC__MAT2DSIZE(mat) ((mat).w * (mat).h * sizeof(*(mat).m))
+
 int wfc__mat2dXyToInd(int w, int x, int y) {
     return y * w + x;
 }
@@ -69,6 +71,8 @@ void wfc__mat2dIndToXy(int w, int ind, int *x, int *y) {
         type *m; \
         int w, h, d; \
     }
+
+#define WFC__MAT3DSIZE(mat) ((mat).w * (mat).h * (mat).d * sizeof(*(mat).m))
 
 int wfc__mat3dXyzToInd(int w, int h, int x, int y, int z) {
     return z * w * h + y * w + x;
@@ -254,7 +258,6 @@ void wfc__observeOne(
     WFC__MAT3DGET(*wave, chosenX, chosenY, chosenPatt) = 1;
 }
 
-// @TODO pass dx and dy to make it clearer they are supposed to be close
 int wfc__overlapMatches(
     int n, struct wfc__Mat2d_cu32 srcM,
     int x1, int y1, int x2, int y2,
@@ -331,7 +334,7 @@ void wfc__propagate(
     int seedX, int seedY, struct wfc__Mat2d_u8 *ripple,
     struct wfc__Mat3d_u8 *wave) {
     // @TODO create a macro for mat size
-    memset(ripple->m, 0, ripple->w * ripple->h * sizeof(*ripple->m));
+    memset(ripple->m, 0, WFC__MAT2DSIZE(*ripple));
     WFC__MAT2DGET(*ripple, seedX, seedY) = 1;
 
     uint8_t oddEven = 0;
@@ -388,16 +391,16 @@ int wfc_generate(
     wave.w = dstW;
     wave.h = dstH;
     wave.d = pattCnt;
-    wave.m = malloc(wave.w * wave.h * wave.d * sizeof(*wave.m));
+    wave.m = malloc(WFC__MAT3DSIZE(wave));
     for (int i = 0; i < wave.w * wave.h * wave.d; ++i) wave.m[i] = 1;
 
     entropies.w = dstW;
     entropies.h = dstH;
-    entropies.m = malloc(entropies.w * entropies.h * sizeof(*entropies.m));
+    entropies.m = malloc(WFC__MAT2DSIZE(entropies));
 
     ripple.w = dstW;
     ripple.h = dstH;
-    ripple.m = malloc(ripple.w * ripple.h * sizeof(*ripple.m));
+    ripple.m = malloc(WFC__MAT2DSIZE(ripple));
 
     {
         // @TODO repeat until all have single pattern or contradiction reached

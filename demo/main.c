@@ -10,7 +10,7 @@
 
 const int screenW = 640, screenH = 480;
 
-const char *image = "samples/3Bricks.png";
+const char *image = "samples/Angular.png";
 const int wfcN = 3;
 const int genW = 64, genH = 64;
 
@@ -56,6 +56,7 @@ int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
             n,
             srcW, srcH, srcSurface->pixels,
             dstW, dstH, dstPixels) != 0) {
+        logError("WFC failed.");
         ret = 1;
         goto cleanup;
     }

@@ -379,6 +379,8 @@ int wfc_generate(
     int n,
     int srcW, int srcH, const uint32_t *src,
     int dstW, int dstH, uint32_t *dst) {
+    int ret = 0;
+
     struct wfc__Pattern *patts = NULL;
     struct wfc__Mat3d_u8 wave = {0};
     struct wfc__Mat2d_f entropies = {0};
@@ -403,14 +405,34 @@ int wfc_generate(
     ripple.h = dstH;
     ripple.m = malloc(WFC__MAT2DSIZE(ripple));
 
-    {
-        // @TODO repeat until all have single pattern or contradiction reached
+    while (1) {
+        int minPatts = pattCnt, maxPatts = 0;
+        for (int x = 0; x < wave.w; ++x) {
+            for (int y = 0; y < wave.h; ++y) {
+                int patts = 0;
+                for (int z = 0; z < wave.d; ++z) {
+                    if (WFC__MAT3DGET(wave, x, y, z)) ++patts;
+                }
+
+                if (patts < minPatts) minPatts = patts;
+                if (patts > maxPatts) maxPatts = patts;
+            }
+        }
+
+        if (minPatts == 0) {
+            // contradiction reached
+            ret = 1;
+            goto cleanup;
+        } else if (maxPatts == 1) {
+            // WFC completed
+            break;
+        }
+
         wfc__calcEntropies(patts, wave, &entropies);
 
         int obsX, obsY;
         wfc__observeOne(pattCnt, patts, entropies, &obsX, &obsY, &wave);
 
-        // @TODO detect contradictions
         wfc__propagate(n, srcM, pattCnt, patts, obsX, obsY, &ripple, &wave);
     }
 
@@ -445,11 +467,11 @@ int wfc_generate(
         }
     }*/
 
-//cleanup:
+cleanup:
     free(ripple.m);
     free(entropies.m);
     free(wave.m);
     free(patts);
 
-    return 0;
+    return ret;
 }

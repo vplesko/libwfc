@@ -383,7 +383,7 @@ int wfc_generate(
             dst[wfc__mat2dXyToInd(dstW, x, y)] = 0xff000000 + (blue << 16);
         }
     }
-    for (int x = 0; x < srcW; ++x) {
+    /*for (int x = 0; x < srcW; ++x) {
         for (int y = 0; y < srcH; ++y) {
             struct wfc__Pattern patt = {x, y, 0};
 
@@ -394,7 +394,7 @@ int wfc_generate(
                 }
             }
         }
-    }
+    }*/
 
 //cleanup:
     free(entropies.m);

@@ -201,15 +201,15 @@ void wfc__observeOne(
     int pattCnt, const struct wfc__Pattern *patts,
     struct wfc__Mat2d_f entropies,
     int *obsX, int *obsY, struct wfc__Mat3d_u8 *wave) {
-    float smallest = WFC__MAT2DGET(entropies, 0, 0);
-    int smallestCnt = 1;
-    for (int i = 1; i < entropies.w * entropies.h; ++i) {
+    float smallest;
+    int smallestCnt = 0;
+    for (int i = 0; i < entropies.w * entropies.h; ++i) {
         // skip observed points
         if (entropies.m[i] == 0.0f) continue;
 
-        if (wfc__approxEq_f(entropies.m[i], smallest)) {
+        if (smallestCnt > 0 && wfc__approxEq_f(entropies.m[i], smallest)) {
             ++smallestCnt;
-        } else if (entropies.m[i] < smallest) {
+        } else if (smallestCnt == 0 || entropies.m[i] < smallest) {
             smallest = entropies.m[i];
             smallestCnt = 1;
         }

@@ -35,7 +35,7 @@ int wfc__indWrap(int ind, int sz) {
     return sz + ind % sz;
 }
 
-#define WFC__DEF_MAT2D(type, abbrv) \
+#define WFC__MAT2DDEF(type, abbrv) \
     struct wfc__Mat2d_##abbrv { \
         type *m; \
         int w, h; \
@@ -66,7 +66,7 @@ void wfc__mat2dIndToXy(int w, int ind, int *x, int *y) {
         wfc__indWrap(y, (mat).h))\
     ])
 
-#define WFC__DEF_MAT3D(type, abbrv) \
+#define WFC__MAT3DDEF(type, abbrv) \
     struct wfc__Mat3d_##abbrv { \
         type *m; \
         int w, h, d; \
@@ -107,10 +107,10 @@ struct wfc__Pattern {
     int freq;
 };
 
-WFC__DEF_MAT2D(const uint32_t, cu32);
-WFC__DEF_MAT2D(uint8_t, u8);
-WFC__DEF_MAT2D(float, f);
-WFC__DEF_MAT3D(uint8_t, u8);
+WFC__MAT2DDEF(const uint32_t, cu32);
+WFC__MAT2DDEF(uint8_t, u8);
+WFC__MAT2DDEF(float, f);
+WFC__MAT3DDEF(uint8_t, u8);
 
 int wfc__patternsEq(int n, struct wfc__Mat2d_cu32 srcM,
     struct wfc__Pattern patt1, struct wfc__Pattern patt2) {

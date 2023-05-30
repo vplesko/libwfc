@@ -82,7 +82,7 @@ void wfc__mat3dIndToXyz(int w, int h, int ind, int *x, int *y, int *z) {
     int zz = ind / (w * h);
     ind -= zz * (w * h);
     int yy = ind / w;
-    ind -= yy;
+    ind -= yy * w;
     int xx = ind;
 
     *x = xx;

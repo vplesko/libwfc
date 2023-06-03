@@ -15,15 +15,15 @@ all: build build_asan
 build: $(BIN_DIR)/main
 
 $(BIN_DIR)/main: $(HDRS) $(SRCS)
-	mkdir -p $(BIN_DIR)
-	$(CC) $(BUILD_FLAGS) -O2 $(SRCS) -o $(BIN_DIR)/main $(LINK_FLAGS)
+	@mkdir -p $(@D)
+	$(CC) $(BUILD_FLAGS) -O2 $(SRCS) -o $@ $(LINK_FLAGS)
 
 build_asan: $(BIN_DIR)/main_asan
 
 # MSan requires that libs are compiled with it and -fsanitize-ignorelist doesn't seem able to filter .so files
 $(BIN_DIR)/main_asan: $(HDRS) $(SRCS)
-	mkdir -p $(BIN_DIR)
-	$(CC) $(BUILD_FLAGS) -O1 -fsanitize=address,undefined -fno-omit-frame-pointer $(SRCS) -o $(BIN_DIR)/main_asan $(LINK_FLAGS)
+	@mkdir -p $(@D)
+	$(CC) $(BUILD_FLAGS) -O1 -fsanitize=address,undefined -fno-omit-frame-pointer $(SRCS) -o $@ $(LINK_FLAGS)
 
 clean:
 	rm -rf $(BIN_DIR)

@@ -32,10 +32,7 @@ int testBasicN1(void) {
 }
 
 int main(void) {
-    int ret = 0;
+    if (testBasicN1() != 0) return 1;
 
-    ret = testBasicN1();
-    if (ret != 0) return ret;
-
-    return ret;
+    return 0;
 }

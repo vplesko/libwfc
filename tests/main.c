@@ -170,13 +170,17 @@ int testTall(void) {
 }
 
 int main(void) {
-    srand(time(NULL));
+    time_t seed = time(NULL);
+    srand(seed);
 
-    if (testBasicN1() != 0) return 1;
-    if (testBasicN3() != 0) return 1;
-    if (testPattern() != 0) return 1;
-    if (testWide() != 0) return 1;
-    if (testTall() != 0) return 1;
+    if (testBasicN1() != 0 ||
+        testBasicN3() != 0 ||
+        testPattern() != 0 ||
+        testWide() != 0 ||
+        testTall() != 0) {
+        printf("Seed was: %ld\n", seed);
+        return 1;
+    }
 
     return 0;
 }

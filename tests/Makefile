@@ -1,5 +1,3 @@
-# @TODO print the rand seed if not ok, so easier if flaky
-
 .DEFAULT_GOAL = test
 
 CC = clang

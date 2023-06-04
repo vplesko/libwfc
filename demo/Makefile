@@ -5,18 +5,15 @@ CC = clang
 BIN_DIR = bin
 
 HDRS = $(wildcard *.h) ../wfc.h
-SRCS = $(wildcard *.c)
 
 BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -g -I../
 LINK_FLAGS = -lm `sdl2-config --cflags --libs` -lSDL2_image
 
-all: build
+all: $(BIN_DIR)/showcase
 
-build: $(BIN_DIR)/main
-
-$(BIN_DIR)/main: $(HDRS) $(SRCS)
+$(BIN_DIR)/showcase: showcase.c $(HDRS)
 	@mkdir -p $(@D)
-	$(CC) $(BUILD_FLAGS) -O2 $(SRCS) -o $@ $(LINK_FLAGS)
+	$(CC) $(BUILD_FLAGS) -O2 $< -o $@ $(LINK_FLAGS)
 
 clean:
 	rm -rf $(BIN_DIR)

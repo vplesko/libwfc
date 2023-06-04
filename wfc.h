@@ -377,11 +377,18 @@ void wfc__propagate(
     }
 }
 
-// @TODO verify args
 int wfc_generate(
     int n,
     int srcW, int srcH, const uint32_t *src,
     int dstW, int dstH, uint32_t *dst) {
+    assert(n > 0);
+    assert(srcW > 0);
+    assert(srcH > 0);
+    assert(src != NULL);
+    assert(dstW > 0);
+    assert(dstH > 0);
+    assert(dst != NULL);
+
     int ret = 0;
 
     struct wfc__Pattern *patts = NULL;

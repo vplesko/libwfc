@@ -10,12 +10,44 @@
 
 const int screenW = 640, screenH = 480;
 
-const char *image = "../external/samples/Angular.png";
-const int wfcN = 3;
-const int genW = 64, genH = 64;
-
 void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
+}
+
+int parseArgs(int argc, char *argv[],
+    const char **imagePath, int *wfcN, int *dstW, int *dstH) {
+    if (argc < 5) {
+        logError("Invalid arguments.");
+        return 1;
+    }
+
+    *imagePath = argv[1];
+
+    long l;
+    char *end;
+
+    l = strtol(argv[2], &end, 0);
+    if (*end != '\0') {
+        logError("Invalid arguments.");
+        return 1;
+    }
+    *wfcN = (int)l;
+
+    l = strtol(argv[3], &end, 0);
+    if (*end != '\0') {
+        logError("Invalid arguments.");
+        return 1;
+    }
+    *dstW = (int)l;
+
+    l = strtol(argv[4], &end, 0);
+    if (*end != '\0') {
+        logError("Invalid arguments.");
+        return 1;
+    }
+    *dstH = (int)l;
+
+    return 0;
 }
 
 int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
@@ -102,9 +134,6 @@ void renderTexture(SDL_Renderer *renderer, SDL_Texture *texture, int x, int y) {
 }
 
 int main(int argc, char *argv[]) {
-    (void)argc;
-    (void)argv;
-
     int ret = 0;
 
     int calledSdlInit = 0;
@@ -113,6 +142,13 @@ int main(int argc, char *argv[]) {
     SDL_Renderer *renderer = NULL;
     SDL_Texture *texSrc = NULL;
     SDL_Texture *texDst = NULL;
+
+    const char *imagePath;
+    int wfcN, dstW, dstH;
+    if (parseArgs(argc, argv, &imagePath, &wfcN, &dstW, &dstH) != 0) {
+        ret = 1;
+        goto cleanup;
+    }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         logError(SDL_GetError());
@@ -148,7 +184,7 @@ int main(int argc, char *argv[]) {
 
     srand(time(NULL));
 
-    if (loadAndWfcGenerateTextures(image, wfcN, genW, genH,
+    if (loadAndWfcGenerateTextures(imagePath, wfcN, dstW, dstH,
             renderer, &texSrc, &texDst) != 0) {
         ret = 1;
         goto cleanup;

@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// @TODO verify correctness
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.
 // @TODO allow users to supply their own rand

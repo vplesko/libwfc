@@ -1,6 +1,5 @@
-// @TODO demo for sdl and stbi to call into libwfc
+// @TODO demo for stbi to call into libwfc
 
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -56,8 +55,9 @@ int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
     SDL_Renderer *renderer, SDL_Texture **texSrc, SDL_Texture **texDst) {
     int ret = 0;
 
-    SDL_Surface *srcSurface = NULL;
+    void *srcPixels = NULL;
     void *dstPixels = NULL;
+    SDL_Surface *srcSurface = NULL;
     SDL_Surface *dstSurface = NULL;
 
     srcSurface = IMG_Load(path);
@@ -83,12 +83,18 @@ int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
     const int bytesPerPixel = srcSurface->format->BytesPerPixel;
     const int srcW = srcSurface->w, srcH = srcSurface->h;
 
-    assert(SDL_MUSTLOCK(srcSurface) == 0);
+    if (SDL_MUSTLOCK(srcSurface)) {
+        srcPixels = malloc(srcW * srcH * bytesPerPixel);
+
+        SDL_LockSurface(srcSurface);
+        memcpy(srcPixels, srcSurface->pixels, srcW * srcH * bytesPerPixel);
+        SDL_UnlockSurface(srcSurface);
+    }
 
     dstPixels = malloc(dstW * dstH * bytesPerPixel);
     if (wfc_generate(
             n,
-            srcW, srcH, srcSurface->pixels,
+            srcW, srcH, srcPixels != NULL ? srcPixels : srcSurface->pixels,
             dstW, dstH, dstPixels) != 0) {
         logError("WFC failed.");
         ret = 1;
@@ -122,6 +128,7 @@ cleanup:
     if (dstSurface != NULL) SDL_FreeSurface(dstSurface);
     if (srcSurface != NULL) SDL_FreeSurface(srcSurface);
     free(dstPixels);
+    free(srcPixels);
 
     return ret;
 }
@@ -159,7 +166,7 @@ int main(int argc, char *argv[]) {
     }
     calledSdlInit = 1;
 
-    int sdlImgInitFlags = IMG_INIT_PNG;
+    int sdlImgInitFlags = IMG_INIT_JPG | IMG_INIT_PNG;
     if ((IMG_Init(sdlImgInitFlags) & sdlImgInitFlags) != sdlImgInitFlags) {
         logError(SDL_GetError());
         ret = 1;

@@ -7,26 +7,28 @@
 #include "wfc.h"
 
 int testBasicN1(void) {
-    uint32_t src[4][4] = {
-        {5,5,5,5},
-        {5,5,6,5},
-        {5,6,6,5},
-        {5,5,5,5},
-    };
-    uint32_t dst[16][16];
+    enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
-    int res = wfc_generate(1, 4, 4, (uint32_t*)&src, 16, 16, (uint32_t*)&dst);
-    if (res != 0) {
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,5,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n,
+        srcW, srcH, (uint32_t*)&src,
+        dstW, dstH, (uint32_t*)&dst) != 0) {
         PRINT_TEST_FAIL();
         return 1;
     }
 
-    for (size_t y = 0; y < ARR_LEN(dst); ++y) {
-        for (size_t x = 0; x < ARR_LEN(dst[y]); ++x) {
-            if (dst[y][x] != 5 && dst[y][x] != 6) {
-                PRINT_TEST_FAIL();
-                return 1;
-            }
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            PRINT_TEST_FAIL();
+            return 1;
         }
     }
 
@@ -34,26 +36,28 @@ int testBasicN1(void) {
 }
 
 int testBasicN3(void) {
-    uint32_t src[4][4] = {
-        {5,5,5,5},
-        {5,5,6,5},
-        {5,6,6,5},
-        {5,5,5,5},
-    };
-    uint32_t dst[16][16];
+    enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
-    int res = wfc_generate(3, 4, 4, (uint32_t*)&src, 16, 16, (uint32_t*)&dst);
-    if (res != 0) {
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,5,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n,
+        srcW, srcH, (uint32_t*)&src,
+        dstW, dstH, (uint32_t*)&dst) != 0) {
         PRINT_TEST_FAIL();
         return 1;
     }
 
-    for (size_t y = 0; y < ARR_LEN(dst); ++y) {
-        for (size_t x = 0; x < ARR_LEN(dst[y]); ++x) {
-            if (dst[y][x] != 5 && dst[y][x] != 6) {
-                PRINT_TEST_FAIL();
-                return 1;
-            }
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            PRINT_TEST_FAIL();
+            return 1;
         }
     }
 
@@ -70,11 +74,10 @@ int testPattern(void) {
     };
     uint32_t dst[dstH][dstW];
 
-    int res = wfc_generate(
+    if (wfc_generate(
         n,
         srcW, srcH, (uint32_t*)&src,
-        dstW, dstH, (uint32_t*)&dst);
-    if (res != 0) {
+        dstW, dstH, (uint32_t*)&dst) != 0) {
         PRINT_TEST_FAIL();
         return 1;
     }
@@ -106,29 +109,26 @@ int testPattern(void) {
 int testWide(void) {
     enum { n = 2, srcW = 6, srcH = 4, dstW = 32, dstH = 16 };
 
-    uint32_t src[srcH][srcW] = {
-        {0,0,0,0,0,0},
-        {0,1,1,1,1,0},
-        {0,1,1,1,1,0},
-        {0,0,0,0,0,0},
+    uint32_t src[srcW * srcH] = {
+        0,0,0,0,0,0,
+        0,1,1,1,1,0,
+        0,1,1,1,1,0,
+        0,0,0,0,0,0,
     };
-    uint32_t dst[dstH][dstW];
+    uint32_t dst[dstW * dstH];
 
-    int res = wfc_generate(
+    if (wfc_generate(
         n,
         srcW, srcH, (uint32_t*)&src,
-        dstW, dstH, (uint32_t*)&dst);
-    if (res != 0) {
+        dstW, dstH, (uint32_t*)&dst) != 0) {
         PRINT_TEST_FAIL();
         return 1;
     }
 
-    for (int y = 0; y < dstH; ++y) {
-        for (int x = 0; x < dstW; ++x) {
-            if (dst[y][x] != 0 && dst[y][x] != 1) {
-                PRINT_TEST_FAIL();
-                return 1;
-            }
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 0 && dst[i] != 1) {
+            PRINT_TEST_FAIL();
+            return 1;
         }
     }
 
@@ -138,31 +138,28 @@ int testWide(void) {
 int testTall(void) {
     enum { n = 2, srcW = 4, srcH = 6, dstW = 16, dstH = 32 };
 
-    uint32_t src[srcH][srcW] = {
-        {0,0,0,0},
-        {0,1,1,0},
-        {0,1,1,0},
-        {0,1,1,0},
-        {0,1,1,0},
-        {0,0,0,0},
+    uint32_t src[srcW * srcH] = {
+        0,0,0,0,
+        0,1,1,0,
+        0,1,1,0,
+        0,1,1,0,
+        0,1,1,0,
+        0,0,0,0,
     };
-    uint32_t dst[dstH][dstW];
+    uint32_t dst[dstW * dstH];
 
-    int res = wfc_generate(
+    if (wfc_generate(
         n,
         srcW, srcH, (uint32_t*)&src,
-        dstW, dstH, (uint32_t*)&dst);
-    if (res != 0) {
+        dstW, dstH, (uint32_t*)&dst) != 0) {
         PRINT_TEST_FAIL();
         return 1;
     }
 
-    for (int y = 0; y < dstH; ++y) {
-        for (int x = 0; x < dstW; ++x) {
-            if (dst[y][x] != 0 && dst[y][x] != 1) {
-                PRINT_TEST_FAIL();
-                return 1;
-            }
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 0 && dst[i] != 1) {
+            PRINT_TEST_FAIL();
+            return 1;
         }
     }
 

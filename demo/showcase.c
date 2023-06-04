@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    srand(time(NULL));
+    srand((unsigned)time(NULL));
 
     if (loadAndWfcGenerateTextures(imagePath, wfcN, dstW, dstH,
             renderer, &texSrc, &texDst) != 0) {

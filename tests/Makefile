@@ -8,7 +8,7 @@ TEST_RECORD = tested.txt
 HDRS = $(wildcard *.h) ../wfc.h
 SRCS = $(wildcard *.c)
 
-BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -g -fno-omit-frame-pointer -O1 -I../
+BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Wconversion -Werror -g -fno-omit-frame-pointer -O1 -I../
 LINK_FLAGS = -lm
 
 test: $(BIN_DIR)/$(TEST_RECORD)

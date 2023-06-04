@@ -6,8 +6,7 @@ BIN_DIR = bin
 
 HDRS = $(wildcard *.h) ../wfc.h
 
-# @TODO consider -Wconversion -Wfloat-equal -Wdouble-promotion
-BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -g -O3 -mavx2 -I../
+BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -g -fno-omit-frame-pointer -O3 -mavx2 -I../
 LINK_FLAGS = -lm `sdl2-config --cflags --libs` -lSDL2_image
 
 all: $(BIN_DIR)/showcase

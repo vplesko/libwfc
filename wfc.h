@@ -12,12 +12,12 @@
 
 // [0, 1)
 float wfc__rand(void) {
-    return 1.0f * rand() / ((float)RAND_MAX + 1.0f);
+    return (float)rand() / ((float)RAND_MAX + 1.0f);
 }
 
 // [0, n)
 int wfc__rand_i(int n) {
-    return wfc__rand() * n;
+    return (int)(wfc__rand() * (float)n);
 }
 
 int wfc__approxEq_f(float a, float b) {
@@ -42,7 +42,7 @@ int wfc__indWrap(int ind, int sz) {
         int w, h; \
     }
 
-#define WFC__MAT2DSIZE(mat) ((mat).w * (mat).h * sizeof(*(mat).m))
+#define WFC__MAT2DSIZE(mat) ((size_t)((mat).w * (mat).h) * sizeof(*(mat).m))
 
 int wfc__mat2dXyToInd(int w, int x, int y) {
     return y * w + x;
@@ -73,7 +73,8 @@ void wfc__mat2dIndToXy(int w, int ind, int *x, int *y) {
         int w, h, d; \
     }
 
-#define WFC__MAT3DSIZE(mat) ((mat).w * (mat).h * (mat).d * sizeof(*(mat).m))
+#define WFC__MAT3DSIZE(mat) \
+    ((size_t)((mat).w * (mat).h * (mat).d) * sizeof(*(mat).m))
 
 int wfc__mat3dXyzToInd(int w, int h, int x, int y, int z) {
     return z * w * h + y * w + x;
@@ -145,7 +146,7 @@ struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mat2d_cu32 srcM,
         if (!seenBefore) ++pattCnt;
     }
 
-    patts = malloc(pattCnt * sizeof(*patts));
+    patts = malloc((size_t)pattCnt * sizeof(*patts));
     pattCnt = 0;
     for (int px = 0; px < srcM.w * srcM.h; ++px) {
         struct wfc__Pattern patt = {0};
@@ -187,7 +188,7 @@ void wfc__calcEntropies(
             if (availPatts > 1) {
                 for (int z = 0; z < wave.d; ++z) {
                     if (WFC__MAT3DGET(wave, x, y, z)) {
-                        float prob = 1.0f * patts[z].freq / totalFreq;
+                        float prob = (float)patts[z].freq / (float)totalFreq;
                         entropy -= prob * log2f(prob);
                     }
                 }
@@ -340,8 +341,8 @@ void wfc__propagate(
     uint8_t oddEven = 0;
 
     while (1) {
-        uint8_t oddEvenMask = 1 << oddEven;
-        uint8_t oddEvenMaskNext = 1 << (1 - oddEven);
+        uint8_t oddEvenMask = (uint8_t)(1 << oddEven);
+        uint8_t oddEvenMaskNext = (uint8_t)(1 << (1 - oddEven));
 
         int done = 1;
         for (int x = 0; x < ripple->w; ++x) {

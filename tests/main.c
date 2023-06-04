@@ -170,7 +170,7 @@ int testTall(void) {
 }
 
 int main(void) {
-    time_t seed = time(NULL);
+    unsigned seed = (unsigned)time(NULL);
     srand(seed);
 
     if (testBasicN1() != 0 ||
@@ -178,7 +178,7 @@ int main(void) {
         testPattern() != 0 ||
         testWide() != 0 ||
         testTall() != 0) {
-        printf("Seed was: %ld\n", seed);
+        printf("Seed was: %u\n", seed);
         return 1;
     }
 

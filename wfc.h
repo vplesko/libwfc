@@ -35,6 +35,7 @@ int wfc__indWrap(int ind, int sz) {
     return sz + ind % sz;
 }
 
+// @TODO add macros with range as arg
 #define WFC__MAT2DDEF(type, abbrv) \
     struct wfc__Mat2d_##abbrv { \
         type *m; \

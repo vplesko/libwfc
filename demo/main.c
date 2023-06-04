@@ -10,7 +10,7 @@
 
 const int screenW = 640, screenH = 480;
 
-const char *image = "../samples/Angular.png";
+const char *image = "../external/samples/Angular.png";
 const int wfcN = 3;
 const int genW = 64, genH = 64;
 

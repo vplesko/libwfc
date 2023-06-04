@@ -8,6 +8,7 @@
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.
 // @TODO allow users to supply their own rand
+// @TODO add restrict where appropriate
 
 // [0, 1)
 float wfc__rand(void) {
@@ -375,6 +376,7 @@ void wfc__propagate(
     }
 }
 
+// @TODO verify args
 int wfc_generate(
     int n,
     int srcW, int srcH, const uint32_t *src,

@@ -19,11 +19,11 @@ void logError(const char *msg) {
 }
 
 int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
-    SDL_Renderer *renderer, SDL_Texture **texLoaded, SDL_Texture **texGenerated) {
+    SDL_Renderer *renderer, SDL_Texture **texSrc, SDL_Texture **texDst) {
     int ret = 0;
 
-    void *dstPixels = NULL;
     SDL_Surface *srcSurface = NULL;
+    void *dstPixels = NULL;
     SDL_Surface *dstSurface = NULL;
 
     srcSurface = IMG_Load(path);
@@ -70,15 +70,15 @@ int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
         goto cleanup;
     }
 
-    *texLoaded = SDL_CreateTextureFromSurface(renderer, srcSurface);
-    if (*texLoaded == NULL) {
+    *texSrc = SDL_CreateTextureFromSurface(renderer, srcSurface);
+    if (*texSrc == NULL) {
         logError(SDL_GetError());
         ret = 1;
         goto cleanup;
     }
 
-    *texGenerated = SDL_CreateTextureFromSurface(renderer, dstSurface);
-    if (*texGenerated == NULL) {
+    *texDst = SDL_CreateTextureFromSurface(renderer, dstSurface);
+    if (*texDst == NULL) {
         logError(SDL_GetError());
         ret = 1;
         goto cleanup;
@@ -111,8 +111,8 @@ int main(int argc, char *argv[]) {
     int calledImgInit = 0;
     SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
-    SDL_Texture *texLoaded = NULL;
-    SDL_Texture *texGenerated = NULL;
+    SDL_Texture *texSrc = NULL;
+    SDL_Texture *texDst = NULL;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         logError(SDL_GetError());
@@ -149,15 +149,15 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
 
     if (loadAndWfcGenerateTextures(image, wfcN, genW, genH,
-            renderer, &texLoaded, &texGenerated) != 0) {
+            renderer, &texSrc, &texDst) != 0) {
         ret = 1;
         goto cleanup;
     }
 
-    int texLoadedW, texLoadedH;
-    SDL_QueryTexture(texLoaded, NULL, NULL, &texLoadedW, &texLoadedH);
-    int texGeneratedH;
-    SDL_QueryTexture(texGenerated, NULL, NULL, NULL, &texGeneratedH);
+    int texSrcW, texSrcH;
+    SDL_QueryTexture(texSrc, NULL, NULL, &texSrcW, &texSrcH);
+    int texDstH;
+    SDL_QueryTexture(texDst, NULL, NULL, NULL, &texDstH);
 
     int quit = 0;
     while (!quit) {
@@ -179,15 +179,15 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff);
         SDL_RenderClear(renderer);
 
-        renderTexture(renderer, texLoaded, 0, (texGeneratedH - texLoadedH) / 2);
-        renderTexture(renderer, texGenerated, texLoadedW + 4, 0);
+        renderTexture(renderer, texSrc, 0, (texDstH - texSrcH) / 2);
+        renderTexture(renderer, texDst, texSrcW + 4, 0);
 
         SDL_RenderPresent(renderer);
     }
 
 cleanup:
-    if (texGenerated != NULL) SDL_DestroyTexture(texGenerated);
-    if (texLoaded != NULL) SDL_DestroyTexture(texLoaded);
+    if (texDst != NULL) SDL_DestroyTexture(texDst);
+    if (texSrc != NULL) SDL_DestroyTexture(texSrc);
     if (renderer != NULL) SDL_DestroyRenderer(renderer);
     if (window != NULL) SDL_DestroyWindow(window);
     if (calledImgInit) IMG_Quit();

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "tests.h"
+#include "testing.h"
 #include "wfc.h"
 
 int testBasicN1(void) {

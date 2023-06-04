@@ -1,5 +1,5 @@
-#ifndef LIBWFC_TESTS_TESTS_H_
-#define LIBWFC_TESTS_TESTS_H_
+#ifndef LIBWFC_TESTS_TESTING_H_
+#define LIBWFC_TESTS_TESTING_H_
 
 #define ARR_LEN(a) (sizeof(a) / sizeof((a)[0]))
 

@@ -1,4 +1,4 @@
 .vscode
 
 demo/bin
-tests/bin
+test/bin

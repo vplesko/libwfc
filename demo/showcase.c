@@ -1,5 +1,3 @@
-// @TODO demo for stbi to call into libwfc
-
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>

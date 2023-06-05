@@ -44,6 +44,7 @@ int wfc__rand_i(int n) {
 }
 
 // multi-dimensional array utility
+// @TODO this is making the code ~2.5x slower!!!
 
 int wfc__indWrap(int ind, int sz) {
     if (ind >= 0) return ind % sz;

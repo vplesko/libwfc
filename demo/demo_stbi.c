@@ -70,7 +70,6 @@ int main(int argc, char *argv[]) {
     srand((unsigned)time(NULL));
 
     dstPixels = malloc(dstW * dstH * 4);
-    // @TODO see if my new MDA macros made the code slower
     if (wfc_generate(
             wfcN,
             srcW, srcH, (uint32_t*)srcPixels,

@@ -1,4 +1,5 @@
 .vscode
 
+benchmark/bin
 demo/bin
 test/bin

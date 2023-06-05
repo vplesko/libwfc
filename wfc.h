@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <float.h>
 #include <math.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,14 +11,6 @@
 // @TODO add restrict where appropriate
 
 // basic utility
-
-#define WFC__ARR_LEN(a) ((int)(sizeof(a) / sizeof((a)[0])))
-
-int wfc__product(int n, int *arr) {
-    int prod = 1;
-    for (int i = 0; i < n; ++i) prod *= arr[i];
-    return prod;
-}
 
 int wfc__approxEq_f(float a, float b) {
     const float absDiff = 0.001f;
@@ -44,50 +35,57 @@ int wfc__rand_i(int n) {
 }
 
 // multi-dimensional array utility
-// @TODO this is making the code ~2.5x slower!!!
 
 int wfc__indWrap(int ind, int sz) {
     if (ind >= 0) return ind % sz;
     return sz + ind % sz;
 }
 
-int wfc__coordsToInd(int wrap, int rank, int *dim, ...) {
-    va_list vargs;
-    va_start(vargs, dim);
+struct wfc__Size2d { int dim[2]; };
+struct wfc__Size3d { int dim[3]; };
 
-    int mul = 1, ind = 0;
-    for (int i = 0; i < rank; ++i) {
-        int coord = va_arg(vargs, int);
-        if (wrap) coord = wfc__indWrap(coord, dim[i]);
-
-        ind += coord * mul;
-        mul *= dim[i];
-    }
-
-    return ind;
+int wfc__len2d(struct wfc__Size2d sz) {
+    return sz.dim[0] * sz.dim[1];
 }
 
-#define WFC__MDA_DEF(rank, type, abbrv) \
-    struct wfc__Mda_##rank##abbrv { \
-        type *a; \
-        int dim[rank]; \
-    }
+int wfc__len3d(struct wfc__Size3d sz) {
+    return sz.dim[0] * sz.dim[1] * sz.dim[2];
+}
 
-#define WFC__MDA_RANK(mda) WFC__ARR_LEN((mda).dim)
+size_t wfc__size2d(struct wfc__Size2d sz, size_t membSz) {
+    return (size_t)wfc__len2d(sz) * membSz;
+}
 
-#define WFC__MDA_LEN(mda) wfc__product(WFC__MDA_RANK(mda), (mda).dim)
+size_t wfc__size3d(struct wfc__Size3d sz, size_t membSz) {
+    return (size_t)wfc__len3d(sz) * membSz;
+}
 
-#define WFC__MDA_SIZE(mda) ((size_t)WFC__MDA_LEN(mda) * sizeof(*(mda).a))
+int wfc__coordsToInd2d(struct wfc__Size2d sz, int c0, int c1) {
+    return c1 * sz.dim[0] + c0;
+}
 
-#define WFC__MDA_GET(mda, ...) \
-    ((mda).a[wfc__coordsToInd(0, WFC__MDA_RANK(mda), (mda).dim, __VA_ARGS__)])
+int wfc__coordsToInd3d(struct wfc__Size3d sz, int c0, int c1, int c2) {
+    return c2 * sz.dim[0] * sz.dim[1] + c1 * sz.dim[0] + c0;
+}
 
-#define WFC__MDA_GET_WRAP(mda, ...) \
-    ((mda).a[wfc__coordsToInd(1, WFC__MDA_RANK(mda), (mda).dim, __VA_ARGS__)])
+int wfc__coordsToInd2dWrap(struct wfc__Size2d sz, int c0, int c1) {
+    return wfc__coordsToInd2d(
+        sz,
+        wfc__indWrap(c0, sz.dim[0]),
+        wfc__indWrap(c1, sz.dim[1]));
+}
 
-void wfc__indToCoords2d(int dim0, int ind, int *c0, int *c1) {
-    int c1_ = ind / dim0;
-    ind -= c1_ * dim0;
+int wfc__coordsToInd3dWrap(struct wfc__Size3d sz, int c0, int c1, int c2) {
+    return wfc__coordsToInd3d(
+        sz,
+        wfc__indWrap(c0, sz.dim[0]),
+        wfc__indWrap(c1, sz.dim[1]),
+        wfc__indWrap(c2, sz.dim[2]));
+}
+
+void wfc__indToCoords2d(struct wfc__Size2d sz, int ind, int *c0, int *c1) {
+    int c1_ = ind / sz.dim[0];
+    ind -= c1_ * sz.dim[0];
     int c0_ = ind;
 
     *c0 = c0_;
@@ -95,11 +93,11 @@ void wfc__indToCoords2d(int dim0, int ind, int *c0, int *c1) {
 }
 
 void wfc__indToCoords3d(
-    int dim0, int dim1, int ind, int *c0, int *c1, int *c2) {
-    int c2_ = ind / (dim0 * dim1);
-    ind -= c2_ * (dim0 * dim1);
-    int c1_ = ind / dim0;
-    ind -= c1_ * dim0;
+    struct wfc__Size3d sz, int ind, int *c0, int *c1, int *c2) {
+    int c2_ = ind / (sz.dim[0] * sz.dim[1]);
+    ind -= c2_ * (sz.dim[0] * sz.dim[1]);
+    int c1_ = ind / sz.dim[0];
+    ind -= c1_ * sz.dim[0];
     int c0_ = ind;
 
     *c0 = c0_;
@@ -109,44 +107,44 @@ void wfc__indToCoords3d(
 
 // wfc code
 
-WFC__MDA_DEF(2, uint32_t, u32);
-WFC__MDA_DEF(2, const uint32_t, cu32);
-WFC__MDA_DEF(2, uint8_t, u8);
-WFC__MDA_DEF(2, float, f);
-WFC__MDA_DEF(3, uint8_t, u8);
-
 struct wfc__Pattern {
     int l, t;
     int freq;
 };
 
-int wfc__patternsEq(int n, struct wfc__Mda_2cu32 srcM,
+int wfc__patternsEq(
+    int n,
+    struct wfc__Size2d srcSz, const uint32_t *src,
     struct wfc__Pattern patt1, struct wfc__Pattern patt2) {
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            uint32_t a = WFC__MDA_GET_WRAP(srcM, patt1.l + i, patt1.t + j);
-            uint32_t b = WFC__MDA_GET_WRAP(srcM, patt2.l + i, patt2.t + j);
+            uint32_t a = src[
+                wfc__coordsToInd2dWrap(srcSz, patt1.l + i, patt1.t + j)];
+            uint32_t b = src[
+                wfc__coordsToInd2dWrap(srcSz, patt2.l + i, patt2.t + j)];;
             if (a != b) return 0;
         }
     }
     return 1;
 }
 
-struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mda_2cu32 srcM,
+struct wfc__Pattern* wfc__gatherPatterns(
+    int n,
+    struct wfc__Size2d srcSz, const uint32_t *src,
     int *cnt) {
     struct wfc__Pattern *patts = NULL;
 
     int pattCnt = 0;
-    for (int px = 0; px < WFC__MDA_LEN(srcM); ++px) {
+    for (int px = 0; px < wfc__len2d(srcSz); ++px) {
         struct wfc__Pattern patt = {0};
-        wfc__indToCoords2d(srcM.dim[0], px, &patt.l, &patt.t);
+        wfc__indToCoords2d(srcSz, px, &patt.l, &patt.t);
 
         int seenBefore = 0;
         for (int px1 = 0; !seenBefore && px1 < px; ++px1) {
             struct wfc__Pattern patt1 = {0};
-            wfc__indToCoords2d(srcM.dim[0], px1, &patt1.l, &patt1.t);
+            wfc__indToCoords2d(srcSz, px1, &patt1.l, &patt1.t);
 
-            if (wfc__patternsEq(n, srcM, patt, patt1)) seenBefore = 1;
+            if (wfc__patternsEq(n, srcSz, src, patt, patt1)) seenBefore = 1;
         }
 
         if (!seenBefore) ++pattCnt;
@@ -154,14 +152,14 @@ struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mda_2cu32 srcM,
 
     patts = malloc((size_t)pattCnt * sizeof(*patts));
     pattCnt = 0;
-    for (int px = 0; px < WFC__MDA_LEN(srcM); ++px) {
+    for (int px = 0; px < wfc__len2d(srcSz); ++px) {
         struct wfc__Pattern patt = {0};
-        wfc__indToCoords2d(srcM.dim[0], px, &patt.l, &patt.t);
+        wfc__indToCoords2d(srcSz, px, &patt.l, &patt.t);
         patt.freq = 1;
 
         int seenBefore = 0;
         for (int i = 0; !seenBefore && i < pattCnt; ++i) {
-            if (wfc__patternsEq(n, srcM, patt, patts[i])) {
+            if (wfc__patternsEq(n, srcSz, src, patt, patts[i])) {
                 ++patts[i].freq;
                 seenBefore = 1;
             }
@@ -176,14 +174,16 @@ struct wfc__Pattern* wfc__gatherPatterns(int n, struct wfc__Mda_2cu32 srcM,
 
 void wfc__calcEntropies(
     const struct wfc__Pattern *patts,
-    struct wfc__Mda_3u8 wave,
-    struct wfc__Mda_2f *entropies) {
-    for (int x = 0; x < entropies->dim[0]; ++x) {
-        for (int y = 0; y < entropies->dim[1]; ++y) {
+    struct wfc__Size3d waveSz, uint8_t *wave,
+    float *entropies) {
+    struct wfc__Size2d dstSz = {{waveSz.dim[0], waveSz.dim[1]}};
+
+    for (int x = 0; x < waveSz.dim[0]; ++x) {
+        for (int y = 0; y < waveSz.dim[1]; ++y) {
             int totalFreq = 0;
             int availPatts = 0;
-            for (int z = 0; z < wave.dim[2]; ++z) {
-                if (WFC__MDA_GET(wave, x, y, z)) {
+            for (int z = 0; z < waveSz.dim[2]; ++z) {
+                if (wave[wfc__coordsToInd3d(waveSz, x, y, z)]) {
                     totalFreq += patts[z].freq;
                     ++availPatts;
                 }
@@ -192,33 +192,36 @@ void wfc__calcEntropies(
             float entropy = 0.0f;
             // check is here to ensure entropy of observed points becomes 0
             if (availPatts > 1) {
-                for (int z = 0; z < wave.dim[2]; ++z) {
-                    if (WFC__MDA_GET(wave, x, y, z)) {
+                for (int z = 0; z < waveSz.dim[2]; ++z) {
+                    if (wave[wfc__coordsToInd3d(waveSz, x, y, z)]) {
                         float prob = (float)patts[z].freq / (float)totalFreq;
                         entropy -= prob * log2f(prob);
                     }
                 }
             }
 
-            WFC__MDA_GET(*entropies, x, y) = entropy;
+            entropies[wfc__coordsToInd2d(dstSz, x, y)] = entropy;
         }
     }
 }
 
 void wfc__observeOne(
     int pattCnt, const struct wfc__Pattern *patts,
-    struct wfc__Mda_2f entropies,
-    int *obsX, int *obsY, struct wfc__Mda_3u8 *wave) {
+    float *entropies,
+    int *obsX, int *obsY,
+    struct wfc__Size3d waveSz, uint8_t *wave) {
+    struct wfc__Size2d dstSz = {{waveSz.dim[0], waveSz.dim[1]}};
+
     float smallest;
     int smallestCnt = 0;
-    for (int i = 0; i < WFC__MDA_LEN(entropies); ++i) {
+    for (int i = 0; i < wfc__len2d(dstSz); ++i) {
         // skip observed points
-        if (entropies.a[i] == 0.0f) continue;
+        if (entropies[i] == 0.0f) continue;
 
-        if (smallestCnt > 0 && wfc__approxEq_f(entropies.a[i], smallest)) {
+        if (smallestCnt > 0 && wfc__approxEq_f(entropies[i], smallest)) {
             ++smallestCnt;
-        } else if (smallestCnt == 0 || entropies.a[i] < smallest) {
-            smallest = entropies.a[i];
+        } else if (smallestCnt == 0 || entropies[i] < smallest) {
+            smallest = entropies[i];
             smallestCnt = 1;
         }
     }
@@ -227,28 +230,28 @@ void wfc__observeOne(
     {
         int chosenPnt = 0;
         int chosenSmallestPnt = wfc__rand_i(smallestCnt);
-        for (int i = 0; i < WFC__MDA_LEN(entropies); ++i) {
-            if (wfc__approxEq_f(entropies.a[i], smallest)) {
+        for (int i = 0; i < wfc__len2d(dstSz); ++i) {
+            if (wfc__approxEq_f(entropies[i], smallest)) {
                 chosenPnt = i;
                 if (chosenSmallestPnt == 0) break;
                 --chosenSmallestPnt;
             }
         }
-        wfc__indToCoords2d(entropies.dim[0], chosenPnt, &chosenX, &chosenY);
+        wfc__indToCoords2d(dstSz, chosenPnt, &chosenX, &chosenY);
     }
 
     int chosenPatt = 0;
     {
         int totalFreq = 0;
         for (int i = 0; i < pattCnt; ++i) {
-            if (WFC__MDA_GET(*wave, chosenX, chosenY, i)) {
+            if (wave[wfc__coordsToInd3d(waveSz, chosenX, chosenY, i)]) {
                 totalFreq += patts[i].freq;
             }
         }
         int chosenInst = wfc__rand_i(totalFreq);
 
         for (int i = 0; i < pattCnt; ++i) {
-            if (WFC__MDA_GET(*wave, chosenX, chosenY, i)) {
+            if (wave[wfc__coordsToInd3d(waveSz, chosenX, chosenY, i)]) {
                 if (chosenInst < patts[i].freq) {
                     chosenPatt = i;
                     break;
@@ -261,13 +264,14 @@ void wfc__observeOne(
     *obsX = chosenX;
     *obsY = chosenY;
     for (int i = 0; i < pattCnt; ++i) {
-        WFC__MDA_GET(*wave, chosenX, chosenY, i) = 0;
+        wave[wfc__coordsToInd3d(waveSz, chosenX, chosenY, i)] = 0;
     }
-    WFC__MDA_GET(*wave, chosenX, chosenY, chosenPatt) = 1;
+    wave[wfc__coordsToInd3d(waveSz, chosenX, chosenY, chosenPatt)] = 1;
 }
 
 int wfc__overlapMatches(
-    int n, struct wfc__Mda_2cu32 srcM,
+    int n,
+    struct wfc__Size2d srcSz, const uint32_t *src,
     int x1, int y1, int x2, int y2,
     struct wfc__Pattern patt1, struct wfc__Pattern patt2) {
     assert(abs(x1 - x2) < n);
@@ -296,8 +300,8 @@ int wfc__overlapMatches(
             int mx2 = patt2.l + px2;
             int my2 = patt2.t + py2;
 
-            uint32_t a = WFC__MDA_GET_WRAP(srcM, mx1, my1);
-            uint32_t b = WFC__MDA_GET_WRAP(srcM, mx2, my2);
+            uint32_t a = src[wfc__coordsToInd2dWrap(srcSz, mx1, my1)];
+            uint32_t b = src[wfc__coordsToInd2dWrap(srcSz, mx2, my2)];
 
             if (a != b) return 0;
         }
@@ -307,18 +311,19 @@ int wfc__overlapMatches(
 }
 
 int wfc__propagateSingle(
-    int n, struct wfc__Mda_2cu32 srcM,
+    int n,
+    struct wfc__Size2d srcSz, const uint32_t *src,
     int x, int y, int xN, int yN,
     int pattCnt, const struct wfc__Pattern *patts,
-    struct wfc__Mda_3u8 *wave) {
+    struct wfc__Size3d waveSz, uint8_t *wave) {
     int changed = 0;
 
     for (int p = 0; p < pattCnt; ++p) {
-        if (WFC__MDA_GET_WRAP(*wave, x, y, p)) {
+        if (wave[wfc__coordsToInd3dWrap(waveSz, x, y, p)]) {
             int mayKeep = 0;
             for (int pN = 0; pN < pattCnt; ++pN) {
-                if (WFC__MDA_GET_WRAP(*wave, xN, yN, pN)) {
-                    if (wfc__overlapMatches(n, srcM,
+                if (wave[wfc__coordsToInd3dWrap(waveSz, xN, yN, pN)]) {
+                    if (wfc__overlapMatches(n, srcSz, src,
                             x, y, xN, yN, patts[p], patts[pN])) {
                         mayKeep = 1;
                         break;
@@ -327,7 +332,7 @@ int wfc__propagateSingle(
             }
 
             if (!mayKeep) {
-                WFC__MDA_GET_WRAP(*wave, x, y, p) = 0;
+                wave[wfc__coordsToInd3dWrap(waveSz, x, y, p)] = 0;
                 changed = 1;
             }
         }
@@ -337,12 +342,16 @@ int wfc__propagateSingle(
 }
 
 void wfc__propagate(
-    int n, struct wfc__Mda_2cu32 srcM,
+    int n,
+    struct wfc__Size2d srcSz, const uint32_t *src,
     int pattCnt, const struct wfc__Pattern *patts,
-    int seedX, int seedY, struct wfc__Mda_2u8 *ripple,
-    struct wfc__Mda_3u8 *wave) {
-    memset(ripple->a, 0, WFC__MDA_SIZE(*ripple));
-    WFC__MDA_GET(*ripple, seedX, seedY) = 1;
+    int seedX, int seedY,
+    uint8_t *ripple,
+    struct wfc__Size3d waveSz, uint8_t *wave) {
+    struct wfc__Size2d dstSz = {{waveSz.dim[0], waveSz.dim[1]}};
+
+    memset(ripple, 0, wfc__size2d(dstSz, sizeof(*ripple)));
+    ripple[wfc__coordsToInd2d(dstSz, seedX, seedY)] = 1;
 
     uint8_t oddEven = 0;
 
@@ -351,28 +360,33 @@ void wfc__propagate(
         uint8_t oddEvenMaskNext = (uint8_t)(1 << (1 - oddEven));
 
         int done = 1;
-        for (int x = 0; x < ripple->dim[0]; ++x) {
-            for (int y = 0; y < ripple->dim[1]; ++y) {
-                if (WFC__MDA_GET(*ripple, x, y) & oddEvenMask) done = 0;
-                WFC__MDA_GET(*ripple, x, y) &= ~oddEvenMaskNext;
+        for (int x = 0; x < dstSz.dim[0]; ++x) {
+            for (int y = 0; y < dstSz.dim[1]; ++y) {
+                if (ripple[wfc__coordsToInd2d(dstSz, x, y)] & oddEvenMask) {
+                    done = 0;
+                }
+                ripple[wfc__coordsToInd2d(dstSz, x, y)] &= ~oddEvenMaskNext;
             }
         }
 
         if (done) break;
 
-        for (int xN = 0; xN < wave->dim[0]; ++xN) {
-            for (int yN = 0; yN < wave->dim[1]; ++yN) {
-                if (!(WFC__MDA_GET(*ripple, xN, yN) & oddEvenMask)) continue;
+        for (int xN = 0; xN < waveSz.dim[0]; ++xN) {
+            for (int yN = 0; yN < waveSz.dim[1]; ++yN) {
+                if (!(ripple[wfc__coordsToInd2d(dstSz, xN, yN)] &
+                        oddEvenMask)) {
+                    continue;
+                }
 
                 for (int dx = -(n - 1); dx <= n - 1; ++dx) {
                     for (int dy = -(n - 1); dy <= n - 1; ++dy) {
                         int x = xN + dx;
                         int y = yN + dy;
 
-                        if (wfc__propagateSingle(n, srcM,
-                                x, y, xN, yN, pattCnt, patts, wave)) {
-                            WFC__MDA_GET_WRAP(*ripple, x, y) |= oddEvenMask;
-                            WFC__MDA_GET_WRAP(*ripple, x, y) |= oddEvenMaskNext;
+                        if (wfc__propagateSingle(n, srcSz, src,
+                                x, y, xN, yN, pattCnt, patts, waveSz, wave)) {
+                            ripple[wfc__coordsToInd2dWrap(dstSz, x, y)]
+                                |= oddEvenMask | oddEvenMaskNext;
                         }
                     }
                 }
@@ -387,6 +401,7 @@ int wfc_generate(
     int n,
     int srcW, int srcH, const uint32_t *src,
     int dstW, int dstH, uint32_t *dst) {
+    // @TODO assert that n is <= (src|dst)(W|H)
     assert(n > 0);
     assert(srcW > 0);
     assert(srcH > 0);
@@ -398,37 +413,30 @@ int wfc_generate(
     int ret = 0;
 
     struct wfc__Pattern *patts = NULL;
-    struct wfc__Mda_3u8 wave = {0};
-    struct wfc__Mda_2f entropies = {0};
-    struct wfc__Mda_2u8 ripple = {0};
+    uint8_t *wave = NULL;
+    float *entropies = NULL;
+    uint8_t *ripple = NULL;
 
-    struct wfc__Mda_2cu32 srcM = {src, {srcW, srcH}};
-    struct wfc__Mda_2u32 dstM = {dst, {dstW, dstH}};
+    struct wfc__Size2d srcSz = {{srcW, srcH}};
+    struct wfc__Size2d dstSz = {{dstW, dstH}};
 
     int pattCnt;
-    patts = wfc__gatherPatterns(n, srcM, &pattCnt);
+    patts = wfc__gatherPatterns(n, srcSz, src, &pattCnt);
 
-    wave.dim[0] = dstW;
-    wave.dim[1] = dstH;
-    wave.dim[2] = pattCnt;
-    wave.a = malloc(WFC__MDA_SIZE(wave));
-    for (int i = 0; i < WFC__MDA_LEN(wave); ++i) wave.a[i] = 1;
+    struct wfc__Size3d waveSz = {{dstW, dstH, pattCnt}};
+    wave = malloc(wfc__size3d(waveSz, sizeof(*wave)));
+    for (int i = 0; i < wfc__len3d(waveSz); ++i) wave[i] = 1;
 
-    entropies.dim[0] = dstW;
-    entropies.dim[1] = dstH;
-    entropies.a = malloc(WFC__MDA_SIZE(entropies));
-
-    ripple.dim[0] = dstW;
-    ripple.dim[1] = dstH;
-    ripple.a = malloc(WFC__MDA_SIZE(ripple));
+    entropies = malloc(wfc__size2d(dstSz, sizeof(*entropies)));
+    ripple = malloc(wfc__size2d(dstSz, sizeof(*ripple)));
 
     while (1) {
         int minPatts = pattCnt, maxPatts = 0;
-        for (int x = 0; x < wave.dim[0]; ++x) {
-            for (int y = 0; y < wave.dim[1]; ++y) {
+        for (int x = 0; x < waveSz.dim[0]; ++x) {
+            for (int y = 0; y < waveSz.dim[1]; ++y) {
                 int patts = 0;
-                for (int z = 0; z < wave.dim[2]; ++z) {
-                    if (WFC__MDA_GET(wave, x, y, z)) ++patts;
+                for (int z = 0; z < waveSz.dim[2]; ++z) {
+                    if (wave[wfc__coordsToInd3d(waveSz, x, y, z)]) ++patts;
                 }
 
                 if (patts < minPatts) minPatts = patts;
@@ -445,19 +453,21 @@ int wfc_generate(
             break;
         }
 
-        wfc__calcEntropies(patts, wave, &entropies);
+        wfc__calcEntropies(patts, waveSz, wave, entropies);
 
         int obsX, obsY;
-        wfc__observeOne(pattCnt, patts, entropies, &obsX, &obsY, &wave);
+        wfc__observeOne(pattCnt, patts, entropies,
+            &obsX, &obsY, waveSz, wave);
 
-        wfc__propagate(n, srcM, pattCnt, patts, obsX, obsY, &ripple, &wave);
+        wfc__propagate(n, srcSz, src, pattCnt, patts, obsX, obsY,
+            ripple, waveSz, wave);
     }
 
     for (int x = 0; x < dstW; ++x) {
         for (int y = 0; y < dstH; ++y) {
             int patt = 0;
             for (int z = 0; z < pattCnt; ++z) {
-                if (WFC__MDA_GET(wave, x, y, z)) {
+                if (wave[wfc__coordsToInd3d(waveSz, x, y, z)]) {
                     patt = z;
                     break;
                 }
@@ -465,16 +475,16 @@ int wfc_generate(
 
             int mx = patts[patt].l;
             int my = patts[patt].t;
-            uint32_t col = WFC__MDA_GET(srcM, mx, my);
+            uint32_t col = src[wfc__coordsToInd2d(srcSz, mx, my)];
 
-            WFC__MDA_GET(dstM, x, y) = col;
+            dst[wfc__coordsToInd2d(dstSz, x, y)] = col;
         }
     }
 
 cleanup:
-    free(ripple.a);
-    free(entropies.a);
-    free(wave.a);
+    free(ripple);
+    free(entropies);
+    free(wave);
     free(patts);
 
     return ret;

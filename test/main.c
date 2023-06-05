@@ -166,6 +166,7 @@ int testTall(void) {
     return 0;
 }
 
+// @TODO add a test for when src is bigger than dst
 int main(void) {
     unsigned seed = (unsigned)time(NULL);
     srand(seed);

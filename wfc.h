@@ -401,8 +401,11 @@ int wfc_generate(
     int n,
     int srcW, int srcH, const uint32_t *src,
     int dstW, int dstH, uint32_t *dst) {
-    // @TODO assert that n is <= (src|dst)(W|H)
     assert(n > 0);
+    assert(n <= srcW);
+    assert(n <= srcH);
+    assert(n <= dstW);
+    assert(n <= dstH);
     assert(srcW > 0);
     assert(srcH > 0);
     assert(src != NULL);

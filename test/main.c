@@ -166,7 +166,37 @@ int testTall(void) {
     return 0;
 }
 
-// @TODO add a test for when src is bigger than dst
+int testSrcBiggerThanDst(void) {
+    enum { n = 2, srcW = 6, srcH = 6, dstW = 4, dstH = 4 };
+
+    uint32_t src[srcW * srcH] = {
+        0,0,0,0,0,0,
+        0,1,1,1,1,0,
+        0,1,1,1,1,0,
+        0,1,1,1,1,0,
+        0,1,1,1,1,0,
+        0,0,0,0,0,0
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n,
+        srcW, srcH, (uint32_t*)&src,
+        dstW, dstH, (uint32_t*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 0 && dst[i] != 1) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int main(void) {
     unsigned seed = (unsigned)time(NULL);
     srand(seed);
@@ -175,7 +205,8 @@ int main(void) {
         testBasicN3() != 0 ||
         testPattern() != 0 ||
         testWide() != 0 ||
-        testTall() != 0) {
+        testTall() != 0 ||
+        testSrcBiggerThanDst() != 0) {
         printf("Seed was: %u\n", seed);
         return 1;
     }

@@ -57,7 +57,7 @@ void benchmarkImage(const char *path, int n, int dstW, int dstH) {
     src = stbi_load(path, &srcW, &srcH, NULL, 4);
     assert(src != NULL);
 
-    dst = malloc(dstW * dstH * 4);
+    dst = malloc(dstW * dstH * sizeof(*dst));
 
     printf("image=%s n=%d dstW=%d dstH=%d (repeats=%d)\n",
         path, n, dstW, dstH, REPEATS);
@@ -87,12 +87,12 @@ void benchmarkText(const char *path, int n, int dstW, int dstH) {
         src[i] = u;
     }
 
-    dst = malloc(dstW * dstH * 4);
+    dst = malloc(dstW * dstH * sizeof(*dst));
 
     printf("image=%s n=%d dstW=%d dstH=%d (repeats=%d)\n",
         path, n, dstW, dstH, REPEATS);
 
-    benchmark(n, srcW, srcH, (uint32_t*)src, dstW, dstH, dst);
+    benchmark(n, srcW, srcH, src, dstW, dstH, dst);
 
     free(dst);
     free(src);
@@ -106,8 +106,7 @@ int main(void) {
     benchmarkImage("../external/samples/Angular.png", 3, 64, 64);
 
     putchar('\n');
-    // @TODO benchmark with a larger sample
-    benchmarkText("test.txt", 2, 64, 64);
+    benchmarkText("test.txt", 5, 120, 120);
 
     return 0;
 }

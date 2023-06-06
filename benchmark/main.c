@@ -27,25 +27,25 @@ void benchmark(
     int n,
     int srcW, int srcH, const uint32_t *src,
     int dstW, int dstH, uint32_t *dst) {
-    double times[REPEATS];
+    int first = 1;
+    double avg = 0.0, min, max;
+
     putchar('\t');
-    for (int i = 0; i <REPEATS; ++i) {
-        times[i] = measure(n, srcW, srcH, src, dstW, dstH, dst);
+    for (int i = 0; i < REPEATS; ++i) {
+        double elapsed = measure(n, srcW, srcH, src, dstW, dstH, dst);
+
+        avg += elapsed;
+        if (first || elapsed < min) min = elapsed;
+        if (first || elapsed > max) max = elapsed;
+        first = 0;
 
         if (i % 5 != 4) putchar('.');
         else putchar('o');
         fflush(stdout);
     }
-    putchar('\n');
-
-    double avg = 0.0, min = times[0], max = times[0];
-    for (int i = 0; i < REPEATS; ++i) {
-        avg += times[i];
-        if (times[i] < min) min = times[i];
-        if (times[i] > max) max = times[i];
-    }
     avg /= REPEATS;
 
+    putchar('\n');
     printf("\tavg=%.4f min=%.4f max=%.4f\n", avg, min, max);
 }
 

@@ -49,19 +49,18 @@ void benchmark(
     printf("\tavg=%.4f min=%.4f max=%.4f\n", avg, min, max);
 }
 
-// @TODO benchmark with a generated image
-void benchmarkImageLoad(const char *imagePath, int n, int dstW, int dstH) {
+void benchmarkImage(const char *path, int n, int dstW, int dstH) {
     unsigned char *src = NULL;
     uint32_t *dst = NULL;
 
     int srcW, srcH;
-    src = stbi_load(imagePath, &srcW, &srcH, NULL, 4);
+    src = stbi_load(path, &srcW, &srcH, NULL, 4);
     assert(src != NULL);
 
     dst = malloc(dstW * dstH * 4);
 
     printf("image=%s n=%d dstW=%d dstH=%d (repeats=%d)\n",
-        imagePath, n, dstW, dstH, REPEATS);
+        path, n, dstW, dstH, REPEATS);
 
     benchmark(n, srcW, srcH, (uint32_t*)src, dstW, dstH, dst);
 
@@ -69,14 +68,46 @@ void benchmarkImageLoad(const char *imagePath, int n, int dstW, int dstH) {
     stbi_image_free(src);
 }
 
+void benchmarkText(const char *path, int n, int dstW, int dstH) {
+    FILE *file = NULL;
+    uint32_t *src = NULL;
+    uint32_t *dst = NULL;
+
+    file = fopen(path, "r");
+    assert(file != NULL);
+
+    int srcW, srcH;
+    assert(fscanf(file, "%d", &srcW) == 1);
+    assert(fscanf(file, "%d", &srcH) == 1);
+
+    src = malloc(srcW * srcH * sizeof(*src));
+    for (int i = 0; i < srcW * srcH; ++i) {
+        uint32_t u;
+        assert(fscanf(file, "%u", &u) == 1);
+        src[i] = u;
+    }
+
+    dst = malloc(dstW * dstH * 4);
+
+    printf("image=%s n=%d dstW=%d dstH=%d (repeats=%d)\n",
+        path, n, dstW, dstH, REPEATS);
+
+    benchmark(n, srcW, srcH, (uint32_t*)src, dstW, dstH, dst);
+
+    free(dst);
+    free(src);
+    fclose(file);
+}
+
 // @TODO create a text file with the benchmark report
 int main(void) {
     srand((unsigned)time(NULL));
 
-    benchmarkImageLoad("../external/samples/Angular.png", 3, 64, 64);
+    benchmarkImage("../external/samples/Angular.png", 3, 64, 64);
 
-    //putchar('\n');
-    //benchmarkImageLoad ...
+    putchar('\n');
+    // @TODO benchmark with a larger sample
+    benchmarkText("test.txt", 2, 64, 64);
 
     return 0;
 }

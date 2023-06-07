@@ -102,10 +102,10 @@ void benchmarkText(const char *path, int n, int dstW, int dstH) {
 int main(void) {
     srand((unsigned)time(NULL));
 
-    benchmarkImage("../external/samples/Angular.png", 3, 64, 64);
+    benchmarkImage("external/samples/Angular.png", 3, 64, 64);
 
     putchar('\n');
-    benchmarkText("test.txt", 5, 120, 120);
+    benchmarkText("benchmark/test.txt", 5, 120, 120);
 
     return 0;
 }

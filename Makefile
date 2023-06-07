@@ -6,6 +6,7 @@ BIN_DIR = bin
 
 HDRS = $(wildcard *.h external/lib/*.h)
 TEST_HDRS = $(wildcard test/*.h)
+UI_HDRS = $(wildcard ui/*.h)
 BENCHMARK_HDRS = $(wildcard benchmark/*.h)
 
 BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -I./ -Iexternal/lib -g -fno-omit-frame-pointer
@@ -41,6 +42,20 @@ $(BIN_DIR)/benchmark/done.txt: $(BIN_DIR)/benchmark/main
 $(BIN_DIR)/benchmark/main: benchmark/main.c $(HDRS) $(BENCHMARK_HDRS)
 	@mkdir -p $(@D)
 	$(CC) $(BUILD_FLAGS) -O3 -mavx2 $< -o $@ $(LINK_FLAGS)
+
+ui: cli gui
+
+cli: $(BIN_DIR)/ui/cli
+
+$(BIN_DIR)/ui/cli: ui/main_cli.c $(HDRS) $(UI_HDRS)
+	@mkdir -p $(@D)
+	$(CC) $(BUILD_FLAGS) -O3 -mavx2 $< -o $@ $(LINK_FLAGS)
+
+gui: $(BIN_DIR)/ui/gui
+
+$(BIN_DIR)/ui/gui: ui/main_gui.c $(HDRS) $(UI_HDRS)
+	@mkdir -p $(@D)
+	$(CC) $(BUILD_FLAGS) -O3 -mavx2 $< -o $@ $(LINK_FLAGS) `sdl2-config --cflags --libs` -lSDL2_image
 
 clean:
 	rm -rf $(BIN_DIR)

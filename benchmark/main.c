@@ -59,8 +59,8 @@ void benchmarkImage(const char *path, int n, int dstW, int dstH) {
 
     dst = malloc(dstW * dstH * sizeof(*dst));
 
-    printf("image=%s n=%d dstW=%d dstH=%d (repeats=%d)\n",
-        path, n, dstW, dstH, REPEATS);
+    printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
+        path, REPEATS, n, dstW, dstH);
 
     benchmark(n, srcW, srcH, (uint32_t*)src, dstW, dstH, dst);
 
@@ -89,8 +89,8 @@ void benchmarkText(const char *path, int n, int dstW, int dstH) {
 
     dst = malloc(dstW * dstH * sizeof(*dst));
 
-    printf("image=%s n=%d dstW=%d dstH=%d (repeats=%d)\n",
-        path, n, dstW, dstH, REPEATS);
+    printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
+        path, REPEATS, n, dstW, dstH);
 
     benchmark(n, srcW, srcH, src, dstW, dstH, dst);
 
@@ -99,7 +99,6 @@ void benchmarkText(const char *path, int n, int dstW, int dstH) {
     fclose(file);
 }
 
-// @TODO create a text file with the benchmark report
 int main(void) {
     srand((unsigned)time(NULL));
 

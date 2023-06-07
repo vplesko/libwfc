@@ -35,16 +35,6 @@ $(BIN_DIR)/test/main_msan: test/main.c $(HDRS) $(TEST_HDRS)
 	@mkdir -p $(@D)
 	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_DBG) -Wconversion -fsanitize=memory -fsanitize-memory-track-origins -fPIE -pie $< -o $@ $(LINK_FLAGS)
 
-benchmark: $(BIN_DIR)/benchmark/done.txt
-
-$(BIN_DIR)/benchmark/done.txt: $(BIN_DIR)/benchmark/main
-	$(BIN_DIR)/benchmark/main
-	@touch $@
-
-$(BIN_DIR)/benchmark/main: benchmark/main.c $(HDRS) $(BENCHMARK_HDRS)
-	@mkdir -p $(@D)
-	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS)
-
 ui: cli gui
 
 cli: $(BIN_DIR)/ui/cli
@@ -58,6 +48,16 @@ gui: $(BIN_DIR)/ui/gui
 $(BIN_DIR)/ui/gui: ui/main_gui.c $(HDRS) $(UI_HDRS)
 	@mkdir -p $(@D)
 	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) `sdl2-config --cflags --libs` -lSDL2_image
+
+benchmark: $(BIN_DIR)/benchmark/done.txt
+
+$(BIN_DIR)/benchmark/done.txt: $(BIN_DIR)/benchmark/main
+	$(BIN_DIR)/benchmark/main
+	@touch $@
+
+$(BIN_DIR)/benchmark/main: benchmark/main.c $(HDRS) $(BENCHMARK_HDRS)
+	@mkdir -p $(@D)
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS)
 
 clean:
 	rm -rf $(BIN_DIR)

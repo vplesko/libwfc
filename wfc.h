@@ -43,6 +43,7 @@ int wfc__indWrap(int ind, int sz) {
 
 struct wfc__Size2d { int dim[2]; };
 struct wfc__Size3d { int dim[3]; };
+struct wfc__Size4d { int dim[4]; };
 
 int wfc__len2d(struct wfc__Size2d sz) {
     return sz.dim[0] * sz.dim[1];
@@ -50,6 +51,10 @@ int wfc__len2d(struct wfc__Size2d sz) {
 
 int wfc__len3d(struct wfc__Size3d sz) {
     return sz.dim[0] * sz.dim[1] * sz.dim[2];
+}
+
+int wfc__len4d(struct wfc__Size4d sz) {
+    return sz.dim[0] * sz.dim[1] * sz.dim[2] * sz.dim[3];
 }
 
 size_t wfc__size2d(struct wfc__Size2d sz, size_t membSz) {
@@ -60,12 +65,21 @@ size_t wfc__size3d(struct wfc__Size3d sz, size_t membSz) {
     return (size_t)wfc__len3d(sz) * membSz;
 }
 
+size_t wfc__size4d(struct wfc__Size4d sz, size_t membSz) {
+    return (size_t)wfc__len4d(sz) * membSz;
+}
+
 int wfc__coordsToInd2d(struct wfc__Size2d sz, int c0, int c1) {
     return c1 * sz.dim[0] + c0;
 }
 
 int wfc__coordsToInd3d(struct wfc__Size3d sz, int c0, int c1, int c2) {
     return c2 * sz.dim[0] * sz.dim[1] + c1 * sz.dim[0] + c0;
+}
+
+int wfc__coordsToInd4d(struct wfc__Size4d sz, int c0, int c1, int c2, int c3) {
+    return c3 * sz.dim[0] * sz.dim[1] * sz.dim[2]
+        + c2 * sz.dim[0] * sz.dim[1] + c1 * sz.dim[0] + c0;
 }
 
 int wfc__coordsToInd2dWrap(struct wfc__Size2d sz, int c0, int c1) {
@@ -81,6 +95,16 @@ int wfc__coordsToInd3dWrap(struct wfc__Size3d sz, int c0, int c1, int c2) {
         wfc__indWrap(c0, sz.dim[0]),
         wfc__indWrap(c1, sz.dim[1]),
         wfc__indWrap(c2, sz.dim[2]));
+}
+
+int wfc__coordsToInd4dWrap(struct wfc__Size4d sz,
+    int c0, int c1, int c2, int c3) {
+    return wfc__coordsToInd4d(
+        sz,
+        wfc__indWrap(c0, sz.dim[0]),
+        wfc__indWrap(c1, sz.dim[1]),
+        wfc__indWrap(c2, sz.dim[2]),
+        wfc__indWrap(c3, sz.dim[3]));
 }
 
 void wfc__indToCoords2d(struct wfc__Size2d sz, int ind, int *c0, int *c1) {
@@ -103,6 +127,22 @@ void wfc__indToCoords3d(
     *c0 = c0_;
     *c1 = c1_;
     *c2 = c2_;
+}
+
+void wfc__indToCoords4d(
+    struct wfc__Size4d sz, int ind, int *c0, int *c1, int *c2, int *c3) {
+    int c3_ = ind / (sz.dim[0] * sz.dim[1] * sz.dim[2]);
+    ind -= c3_ * (sz.dim[0] * sz.dim[1] * sz.dim[2]);
+    int c2_ = ind / (sz.dim[0] * sz.dim[1]);
+    ind -= c2_ * (sz.dim[0] * sz.dim[1]);
+    int c1_ = ind / sz.dim[0];
+    ind -= c1_ * sz.dim[0];
+    int c0_ = ind;
+
+    *c0 = c0_;
+    *c1 = c1_;
+    *c2 = c2_;
+    *c3 = c3_;
 }
 
 // wfc code

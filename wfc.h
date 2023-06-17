@@ -207,7 +207,7 @@ void wfc__calcEntropies(
 
 void wfc__observeOne(
     int pattCnt, const struct wfc__Pattern *patts,
-    float *entropies,
+    const float *entropies,
     int *obsX, int *obsY,
     struct wfc__Size3d waveSz, uint8_t *wave) {
     struct wfc__Size2d dstSz = {{waveSz.dim[0], waveSz.dim[1]}};

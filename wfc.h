@@ -412,7 +412,6 @@ int wfc__propagateSingle(
     return changed;
 }
 
-// @TODO there's no need for odd-even, remove that
 void wfc__propagate(
     int n, int seedX, int seedY,
     struct wfc__Size4d overlapsSz, const uint8_t *overlaps,
@@ -423,30 +422,13 @@ void wfc__propagate(
     memset(ripple, 0, wfc__size2d(dstSz, sizeof(*ripple)));
     ripple[wfc__coordsToInd2d(dstSz, seedX, seedY)] = 1;
 
-    uint8_t oddEven = 0;
-
-    while (1) {
-        uint8_t oddEvenMask = (uint8_t)(1 << oddEven);
-        uint8_t oddEvenMaskNext = (uint8_t)(1 << (1 - oddEven));
-
-        int done = 1;
-        for (int x = 0; x < dstSz.dim[0]; ++x) {
-            for (int y = 0; y < dstSz.dim[1]; ++y) {
-                if (ripple[wfc__coordsToInd2d(dstSz, x, y)] & oddEvenMask) {
-                    done = 0;
-                }
-                ripple[wfc__coordsToInd2d(dstSz, x, y)] &= ~oddEvenMaskNext;
-            }
-        }
-
-        if (done) break;
+    int done = 0;
+    while (!done) {
+        done = 1;
 
         for (int xN = 0; xN < waveSz.dim[0]; ++xN) {
             for (int yN = 0; yN < waveSz.dim[1]; ++yN) {
-                if (!(ripple[wfc__coordsToInd2d(dstSz, xN, yN)] &
-                        oddEvenMask)) {
-                    continue;
-                }
+                if (!ripple[wfc__coordsToInd2d(dstSz, xN, yN)]) continue;
 
                 for (int dx = -(n - 1); dx <= n - 1; ++dx) {
                     for (int dy = -(n - 1); dy <= n - 1; ++dy) {
@@ -455,15 +437,15 @@ void wfc__propagate(
 
                         if (wfc__propagateSingle(n, x, y, xN, yN,
                                 overlapsSz, overlaps, waveSz, wave)) {
-                            ripple[wfc__coordsToInd2dWrap(dstSz, x, y)]
-                                |= oddEvenMask | oddEvenMaskNext;
+                            ripple[wfc__coordsToInd2dWrap(dstSz, x, y)] = 1;
+                            done = 0;
                         }
                     }
                 }
+
+                ripple[wfc__coordsToInd2d(dstSz, xN, yN)] = 0;
             }
         }
-
-        oddEven = 1 - oddEven;
     }
 }
 

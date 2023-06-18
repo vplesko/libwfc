@@ -41,9 +41,33 @@ int wfc__indWrap(int ind, int sz) {
     return sz + ind % sz;
 }
 
+// @TODO same for all MDAs
+#define WFC__A4D_DEF(type, abbrv) \
+    struct wfc__A4d_##abbrv { \
+        type *a; \
+        int d0, d1, d2, d3; \
+    }
+
+#define WFC__A4D_LEN(arr) ((arr).d0 * (arr).d1 * (arr).d2 * (arr).d3)
+
+#define WFC__A4D_SIZE(arr) ((size_t)WFC__A4D_LEN(arr) * sizeof(*(arr).a))
+
+#define WFC__A4D_GET(arr, c0, c1, c2, c3) \
+    ((arr).a[ \
+        (c3) * (arr).d0 * (arr).d1 * (arr).d2 + \
+        (c2) * (arr).d0 * (arr).d1 + \
+        (c1) * (arr).d0 + \
+        (c0)])
+
+#define WFC__A4D_GET_WRAP(arr, c0, c1, c2, c3) \
+    ((arr).a[ \
+        wfc__indWrap(c3, (arr).d3) * (arr).d0 * (arr).d1 * (arr).d2 + \
+        wfc__indWrap(c2, (arr).d2) * (arr).d0 * (arr).d1 + \
+        wfc__indWrap(c1, (arr).d1) * (arr).d0 + \
+        wfc__indWrap(c0, (arr).d0)])
+
 struct wfc__Size2d { int dim[2]; };
 struct wfc__Size3d { int dim[3]; };
-struct wfc__Size4d { int dim[4]; };
 
 int wfc__len2d(struct wfc__Size2d sz) {
     return sz.dim[0] * sz.dim[1];
@@ -51,10 +75,6 @@ int wfc__len2d(struct wfc__Size2d sz) {
 
 int wfc__len3d(struct wfc__Size3d sz) {
     return sz.dim[0] * sz.dim[1] * sz.dim[2];
-}
-
-int wfc__len4d(struct wfc__Size4d sz) {
-    return sz.dim[0] * sz.dim[1] * sz.dim[2] * sz.dim[3];
 }
 
 size_t wfc__size2d(struct wfc__Size2d sz, size_t membSz) {
@@ -65,22 +85,12 @@ size_t wfc__size3d(struct wfc__Size3d sz, size_t membSz) {
     return (size_t)wfc__len3d(sz) * membSz;
 }
 
-size_t wfc__size4d(struct wfc__Size4d sz, size_t membSz) {
-    return (size_t)wfc__len4d(sz) * membSz;
-}
-
-// @TODO this is unwieldy and less type-accurate, go back to MDA macros
 int wfc__coordsToInd2d(struct wfc__Size2d sz, int c0, int c1) {
     return c1 * sz.dim[0] + c0;
 }
 
 int wfc__coordsToInd3d(struct wfc__Size3d sz, int c0, int c1, int c2) {
     return c2 * sz.dim[0] * sz.dim[1] + c1 * sz.dim[0] + c0;
-}
-
-int wfc__coordsToInd4d(struct wfc__Size4d sz, int c0, int c1, int c2, int c3) {
-    return c3 * sz.dim[0] * sz.dim[1] * sz.dim[2]
-        + c2 * sz.dim[0] * sz.dim[1] + c1 * sz.dim[0] + c0;
 }
 
 int wfc__coordsToInd2dWrap(struct wfc__Size2d sz, int c0, int c1) {
@@ -96,16 +106,6 @@ int wfc__coordsToInd3dWrap(struct wfc__Size3d sz, int c0, int c1, int c2) {
         wfc__indWrap(c0, sz.dim[0]),
         wfc__indWrap(c1, sz.dim[1]),
         wfc__indWrap(c2, sz.dim[2]));
-}
-
-int wfc__coordsToInd4dWrap(struct wfc__Size4d sz,
-    int c0, int c1, int c2, int c3) {
-    return wfc__coordsToInd4d(
-        sz,
-        wfc__indWrap(c0, sz.dim[0]),
-        wfc__indWrap(c1, sz.dim[1]),
-        wfc__indWrap(c2, sz.dim[2]),
-        wfc__indWrap(c3, sz.dim[3]));
 }
 
 void wfc__indToCoords2d(struct wfc__Size2d sz, int ind, int *c0, int *c1) {
@@ -130,28 +130,14 @@ void wfc__indToCoords3d(
     *c2 = c2_;
 }
 
-void wfc__indToCoords4d(
-    struct wfc__Size4d sz, int ind, int *c0, int *c1, int *c2, int *c3) {
-    int c3_ = ind / (sz.dim[0] * sz.dim[1] * sz.dim[2]);
-    ind -= c3_ * (sz.dim[0] * sz.dim[1] * sz.dim[2]);
-    int c2_ = ind / (sz.dim[0] * sz.dim[1]);
-    ind -= c2_ * (sz.dim[0] * sz.dim[1]);
-    int c1_ = ind / sz.dim[0];
-    ind -= c1_ * sz.dim[0];
-    int c0_ = ind;
-
-    *c0 = c0_;
-    *c1 = c1_;
-    *c2 = c2_;
-    *c3 = c3_;
-}
-
 // wfc code
 
 struct wfc__Pattern {
     int l, t;
     int freq;
 };
+
+WFC__A4D_DEF(uint8_t, u8);
 
 int wfc__patternsEq(
     int n,
@@ -251,21 +237,16 @@ int wfc__overlapMatches(
     return 1;
 }
 
-int wfc__coordsToOverlapsInd(int n, struct wfc__Size4d overlapsSz,
-    int patt1, int patt2, int dx, int dy) {
-    int c2 = dx + (n - 1);
-    int c3 = dy + (n - 1);
-    return wfc__coordsToInd4d(overlapsSz, patt1, patt2, c2, c3);
-}
-
-uint8_t* wfc__calcOverlaps(
+struct wfc__A4d_u8 wfc__calcOverlaps(
     int n,
     struct wfc__Size2d srcSz, const uint32_t *src,
-    int pattCnt, const struct wfc__Pattern *patts,
-    struct wfc__Size4d *overlapsSz) {
-    struct wfc__Size4d overlapsSz_ = {{pattCnt, pattCnt, 2 * n - 1, 2 * n - 1}};
-
-    uint8_t *overlaps = malloc(wfc__size4d(overlapsSz_, sizeof(*overlaps)));
+    int pattCnt, const struct wfc__Pattern *patts) {
+    struct wfc__A4d_u8 overlaps;
+    overlaps.d0 = pattCnt;
+    overlaps.d1 = pattCnt;
+    overlaps.d2 = 2 * n - 1;
+    overlaps.d3 = 2 * n - 1;
+    overlaps.a = malloc(WFC__A4D_SIZE(overlaps));
 
     for (int i = 0; i < pattCnt; ++i) {
         for (int j = 0; j < pattCnt; ++j) {
@@ -273,14 +254,13 @@ uint8_t* wfc__calcOverlaps(
                 for (int dy = -(n - 1); dy <= n - 1; ++dy) {
                     int overlap = wfc__overlapMatches(n, srcSz, src,
                         patts[i], patts[j], dx, dy);
-                    overlaps[wfc__coordsToOverlapsInd(
-                        n, overlapsSz_, i, j, dx, dy)] = overlap ? 1 : 0;
+                    WFC__A4D_GET(overlaps, i, j, dx + n - 1, dy + n - 1) =
+                        overlap ? 1 : 0;
                 }
             }
         }
     }
 
-    *overlapsSz = overlapsSz_;
     return overlaps;
 }
 
@@ -383,9 +363,9 @@ void wfc__observeOne(
 
 int wfc__propagateSingle(
     int n, int x, int y, int xN, int yN,
-    struct wfc__Size4d overlapsSz, const uint8_t *overlaps,
+    struct wfc__A4d_u8 overlaps,
     struct wfc__Size3d waveSz, uint8_t *wave) {
-    int pattCnt = overlapsSz.dim[0];
+    int pattCnt = overlaps.d0;
 
     int changed = 0;
 
@@ -394,8 +374,8 @@ int wfc__propagateSingle(
             int mayKeep = 0;
             for (int pN = 0; pN < pattCnt; ++pN) {
                 if (wave[wfc__coordsToInd3dWrap(waveSz, xN, yN, pN)]) {
-                    if (overlaps[wfc__coordsToOverlapsInd
-                            (n, overlapsSz, p, pN, xN - x, yN - y)]) {
+                    if (WFC__A4D_GET(overlaps,
+                            p, pN, xN - x + n - 1, yN - y + n - 1)) {
                         mayKeep = 1;
                         break;
                     }
@@ -414,7 +394,7 @@ int wfc__propagateSingle(
 
 void wfc__propagate(
     int n, int seedX, int seedY,
-    struct wfc__Size4d overlapsSz, const uint8_t *overlaps,
+    struct wfc__A4d_u8 overlaps,
     uint8_t *ripple,
     struct wfc__Size3d waveSz, uint8_t *wave) {
     struct wfc__Size2d dstSz = {{waveSz.dim[0], waveSz.dim[1]}};
@@ -436,7 +416,7 @@ void wfc__propagate(
                         int y = yN + dy;
 
                         if (wfc__propagateSingle(n, x, y, xN, yN,
-                                overlapsSz, overlaps, waveSz, wave)) {
+                                overlaps, waveSz, wave)) {
                             ripple[wfc__coordsToInd2dWrap(dstSz, x, y)] = 1;
                             done = 0;
                         }
@@ -471,7 +451,7 @@ int wfc_generate(
     uint8_t *wave = NULL;
     float *entropies = NULL;
     uint8_t *ripple = NULL;
-    uint8_t *overlaps = NULL;
+    struct wfc__A4d_u8 overlaps = {0};
 
     struct wfc__Size2d srcSz = {{srcW, srcH}};
     struct wfc__Size2d dstSz = {{dstW, dstH}};
@@ -487,8 +467,7 @@ int wfc_generate(
 
     ripple = malloc(wfc__size2d(dstSz, sizeof(*ripple)));
 
-    struct wfc__Size4d overlapsSz;
-    overlaps = wfc__calcOverlaps(n, srcSz, src, pattCnt, patts, &overlapsSz);
+    overlaps = wfc__calcOverlaps(n, srcSz, src, pattCnt, patts);
 
     while (1) {
         int minPatts = pattCnt, maxPatts = 0;
@@ -519,8 +498,7 @@ int wfc_generate(
         wfc__observeOne(pattCnt, patts, entropies,
             &obsX, &obsY, waveSz, wave);
 
-        wfc__propagate(n, obsX, obsY,
-            overlapsSz, overlaps, ripple, waveSz, wave);
+        wfc__propagate(n, obsX, obsY, overlaps, ripple, waveSz, wave);
     }
 
     for (int x = 0; x < dstW; ++x) {
@@ -542,7 +520,7 @@ int wfc_generate(
     }
 
 cleanup:
-    free(overlaps);
+    free(overlaps.a);
     free(ripple);
     free(entropies);
     free(wave);

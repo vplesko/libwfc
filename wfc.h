@@ -42,6 +42,28 @@ int wfc__indWrap(int ind, int sz) {
 }
 
 // @TODO same for all MDAs
+#define WFC__A3D_DEF(type, abbrv) \
+    struct wfc__A3d_##abbrv { \
+        type *a; \
+        int d0, d1, d2; \
+    }
+
+#define WFC__A3D_LEN(arr) ((arr).d0 * (arr).d1 * (arr).d2)
+
+#define WFC__A3D_SIZE(arr) ((size_t)WFC__A3D_LEN(arr) * sizeof(*(arr).a))
+
+#define WFC__A3D_GET(arr, c0, c1, c2) \
+    ((arr).a[ \
+        (c2) * (arr).d0 * (arr).d1 + \
+        (c1) * (arr).d0 + \
+        (c0)])
+
+#define WFC__A3D_GET_WRAP(arr, c0, c1, c2) \
+    ((arr).a[ \
+        wfc__indWrap(c2, (arr).d2) * (arr).d0 * (arr).d1 + \
+        wfc__indWrap(c1, (arr).d1) * (arr).d0 + \
+        wfc__indWrap(c0, (arr).d0)])
+
 #define WFC__A4D_DEF(type, abbrv) \
     struct wfc__A4d_##abbrv { \
         type *a; \
@@ -67,30 +89,17 @@ int wfc__indWrap(int ind, int sz) {
         wfc__indWrap(c0, (arr).d0)])
 
 struct wfc__Size2d { int dim[2]; };
-struct wfc__Size3d { int dim[3]; };
 
 int wfc__len2d(struct wfc__Size2d sz) {
     return sz.dim[0] * sz.dim[1];
-}
-
-int wfc__len3d(struct wfc__Size3d sz) {
-    return sz.dim[0] * sz.dim[1] * sz.dim[2];
 }
 
 size_t wfc__size2d(struct wfc__Size2d sz, size_t membSz) {
     return (size_t)wfc__len2d(sz) * membSz;
 }
 
-size_t wfc__size3d(struct wfc__Size3d sz, size_t membSz) {
-    return (size_t)wfc__len3d(sz) * membSz;
-}
-
 int wfc__coordsToInd2d(struct wfc__Size2d sz, int c0, int c1) {
     return c1 * sz.dim[0] + c0;
-}
-
-int wfc__coordsToInd3d(struct wfc__Size3d sz, int c0, int c1, int c2) {
-    return c2 * sz.dim[0] * sz.dim[1] + c1 * sz.dim[0] + c0;
 }
 
 int wfc__coordsToInd2dWrap(struct wfc__Size2d sz, int c0, int c1) {
@@ -98,14 +107,6 @@ int wfc__coordsToInd2dWrap(struct wfc__Size2d sz, int c0, int c1) {
         sz,
         wfc__indWrap(c0, sz.dim[0]),
         wfc__indWrap(c1, sz.dim[1]));
-}
-
-int wfc__coordsToInd3dWrap(struct wfc__Size3d sz, int c0, int c1, int c2) {
-    return wfc__coordsToInd3d(
-        sz,
-        wfc__indWrap(c0, sz.dim[0]),
-        wfc__indWrap(c1, sz.dim[1]),
-        wfc__indWrap(c2, sz.dim[2]));
 }
 
 void wfc__indToCoords2d(struct wfc__Size2d sz, int ind, int *c0, int *c1) {
@@ -117,19 +118,6 @@ void wfc__indToCoords2d(struct wfc__Size2d sz, int ind, int *c0, int *c1) {
     *c1 = c1_;
 }
 
-void wfc__indToCoords3d(
-    struct wfc__Size3d sz, int ind, int *c0, int *c1, int *c2) {
-    int c2_ = ind / (sz.dim[0] * sz.dim[1]);
-    ind -= c2_ * (sz.dim[0] * sz.dim[1]);
-    int c1_ = ind / sz.dim[0];
-    ind -= c1_ * sz.dim[0];
-    int c0_ = ind;
-
-    *c0 = c0_;
-    *c1 = c1_;
-    *c2 = c2_;
-}
-
 // wfc code
 
 struct wfc__Pattern {
@@ -137,6 +125,7 @@ struct wfc__Pattern {
     int freq;
 };
 
+WFC__A3D_DEF(uint8_t, u8);
 WFC__A4D_DEF(uint8_t, u8);
 
 int wfc__patternsEq(
@@ -266,16 +255,16 @@ struct wfc__A4d_u8 wfc__calcOverlaps(
 
 void wfc__calcEntropies(
     const struct wfc__Pattern *patts,
-    struct wfc__Size3d waveSz, uint8_t *wave,
+    const struct wfc__A3d_u8 wave,
     float *entropies) {
-    struct wfc__Size2d dstSz = {{waveSz.dim[0], waveSz.dim[1]}};
+    struct wfc__Size2d dstSz = {{wave.d0, wave.d1}};
 
-    for (int x = 0; x < waveSz.dim[0]; ++x) {
-        for (int y = 0; y < waveSz.dim[1]; ++y) {
+    for (int x = 0; x < wave.d0; ++x) {
+        for (int y = 0; y < wave.d1; ++y) {
             int totalFreq = 0;
             int availPatts = 0;
-            for (int z = 0; z < waveSz.dim[2]; ++z) {
-                if (wave[wfc__coordsToInd3d(waveSz, x, y, z)]) {
+            for (int z = 0; z < wave.d2; ++z) {
+                if (WFC__A3D_GET(wave, x, y, z)) {
                     totalFreq += patts[z].freq;
                     ++availPatts;
                 }
@@ -284,8 +273,8 @@ void wfc__calcEntropies(
             float entropy = 0.0f;
             // check is here to ensure entropy of observed points becomes 0
             if (availPatts > 1) {
-                for (int z = 0; z < waveSz.dim[2]; ++z) {
-                    if (wave[wfc__coordsToInd3d(waveSz, x, y, z)]) {
+                for (int z = 0; z < wave.d2; ++z) {
+                    if (WFC__A3D_GET(wave, x, y, z)) {
                         float prob = (float)patts[z].freq / (float)totalFreq;
                         entropy -= prob * log2f(prob);
                     }
@@ -301,8 +290,8 @@ void wfc__observeOne(
     int pattCnt, const struct wfc__Pattern *patts,
     const float *entropies,
     int *obsX, int *obsY,
-    struct wfc__Size3d waveSz, uint8_t *wave) {
-    struct wfc__Size2d dstSz = {{waveSz.dim[0], waveSz.dim[1]}};
+    struct wfc__A3d_u8 wave) {
+    struct wfc__Size2d dstSz = {{wave.d0, wave.d1}};
 
     float smallest;
     int smallestCnt = 0;
@@ -336,14 +325,14 @@ void wfc__observeOne(
     {
         int totalFreq = 0;
         for (int i = 0; i < pattCnt; ++i) {
-            if (wave[wfc__coordsToInd3d(waveSz, chosenX, chosenY, i)]) {
+            if (WFC__A3D_GET(wave, chosenX, chosenY, i)) {
                 totalFreq += patts[i].freq;
             }
         }
         int chosenInst = wfc__rand_i(totalFreq);
 
         for (int i = 0; i < pattCnt; ++i) {
-            if (wave[wfc__coordsToInd3d(waveSz, chosenX, chosenY, i)]) {
+            if (WFC__A3D_GET(wave, chosenX, chosenY, i)) {
                 if (chosenInst < patts[i].freq) {
                     chosenPatt = i;
                     break;
@@ -356,24 +345,24 @@ void wfc__observeOne(
     *obsX = chosenX;
     *obsY = chosenY;
     for (int i = 0; i < pattCnt; ++i) {
-        wave[wfc__coordsToInd3d(waveSz, chosenX, chosenY, i)] = 0;
+        WFC__A3D_GET(wave, chosenX, chosenY, i) = 0;
     }
-    wave[wfc__coordsToInd3d(waveSz, chosenX, chosenY, chosenPatt)] = 1;
+    WFC__A3D_GET(wave, chosenX, chosenY, chosenPatt) = 1;
 }
 
 int wfc__propagateSingle(
     int n, int x, int y, int xN, int yN,
     struct wfc__A4d_u8 overlaps,
-    struct wfc__Size3d waveSz, uint8_t *wave) {
+    struct wfc__A3d_u8 wave) {
     int pattCnt = overlaps.d0;
 
     int changed = 0;
 
     for (int p = 0; p < pattCnt; ++p) {
-        if (wave[wfc__coordsToInd3dWrap(waveSz, x, y, p)]) {
+        if (WFC__A3D_GET_WRAP(wave, x, y, p)) {
             int mayKeep = 0;
             for (int pN = 0; pN < pattCnt; ++pN) {
-                if (wave[wfc__coordsToInd3dWrap(waveSz, xN, yN, pN)]) {
+                if (WFC__A3D_GET_WRAP(wave, xN, yN, pN)) {
                     if (WFC__A4D_GET(overlaps,
                             p, pN, xN - x + n - 1, yN - y + n - 1)) {
                         mayKeep = 1;
@@ -383,7 +372,7 @@ int wfc__propagateSingle(
             }
 
             if (!mayKeep) {
-                wave[wfc__coordsToInd3dWrap(waveSz, x, y, p)] = 0;
+                WFC__A3D_GET_WRAP(wave, x, y, p) = 0;
                 changed = 1;
             }
         }
@@ -396,8 +385,8 @@ void wfc__propagate(
     int n, int seedX, int seedY,
     struct wfc__A4d_u8 overlaps,
     uint8_t *ripple,
-    struct wfc__Size3d waveSz, uint8_t *wave) {
-    struct wfc__Size2d dstSz = {{waveSz.dim[0], waveSz.dim[1]}};
+    struct wfc__A3d_u8 wave) {
+    struct wfc__Size2d dstSz = {{wave.d0, wave.d1}};
 
     memset(ripple, 0, wfc__size2d(dstSz, sizeof(*ripple)));
     ripple[wfc__coordsToInd2d(dstSz, seedX, seedY)] = 1;
@@ -406,8 +395,8 @@ void wfc__propagate(
     while (!done) {
         done = 1;
 
-        for (int xN = 0; xN < waveSz.dim[0]; ++xN) {
-            for (int yN = 0; yN < waveSz.dim[1]; ++yN) {
+        for (int xN = 0; xN < wave.d0; ++xN) {
+            for (int yN = 0; yN < wave.d1; ++yN) {
                 if (!ripple[wfc__coordsToInd2d(dstSz, xN, yN)]) continue;
 
                 for (int dx = -(n - 1); dx <= n - 1; ++dx) {
@@ -416,7 +405,7 @@ void wfc__propagate(
                         int y = yN + dy;
 
                         if (wfc__propagateSingle(n, x, y, xN, yN,
-                                overlaps, waveSz, wave)) {
+                                overlaps, wave)) {
                             ripple[wfc__coordsToInd2dWrap(dstSz, x, y)] = 1;
                             done = 0;
                         }
@@ -448,7 +437,7 @@ int wfc_generate(
     int ret = 0;
 
     struct wfc__Pattern *patts = NULL;
-    uint8_t *wave = NULL;
+    struct wfc__A3d_u8 wave = {0};
     float *entropies = NULL;
     uint8_t *ripple = NULL;
     struct wfc__A4d_u8 overlaps = {0};
@@ -459,9 +448,11 @@ int wfc_generate(
     int pattCnt;
     patts = wfc__gatherPatterns(n, srcSz, src, &pattCnt);
 
-    struct wfc__Size3d waveSz = {{dstW, dstH, pattCnt}};
-    wave = malloc(wfc__size3d(waveSz, sizeof(*wave)));
-    for (int i = 0; i < wfc__len3d(waveSz); ++i) wave[i] = 1;
+    wave.d0 = dstW;
+    wave.d1 = dstH;
+    wave.d2 = pattCnt;
+    wave.a = malloc(WFC__A3D_SIZE(wave));
+    for (int i = 0; i < WFC__A3D_LEN(wave); ++i) wave.a[i] = 1;
 
     entropies = malloc(wfc__size2d(dstSz, sizeof(*entropies)));
 
@@ -471,11 +462,11 @@ int wfc_generate(
 
     while (1) {
         int minPatts = pattCnt, maxPatts = 0;
-        for (int x = 0; x < waveSz.dim[0]; ++x) {
-            for (int y = 0; y < waveSz.dim[1]; ++y) {
+        for (int x = 0; x < wave.d0; ++x) {
+            for (int y = 0; y < wave.d1; ++y) {
                 int patts = 0;
-                for (int z = 0; z < waveSz.dim[2]; ++z) {
-                    if (wave[wfc__coordsToInd3d(waveSz, x, y, z)]) ++patts;
+                for (int z = 0; z < wave.d2; ++z) {
+                    if (WFC__A3D_GET(wave, x, y, z)) ++patts;
                 }
 
                 if (patts < minPatts) minPatts = patts;
@@ -492,20 +483,19 @@ int wfc_generate(
             break;
         }
 
-        wfc__calcEntropies(patts, waveSz, wave, entropies);
+        wfc__calcEntropies(patts, wave, entropies);
 
         int obsX, obsY;
-        wfc__observeOne(pattCnt, patts, entropies,
-            &obsX, &obsY, waveSz, wave);
+        wfc__observeOne(pattCnt, patts, entropies, &obsX, &obsY, wave);
 
-        wfc__propagate(n, obsX, obsY, overlaps, ripple, waveSz, wave);
+        wfc__propagate(n, obsX, obsY, overlaps, ripple, wave);
     }
 
     for (int x = 0; x < dstW; ++x) {
         for (int y = 0; y < dstH; ++y) {
             int patt = 0;
             for (int z = 0; z < pattCnt; ++z) {
-                if (wave[wfc__coordsToInd3d(waveSz, x, y, z)]) {
+                if (WFC__A3D_GET(wave, x, y, z)) {
                     patt = z;
                     break;
                 }
@@ -523,7 +513,7 @@ cleanup:
     free(overlaps.a);
     free(ripple);
     free(entropies);
-    free(wave);
+    free(wave.a);
     free(patts);
 
     return ret;

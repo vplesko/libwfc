@@ -13,11 +13,11 @@ Compilation:
 Result:
 
 ```
-image=../external/samples/Angular.png repeats=5 args={n=3 dstW=64 dstH=64}
+image=external/samples/Angular.png repeats=5 args={n=3 dstW=64 dstH=64}
         ....o
-        avg=9.7969 min=8.4966 max=10.2870
+        avg=3.7828 min=3.3855 max=4.0377
 
-image=test.txt repeats=5 args={n=5 dstW=120 dstH=120}
+image=benchmark/test.txt repeats=5 args={n=5 dstW=120 dstH=120}
         ....o
-        avg=16.3255 min=16.0138 max=16.5205
+        avg=15.4631 min=15.3088 max=15.8109
 ```

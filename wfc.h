@@ -12,6 +12,14 @@
 
 // basic utility
 
+int wfc__min_i(int x, int y) {
+    return x < y ? x : y;
+}
+
+int wfc__max_i(int x, int y) {
+    return x < y ? y : x;
+}
+
 int wfc__approxEq_f(float a, float b) {
     const float absDiff = 0.001f;
     const float relDiff = FLT_EPSILON;

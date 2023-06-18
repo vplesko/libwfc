@@ -412,6 +412,7 @@ int wfc__propagateSingle(
     return changed;
 }
 
+// @TODO there's no need for odd-even, remove that
 void wfc__propagate(
     int n, int seedX, int seedY,
     struct wfc__Size4d overlapsSz, const uint8_t *overlaps,

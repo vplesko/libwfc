@@ -339,13 +339,13 @@ void wfc__observeOne(
     WFC__A3D_GET(wave, chosenX, chosenY, chosenPatt) = 1;
 }
 
-int wfc__propagateSingle(
-    int n, int x, int y, int xN, int yN,
+int wfc__propagateAgainst(
+    int n, int xN, int yN, int x, int y,
     struct wfc__A4d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
     int pattCnt = overlaps.d40;
 
-    int changed = 0;
+    int modified = 0;
 
     for (int p = 0; p < pattCnt; ++p) {
         if (WFC__A3D_GET_WRAP(wave, x, y, p)) {
@@ -362,12 +362,34 @@ int wfc__propagateSingle(
 
             if (!mayKeep) {
                 WFC__A3D_GET_WRAP(wave, x, y, p) = 0;
-                changed = 1;
+                modified = 1;
             }
         }
     }
 
-    return changed;
+    return modified;
+}
+
+int wfc__propagateNeighbours(
+    int n, int xN, int yN,
+    struct wfc__A4d_u8 overlaps,
+    struct wfc__A2d_u8 ripple,
+    struct wfc__A3d_u8 wave) {
+    int modified = 0;
+
+    for (int dx = -(n - 1); dx <= n - 1; ++dx) {
+        for (int dy = -(n - 1); dy <= n - 1; ++dy) {
+            int x = xN + dx;
+            int y = yN + dy;
+
+            if (wfc__propagateAgainst(n, xN, yN, x, y, overlaps, wave)) {
+                WFC__A2D_GET_WRAP(ripple, x, y) = 1;
+                modified = 1;
+            }
+        }
+    }
+
+    return modified;
 }
 
 void wfc__propagate(
@@ -378,25 +400,17 @@ void wfc__propagate(
     memset(ripple.a, 0, WFC__A2D_SIZE(ripple));
     WFC__A2D_GET(ripple, seedX, seedY) = 1;
 
-    int done = 0;
-    while (!done) {
-        done = 1;
+    int modified = 1;
+    while (modified) {
+        modified = 0;
 
         for (int xN = 0; xN < wave.d30; ++xN) {
             for (int yN = 0; yN < wave.d31; ++yN) {
                 if (!WFC__A2D_GET(ripple, xN, yN)) continue;
 
-                for (int dx = -(n - 1); dx <= n - 1; ++dx) {
-                    for (int dy = -(n - 1); dy <= n - 1; ++dy) {
-                        int x = xN + dx;
-                        int y = yN + dy;
-
-                        if (wfc__propagateSingle(n, x, y, xN, yN,
-                                overlaps, wave)) {
-                            WFC__A2D_GET_WRAP(ripple, x, y) = 1;
-                            done = 0;
-                        }
-                    }
+                if (wfc__propagateNeighbours(n, xN, yN,
+                        overlaps, ripple, wave)) {
+                    modified = 1;
                 }
 
                 WFC__A2D_GET(ripple, xN, yN) = 0;

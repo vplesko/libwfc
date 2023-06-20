@@ -195,7 +195,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
 
 int wfc__overlapMatches(
     int n, const struct wfc__A2d_cu32 src,
-    struct wfc__Pattern patt1, struct wfc__Pattern patt2, int dc0, int dc1) {
+    int dc0, int dc1, struct wfc__Pattern patt1, struct wfc__Pattern patt2) {
     assert(abs(dc0) < n);
     assert(abs(dc1) < n);
 
@@ -233,19 +233,19 @@ struct wfc__A4d_u8 wfc__calcOverlaps(
     int n, const struct wfc__A2d_cu32 src,
     int pattCnt, const struct wfc__Pattern *patts) {
     struct wfc__A4d_u8 overlaps;
-    overlaps.d40 = pattCnt;
-    overlaps.d41 = pattCnt;
-    overlaps.d42 = 2 * n - 1;
-    overlaps.d43 = 2 * n - 1;
+    overlaps.d40 = 2 * n - 1;
+    overlaps.d41 = 2 * n - 1;
+    overlaps.d42 = pattCnt;
+    overlaps.d43 = pattCnt;
     overlaps.a = malloc(WFC__A4D_SIZE(overlaps));
 
-    for (int i = 0; i < pattCnt; ++i) {
-        for (int j = 0; j < pattCnt; ++j) {
-            for (int dc0 = -(n - 1); dc0 <= n - 1; ++dc0) {
-                for (int dc1 = -(n - 1); dc1 <= n - 1; ++dc1) {
+    for (int dc0 = -(n - 1); dc0 <= n - 1; ++dc0) {
+        for (int dc1 = -(n - 1); dc1 <= n - 1; ++dc1) {
+            for (int i = 0; i < pattCnt; ++i) {
+                for (int j = 0; j < pattCnt; ++j) {
                     int overlap = wfc__overlapMatches(n, src,
-                        patts[i], patts[j], dc0, dc1);
-                    WFC__A4D_GET(overlaps, i, j, dc0 + n - 1, dc1 + n - 1) =
+                        dc0, dc1, patts[i], patts[j]);
+                    WFC__A4D_GET(overlaps, dc0 + n - 1, dc1 + n - 1, i, j) =
                         overlap ? 1 : 0;
                 }
             }
@@ -353,7 +353,7 @@ int wfc__propagateAgainst(
     struct wfc__A3d_u8 wave) {
     int c0 = wfc__indWrap(c0N + dc0, wave.d30);
     int c1 = wfc__indWrap(c1N + dc1, wave.d31);
-    int pattCnt = overlaps.d40;
+    int pattCnt = overlaps.d42;
 
     int modified = 0;
 
@@ -363,7 +363,7 @@ int wfc__propagateAgainst(
             for (int pN = 0; pN < pattCnt; ++pN) {
                 if (WFC__A3D_GET(wave, c0N, c1N, pN)) {
                     if (WFC__A4D_GET(overlaps,
-                            pN, p, dc0 + n - 1, dc1 + n - 1)) {
+                            dc0 + n - 1, dc1 + n - 1, pN, p)) {
                         mayKeep = 1;
                         break;
                     }

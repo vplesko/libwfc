@@ -61,13 +61,13 @@ int wfc__indWrap(int ind, int sz) {
 
 #define WFC__A2D_GET(arr, c0, c1) \
     ((arr).a[ \
-        (c1) * (arr).d20 + \
-        (c0)])
+        (c0) * (arr).d21 + \
+        (c1)])
 
 #define WFC__A2D_GET_WRAP(arr, c0, c1) \
     ((arr).a[ \
-        wfc__indWrap(c1, (arr).d21) * (arr).d20 + \
-        wfc__indWrap(c0, (arr).d20)])
+        wfc__indWrap(c0, (arr).d20) * (arr).d21 + \
+        wfc__indWrap(c1, (arr).d21)])
 
 #define WFC__A3D_DEF(type, abbrv) \
     struct wfc__A3d_##abbrv { \
@@ -81,15 +81,15 @@ int wfc__indWrap(int ind, int sz) {
 
 #define WFC__A3D_GET(arr, c0, c1, c2) \
     ((arr).a[ \
-        (c2) * (arr).d30 * (arr).d31 + \
-        (c1) * (arr).d30 + \
-        (c0)])
+        (c0) * (arr).d31 * (arr).d32 + \
+        (c1) * (arr).d32 + \
+        (c2)])
 
 #define WFC__A3D_GET_WRAP(arr, c0, c1, c2) \
     ((arr).a[ \
-        wfc__indWrap(c2, (arr).d32) * (arr).d30 * (arr).d31 + \
-        wfc__indWrap(c1, (arr).d31) * (arr).d30 + \
-        wfc__indWrap(c0, (arr).d30)])
+        wfc__indWrap(c0, (arr).d30) * (arr).d31 * (arr).d32 + \
+        wfc__indWrap(c1, (arr).d31) * (arr).d32 + \
+        wfc__indWrap(c2, (arr).d32)])
 
 #define WFC__A4D_DEF(type, abbrv) \
     struct wfc__A4d_##abbrv { \
@@ -103,22 +103,22 @@ int wfc__indWrap(int ind, int sz) {
 
 #define WFC__A4D_GET(arr, c0, c1, c2, c3) \
     ((arr).a[ \
-        (c3) * (arr).d40 * (arr).d41 * (arr).d42 + \
-        (c2) * (arr).d40 * (arr).d41 + \
-        (c1) * (arr).d40 + \
-        (c0)])
+        (c0) * (arr).d41 * (arr).d42 * (arr).d43 + \
+        (c1) * (arr).d42 * (arr).d43 + \
+        (c2) * (arr).d43 + \
+        (c3)])
 
 #define WFC__A4D_GET_WRAP(arr, c0, c1, c2, c3) \
     ((arr).a[ \
-        wfc__indWrap(c3, (arr).d43) * (arr).d40 * (arr).d41 * (arr).d42 + \
-        wfc__indWrap(c2, (arr).d42) * (arr).d40 * (arr).d41 + \
-        wfc__indWrap(c1, (arr).d41) * (arr).d40 + \
-        wfc__indWrap(c0, (arr).d40)])
+        wfc__indWrap(c0, (arr).d40) * (arr).d41 * (arr).d42 * (arr).d43 + \
+        wfc__indWrap(c1, (arr).d41) * (arr).d42 * (arr).d43 + \
+        wfc__indWrap(c2, (arr).d42) * (arr).d43 + \
+        wfc__indWrap(c3, (arr).d43)])
 
-void wfc__indToCoords2d(int d0, int ind, int *c0, int *c1) {
-    int c1_ = ind / d0;
-    ind -= c1_ * d0;
-    int c0_ = ind;
+void wfc__indToCoords2d(int d1, int ind, int *c0, int *c1) {
+    int c0_ = ind / d1;
+    ind -= c0_ * d1;
+    int c1_ = ind;
 
     *c0 = c0_;
     *c1 = c1_;
@@ -158,12 +158,12 @@ struct wfc__Pattern* wfc__gatherPatterns(
     int pattCnt = 0;
     for (int i = 0; i < WFC__A2D_LEN(src); ++i) {
         struct wfc__Pattern patt = {0};
-        wfc__indToCoords2d(src.d20, i, &patt.c0, &patt.c1);
+        wfc__indToCoords2d(src.d21, i, &patt.c0, &patt.c1);
 
         int seenBefore = 0;
         for (int j = 0; !seenBefore && j < i; ++j) {
             struct wfc__Pattern patt1 = {0};
-            wfc__indToCoords2d(src.d20, j, &patt1.c0, &patt1.c1);
+            wfc__indToCoords2d(src.d21, j, &patt1.c0, &patt1.c1);
 
             if (wfc__patternsEq(n, src, patt, patt1)) seenBefore = 1;
         }
@@ -175,7 +175,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
     pattCnt = 0;
     for (int i = 0; i < WFC__A2D_LEN(src); ++i) {
         struct wfc__Pattern patt = {0};
-        wfc__indToCoords2d(src.d20, i, &patt.c0, &patt.c1);
+        wfc__indToCoords2d(src.d21, i, &patt.c0, &patt.c1);
         patt.freq = 1;
 
         int seenBefore = 0;
@@ -315,7 +315,7 @@ void wfc__observeOne(
                 --chosenSmallestPnt;
             }
         }
-        wfc__indToCoords2d(entropies.d20, chosenPnt, &chosenC0, &chosenC1);
+        wfc__indToCoords2d(entropies.d21, chosenPnt, &chosenC0, &chosenC1);
     }
 
     int chosenPatt = 0;
@@ -451,24 +451,24 @@ int wfc_generate(
     struct wfc__A2d_u8 ripple = {0};
     struct wfc__A4d_u8 overlaps = {0};
 
-    struct wfc__A2d_cu32 srcM = {src, srcW, srcH};
-    struct wfc__A2d_u32 dstM = {dst, dstW, dstH};
+    struct wfc__A2d_cu32 srcM = {src, srcH, srcW};
+    struct wfc__A2d_u32 dstM = {dst, dstH, dstW};
 
     int pattCnt;
     patts = wfc__gatherPatterns(n, srcM, &pattCnt);
 
-    wave.d30 = dstW;
-    wave.d31 = dstH;
+    wave.d30 = dstH;
+    wave.d31 = dstW;
     wave.d32 = pattCnt;
     wave.a = malloc(WFC__A3D_SIZE(wave));
     for (int i = 0; i < WFC__A3D_LEN(wave); ++i) wave.a[i] = 1;
 
-    entropies.d20 = dstW;
-    entropies.d21 = dstH;
+    entropies.d20 = dstH;
+    entropies.d21 = dstW;
     entropies.a = malloc(WFC__A2D_SIZE(entropies));
 
-    ripple.d20 = dstW;
-    ripple.d21 = dstH;
+    ripple.d20 = dstH;
+    ripple.d21 = dstW;
     ripple.a = malloc(WFC__A2D_SIZE(ripple));
 
     overlaps = wfc__calcOverlaps(n, srcM, pattCnt, patts);
@@ -504,8 +504,8 @@ int wfc_generate(
         wfc__propagate(n, obsC0, obsC1, overlaps, ripple, wave);
     }
 
-    for (int c0 = 0; c0 < dstW; ++c0) {
-        for (int c1 = 0; c1 < dstH; ++c1) {
+    for (int c0 = 0; c0 < dstH; ++c0) {
+        for (int c1 = 0; c1 < dstW; ++c1) {
             int patt = 0;
             for (int p = 0; p < pattCnt; ++p) {
                 if (WFC__A3D_GET(wave, c0, c1, p)) {

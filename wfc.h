@@ -348,20 +348,22 @@ void wfc__observeOne(
 }
 
 int wfc__propagateAgainst(
-    int n, int c0N, int c1N, int c0, int c1,
+    int n, int c0N, int c1N, int dc0, int dc1,
     struct wfc__A4d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
+    int c0 = wfc__indWrap(c0N + dc0, wave.d30);
+    int c1 = wfc__indWrap(c1N + dc1, wave.d31);
     int pattCnt = overlaps.d40;
 
     int modified = 0;
 
     for (int p = 0; p < pattCnt; ++p) {
-        if (WFC__A3D_GET_WRAP(wave, c0, c1, p)) {
+        if (WFC__A3D_GET(wave, c0, c1, p)) {
             int mayKeep = 0;
             for (int pN = 0; pN < pattCnt; ++pN) {
-                if (WFC__A3D_GET_WRAP(wave, c0N, c1N, pN)) {
+                if (WFC__A3D_GET(wave, c0N, c1N, pN)) {
                     if (WFC__A4D_GET(overlaps,
-                            p, pN, c0N - c0 + n - 1, c1N - c1 + n - 1)) {
+                            pN, p, dc0 + n - 1, dc1 + n - 1)) {
                         mayKeep = 1;
                         break;
                     }
@@ -369,7 +371,7 @@ int wfc__propagateAgainst(
             }
 
             if (!mayKeep) {
-                WFC__A3D_GET_WRAP(wave, c0, c1, p) = 0;
+                WFC__A3D_GET(wave, c0, c1, p) = 0;
                 modified = 1;
             }
         }
@@ -387,11 +389,8 @@ int wfc__propagateNeighbours(
 
     for (int dc0 = -(n - 1); dc0 <= n - 1; ++dc0) {
         for (int dc1 = -(n - 1); dc1 <= n - 1; ++dc1) {
-            int c0 = c0N + dc0;
-            int c1 = c1N + dc1;
-
-            if (wfc__propagateAgainst(n, c0N, c1N, c0, c1, overlaps, wave)) {
-                WFC__A2D_GET_WRAP(ripple, c0, c1) = 1;
+            if (wfc__propagateAgainst(n, c0N, c1N, dc0, dc1, overlaps, wave)) {
+                WFC__A2D_GET_WRAP(ripple, c0N + dc0, c1N + dc1) = 1;
                 modified = 1;
             }
         }

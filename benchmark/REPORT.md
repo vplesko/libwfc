@@ -15,9 +15,9 @@ Result:
 ```
 image=external/samples/Angular.png repeats=5 args={n=3 dstW=64 dstH=64}
         ....o
-        avg=1.3603 min=1.2557 max=1.4079
+        avg=1.3969 min=1.2609 max=1.4976
 
 image=benchmark/test.txt repeats=5 args={n=5 dstW=120 dstH=120}
         ....o
-        avg=2.6231 min=2.5769 max=2.6620
+        avg=2.5965 min=2.5733 max=2.6412
 ```

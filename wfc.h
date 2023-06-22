@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// @TODO C++ support
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.
 // @TODO allow users to supply their own rand
@@ -347,7 +348,7 @@ void wfc__observeOne(
     WFC__A3D_GET(wave, chosenC0, chosenC1, chosenPatt) = 1;
 }
 
-int wfc__propagateAgainst(
+int wfc__propagateOnto(
     int n, int c0N, int c1N, int dc0, int dc1,
     struct wfc__A4d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
@@ -389,7 +390,7 @@ int wfc__propagateNeighbours(
 
     for (int dc0 = -(n - 1); dc0 <= n - 1; ++dc0) {
         for (int dc1 = -(n - 1); dc1 <= n - 1; ++dc1) {
-            if (wfc__propagateAgainst(n, c0N, c1N, dc0, dc1, overlaps, wave)) {
+            if (wfc__propagateOnto(n, c0N, c1N, dc0, dc1, overlaps, wave)) {
                 WFC__A2D_GET_WRAP(ripple, c0N + dc0, c1N + dc1) = 1;
                 modified = 1;
             }
@@ -426,6 +427,7 @@ void wfc__propagate(
     }
 }
 
+// @TODO allow pixels of any size
 int wfc_generate(
     int n,
     int srcW, int srcH, const uint32_t *src,

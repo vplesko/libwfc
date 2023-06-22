@@ -447,16 +447,18 @@ int wfc_generate(
     int ret = 0;
 
     struct wfc__Pattern *patts = NULL;
+    struct wfc__A4d_u8 overlaps = {0};
     struct wfc__A3d_u8 wave = {0};
     struct wfc__A2d_f entropies = {0};
     struct wfc__A2d_u8 ripple = {0};
-    struct wfc__A4d_u8 overlaps = {0};
 
-    struct wfc__A2d_cu32 srcM = {src, srcH, srcW};
-    struct wfc__A2d_u32 dstM = {dst, dstH, dstW};
+    struct wfc__A2d_cu32 srcA = {src, srcH, srcW};
+    struct wfc__A2d_u32 dstA = {dst, dstH, dstW};
 
     int pattCnt;
-    patts = wfc__gatherPatterns(n, srcM, &pattCnt);
+    patts = wfc__gatherPatterns(n, srcA, &pattCnt);
+
+    overlaps = wfc__calcOverlaps(n, srcA, pattCnt, patts);
 
     wave.d30 = dstH;
     wave.d31 = dstW;
@@ -471,8 +473,6 @@ int wfc_generate(
     ripple.d20 = dstH;
     ripple.d21 = dstW;
     ripple.a = malloc(WFC__A2D_SIZE(ripple));
-
-    overlaps = wfc__calcOverlaps(n, srcM, pattCnt, patts);
 
     while (1) {
         int minPatts = pattCnt, maxPatts = 0;
@@ -517,15 +517,15 @@ int wfc_generate(
 
             int mc0 = patts[patt].c0;
             int mc1 = patts[patt].c1;
-            WFC__A2D_GET(dstM, c0, c1) = WFC__A2D_GET(srcM, mc0, mc1);
+            WFC__A2D_GET(dstA, c0, c1) = WFC__A2D_GET(srcA, mc0, mc1);
         }
     }
 
 cleanup:
-    free(overlaps.a);
     free(ripple.a);
     free(entropies.a);
     free(wave.a);
+    free(overlaps.a);
     free(patts);
 
     return ret;

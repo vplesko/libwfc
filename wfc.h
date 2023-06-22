@@ -350,7 +350,7 @@ void wfc__observeOne(
 
 int wfc__propagateOnto(
     int n, int c0N, int c1N, int dc0, int dc1,
-    struct wfc__A4d_u8 overlaps,
+    const struct wfc__A4d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
     int c0 = wfc__indWrap(c0N + dc0, wave.d30);
     int c1 = wfc__indWrap(c1N + dc1, wave.d31);
@@ -383,7 +383,7 @@ int wfc__propagateOnto(
 
 int wfc__propagateNeighbours(
     int n, int c0N, int c1N,
-    struct wfc__A4d_u8 overlaps,
+    const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave) {
     int modified = 0;
@@ -402,7 +402,7 @@ int wfc__propagateNeighbours(
 
 void wfc__propagate(
     int n, int seedC0, int seedC1,
-    struct wfc__A4d_u8 overlaps,
+    const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave) {
     memset(ripple.a, 0, WFC__A2D_SIZE(ripple));

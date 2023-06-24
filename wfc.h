@@ -356,7 +356,10 @@ int wfc__propagateOnto(
     int c1 = wfc__indWrap(c1N + dc1, wave.d31);
     int pattCnt = overlaps.d42;
 
-    int modified = 0;
+    int oldAvailPattCnt = 0;
+    for (int p = 0; p < pattCnt; ++p) {
+        if (WFC__A3D_GET(wave, c0, c1, p)) ++oldAvailPattCnt;
+    }
 
     for (int p = 0; p < pattCnt; ++p) {
         if (WFC__A3D_GET(wave, c0, c1, p)) {
@@ -366,14 +369,16 @@ int wfc__propagateOnto(
                     WFC__A4D_GET(overlaps, -dc0 + n - 1, -dc1 + n - 1, p, pN);
             }
 
-            if (!total) {
-                WFC__A3D_GET(wave, c0, c1, p) = 0;
-                modified = 1;
-            }
+            WFC__A3D_GET(wave, c0, c1, p) = total;
         }
     }
 
-    return modified;
+    int newAvailPattCnt = 0;
+    for (int p = 0; p < pattCnt; ++p) {
+        if (WFC__A3D_GET(wave, c0, c1, p)) ++newAvailPattCnt;
+    }
+
+    return oldAvailPattCnt != newAvailPattCnt;
 }
 
 int wfc__propagateNeighbours(

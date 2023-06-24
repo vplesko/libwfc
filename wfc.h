@@ -360,15 +360,13 @@ int wfc__propagateOnto(
 
     for (int p = 0; p < pattCnt; ++p) {
         if (WFC__A3D_GET(wave, c0, c1, p)) {
-            int mayKeep = 0;
+            uint8_t total = 0;
             for (int pN = 0; pN < pattCnt; ++pN) {
-                if (WFC__A3D_GET(wave, c0N, c1N, pN) &
-                    WFC__A4D_GET(overlaps, -dc0 + n - 1, -dc1 + n - 1, p, pN)) {
-                    mayKeep = 1;
-                }
+                total |= WFC__A3D_GET(wave, c0N, c1N, pN) &
+                    WFC__A4D_GET(overlaps, -dc0 + n - 1, -dc1 + n - 1, p, pN);
             }
 
-            if (!mayKeep) {
+            if (!total) {
                 WFC__A3D_GET(wave, c0, c1, p) = 0;
                 modified = 1;
             }

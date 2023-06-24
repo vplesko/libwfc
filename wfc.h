@@ -43,7 +43,7 @@ int wfc__rand_i(int n) {
     return (int)(wfc__rand() * (float)n);
 }
 
-// multi-dimensional array utility
+// array utility
 
 int wfc__indWrap(int ind, int sz) {
     if (ind >= 0) return ind % sz;
@@ -52,8 +52,8 @@ int wfc__indWrap(int ind, int sz) {
 
 #define WFC__A2D_DEF(type, abbrv) \
     struct wfc__A2d_##abbrv { \
-        type *a; \
         int d20, d21; \
+        type *a; \
     }
 
 #define WFC__A2D_LEN(arr) ((arr).d20 * (arr).d21)
@@ -72,8 +72,8 @@ int wfc__indWrap(int ind, int sz) {
 
 #define WFC__A3D_DEF(type, abbrv) \
     struct wfc__A3d_##abbrv { \
-        type *a; \
         int d30, d31, d32; \
+        type *a; \
     }
 
 #define WFC__A3D_LEN(arr) ((arr).d30 * (arr).d31 * (arr).d32)
@@ -94,8 +94,8 @@ int wfc__indWrap(int ind, int sz) {
 
 #define WFC__A4D_DEF(type, abbrv) \
     struct wfc__A4d_##abbrv { \
-        type *a; \
         int d40, d41, d42, d43; \
+        type *a; \
     }
 
 #define WFC__A4D_LEN(arr) ((arr).d40 * (arr).d41 * (arr).d42 * (arr).d43)
@@ -452,8 +452,8 @@ int wfc_generate(
     struct wfc__A2d_f entropies = {0};
     struct wfc__A2d_u8 ripple = {0};
 
-    struct wfc__A2d_cu32 srcA = {src, srcH, srcW};
-    struct wfc__A2d_u32 dstA = {dst, dstH, dstW};
+    struct wfc__A2d_cu32 srcA = {srcH, srcW, src};
+    struct wfc__A2d_u32 dstA = {dstH, dstW, dst};
 
     int pattCnt;
     patts = wfc__gatherPatterns(n, srcA, &pattCnt);

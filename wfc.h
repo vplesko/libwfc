@@ -362,12 +362,10 @@ int wfc__propagateOnto(
         if (WFC__A3D_GET(wave, c0, c1, p)) {
             int mayKeep = 0;
             for (int pN = 0; pN < pattCnt; ++pN) {
-                if (WFC__A3D_GET(wave, c0N, c1N, pN)) {
-                    if (WFC__A4D_GET(overlaps,
-                            -dc0 + n - 1, -dc1 + n - 1, p, pN)) {
-                        mayKeep = 1;
-                        break;
-                    }
+                if (WFC__A3D_GET(wave, c0N, c1N, pN) &
+                    WFC__A4D_GET(overlaps, -dc0 + n - 1, -dc1 + n - 1, p, pN)) {
+                    mayKeep = 1;
+                    break;
                 }
             }
 

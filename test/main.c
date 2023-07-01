@@ -18,7 +18,94 @@ int testBasicN1(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, sizeof(*src),
+        n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int testHFlipN1(void) {
+    enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,5,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, WFC_TRANSF_HFLIP, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int testVFlipN1(void) {
+    enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,5,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, WFC_TRANSF_VFLIP, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int testHVFlipN1(void) {
+    enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,5,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -47,7 +134,94 @@ int testBasicN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, sizeof(*src),
+        n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int testHFlipN3(void) {
+    enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,6,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, WFC_TRANSF_HFLIP, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int testVFlipN3(void) {
+    enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,6,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, WFC_TRANSF_VFLIP, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int testHVFlipN3(void) {
+    enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,6,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -75,7 +249,7 @@ int testPattern(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, sizeof(*src),
+        n, 0, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -119,7 +293,7 @@ int testWide(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, sizeof(*src),
+        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -150,7 +324,7 @@ int testTall(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, sizeof(*src),
+        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -181,7 +355,7 @@ int testSrcBiggerThanDst(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, sizeof(*src),
+        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -203,7 +377,13 @@ int main(void) {
     srand(seed);
 
     if (testBasicN1() != 0 ||
+        testHFlipN1() != 0 ||
+        testVFlipN1() != 0 ||
+        testHVFlipN1() != 0 ||
         testBasicN3() != 0 ||
+        testHFlipN3() != 0 ||
+        testVFlipN3() != 0 ||
+        testHVFlipN3() != 0 ||
         testPattern() != 0 ||
         testWide() != 0 ||
         testTall() != 0 ||

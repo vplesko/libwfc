@@ -11,11 +11,12 @@
 #define REPEATS 5
 
 double measure(
-    int n, int bytesPerPixel,
+    int n, int transf, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
     clock_t t0 = clock();
-    int res = wfc_generate(n, bytesPerPixel, srcW, srcH, src, dstW, dstH, dst);
+    int res = wfc_generate(n, transf, bytesPerPixel,
+        srcW, srcH, src, dstW, dstH, dst);
     clock_t t1 = clock();
 
     assert(res == 0);
@@ -24,7 +25,7 @@ double measure(
 }
 
 void benchmark(
-    int n, int bytesPerPixel,
+    int n, int transf, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
     int first = 1;
@@ -32,7 +33,7 @@ void benchmark(
 
     putchar('\t');
     for (int i = 0; i < REPEATS; ++i) {
-        double elapsed = measure(n, bytesPerPixel,
+        double elapsed = measure(n, transf, bytesPerPixel,
             srcW, srcH, src, dstW, dstH, dst);
 
         avg += elapsed;
@@ -65,7 +66,7 @@ void benchmarkImage(const char *path, int n, int dstW, int dstH) {
     printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
         path, REPEATS, n, dstW, dstH);
 
-    benchmark(n, bytesPerPixel, srcW, srcH, src, dstW, dstH, dst);
+    benchmark(n, 0, bytesPerPixel, srcW, srcH, src, dstW, dstH, dst);
 
     free(dst);
     stbi_image_free(src);
@@ -95,7 +96,7 @@ void benchmarkText(const char *path, int n, int dstW, int dstH) {
     printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
         path, REPEATS, n, dstW, dstH);
 
-    benchmark(n, sizeof(*src),
+    benchmark(n, 0, sizeof(*src),
         srcW, srcH, (unsigned char*)src, dstW, dstH, (unsigned char*)dst);
 
     free(dst);

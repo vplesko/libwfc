@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
     dstPixels = malloc(dstW * dstH * bytesPerPixel);
     if (wfc_generate(
-            wfcN, bytesPerPixel,
+            wfcN, 0, bytesPerPixel,
             srcW, srcH, srcPixels,
             dstW, dstH, dstPixels) != 0) {
         logError("WFC failed.");

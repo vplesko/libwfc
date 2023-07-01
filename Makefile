@@ -11,7 +11,7 @@ TEST_HDRS = $(wildcard test/*.h)
 BENCHMARK_HDRS = $(wildcard benchmark/*.h)
 
 BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -I./ -Iexternal/lib -g -fno-omit-frame-pointer
-BUILD_FLAGS_DBG = -O1
+BUILD_FLAGS_DBG = -O0
 BUILD_FLAGS_REL = -O3 -mavx2
 LINK_FLAGS = -lm
 

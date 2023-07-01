@@ -429,6 +429,32 @@ void wfc__propagate(
     }
 }
 
+void wfc__render(
+    const struct wfc__A3d_cu8 src,
+    int pattCnt, const struct wfc__Pattern *patts,
+    const struct wfc__A3d_u8 wave,
+    struct wfc__A3d_u8 dst) {
+    for (int c0 = 0; c0 < dst.d03; ++c0) {
+        for (int c1 = 0; c1 < dst.d13; ++c1) {
+            int patt = 0;
+            for (int p = 0; p < pattCnt; ++p) {
+                if (WFC__A3D_GET(wave, c0, c1, p)) {
+                    patt = p;
+                    break;
+                }
+            }
+
+            int mc0 = patts[patt].c0;
+            int mc1 = patts[patt].c1;
+
+            const uint8_t *srcPx = &WFC__A3D_GET(src, mc0, mc1, 0);
+            uint8_t *dstPx = &WFC__A3D_GET(dst, c0, c1, 0);
+
+            memcpy(dstPx, srcPx, (size_t)src.d23);
+        }
+    }
+}
+
 int wfc_generate(
     int n, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
@@ -507,25 +533,7 @@ int wfc_generate(
         wfc__propagate(n, obsC0, obsC1, overlaps, ripple, wave);
     }
 
-    for (int c0 = 0; c0 < dstH; ++c0) {
-        for (int c1 = 0; c1 < dstW; ++c1) {
-            int patt = 0;
-            for (int p = 0; p < pattCnt; ++p) {
-                if (WFC__A3D_GET(wave, c0, c1, p)) {
-                    patt = p;
-                    break;
-                }
-            }
-
-            int mc0 = patts[patt].c0;
-            int mc1 = patts[patt].c1;
-
-            const uint8_t *srcPx = &WFC__A3D_GET(srcA, mc0, mc1, 0);
-            uint8_t *dstPx = &WFC__A3D_GET(dstA, c0, c1, 0);
-
-            memcpy(dstPx, srcPx, (size_t)bytesPerPixel);
-        }
-    }
+    wfc__render(srcA, pattCnt, patts, wave, dstA);
 
 cleanup:
     free(ripple.a);

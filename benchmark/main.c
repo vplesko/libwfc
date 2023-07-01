@@ -11,11 +11,11 @@
 #define REPEATS 5
 
 double measure(
-    int n,
-    int srcW, int srcH, const uint32_t *src,
-    int dstW, int dstH, uint32_t *dst) {
+    int n, int bytesPerPixel,
+    int srcW, int srcH, const unsigned char *src,
+    int dstW, int dstH, unsigned char *dst) {
     clock_t t0 = clock();
-    int res = wfc_generate(n, srcW, srcH, src, dstW, dstH, dst);
+    int res = wfc_generate(n, bytesPerPixel, srcW, srcH, src, dstW, dstH, dst);
     clock_t t1 = clock();
 
     assert(res == 0);
@@ -24,15 +24,16 @@ double measure(
 }
 
 void benchmark(
-    int n,
-    int srcW, int srcH, const uint32_t *src,
-    int dstW, int dstH, uint32_t *dst) {
+    int n, int bytesPerPixel,
+    int srcW, int srcH, const unsigned char *src,
+    int dstW, int dstH, unsigned char *dst) {
     int first = 1;
     double avg = 0.0, min, max;
 
     putchar('\t');
     for (int i = 0; i < REPEATS; ++i) {
-        double elapsed = measure(n, srcW, srcH, src, dstW, dstH, dst);
+        double elapsed = measure(n, bytesPerPixel,
+            srcW, srcH, src, dstW, dstH, dst);
 
         avg += elapsed;
         if (first || elapsed < min) min = elapsed;
@@ -50,19 +51,21 @@ void benchmark(
 }
 
 void benchmarkImage(const char *path, int n, int dstW, int dstH) {
+    const int bytesPerPixel = 4;
+
     unsigned char *src = NULL;
-    uint32_t *dst = NULL;
+    unsigned char *dst = NULL;
 
     int srcW, srcH;
-    src = stbi_load(path, &srcW, &srcH, NULL, 4);
+    src = stbi_load(path, &srcW, &srcH, NULL, bytesPerPixel);
     assert(src != NULL);
 
-    dst = malloc(dstW * dstH * sizeof(*dst));
+    dst = malloc(dstW * dstH * bytesPerPixel);
 
     printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
         path, REPEATS, n, dstW, dstH);
 
-    benchmark(n, srcW, srcH, (uint32_t*)src, dstW, dstH, dst);
+    benchmark(n, bytesPerPixel, srcW, srcH, src, dstW, dstH, dst);
 
     free(dst);
     stbi_image_free(src);
@@ -92,7 +95,8 @@ void benchmarkText(const char *path, int n, int dstW, int dstH) {
     printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
         path, REPEATS, n, dstW, dstH);
 
-    benchmark(n, srcW, srcH, src, dstW, dstH, dst);
+    benchmark(n, sizeof(*src),
+        srcW, srcH, (unsigned char*)src, dstW, dstH, (unsigned char*)dst);
 
     free(dst);
     free(src);

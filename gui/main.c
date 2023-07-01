@@ -91,7 +91,7 @@ int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
 
     dstPixels = malloc(dstW * dstH * bytesPerPixel);
     if (wfc_generate(
-            n,
+            n, bytesPerPixel,
             srcW, srcH, srcPixels != NULL ? srcPixels : srcSurface->pixels,
             dstW, dstH, dstPixels) != 0) {
         logError("WFC failed.");

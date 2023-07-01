@@ -49,8 +49,10 @@ int parseArgs(int argc, char *argv[],
 int main(int argc, char *argv[]) {
     int ret = 0;
 
+    const int bytesPerPixel = 4;
+
     unsigned char *srcPixels = NULL;
-    uint32_t *dstPixels = NULL;
+    unsigned char *dstPixels = NULL;
 
     const char *imagePath;
     int wfcN, dstW, dstH;
@@ -60,7 +62,7 @@ int main(int argc, char *argv[]) {
     }
 
     int srcW, srcH;
-    srcPixels = stbi_load(imagePath, &srcW, &srcH, NULL, 4);
+    srcPixels = stbi_load(imagePath, &srcW, &srcH, NULL, bytesPerPixel);
     if (srcPixels == NULL) {
         logError(stbi_failure_reason());
         ret = 1;
@@ -69,10 +71,10 @@ int main(int argc, char *argv[]) {
 
     srand((unsigned)time(NULL));
 
-    dstPixels = malloc(dstW * dstH * 4);
+    dstPixels = malloc(dstW * dstH * bytesPerPixel);
     if (wfc_generate(
-            wfcN,
-            srcW, srcH, (uint32_t*)srcPixels,
+            wfcN, bytesPerPixel,
+            srcW, srcH, srcPixels,
             dstW, dstH, dstPixels) != 0) {
         logError("WFC failed.");
         ret = 1;
@@ -81,7 +83,7 @@ int main(int argc, char *argv[]) {
 
     // dummy printout to make sure the compiler doesn't optimize anything away
     uint32_t dummy = 0;
-    for (int i = 0; i < dstW * dstH; ++i) {
+    for (int i = 0; i < dstW * dstH * bytesPerPixel; ++i) {
         dummy += dstPixels[i];
     }
     printf("%u\n", dummy);

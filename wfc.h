@@ -32,6 +32,8 @@ wfc_State* wfc_init(
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH);
 
+wfc_State* wfc_clone(const wfc_State *state);
+
 int wfc_patternCount(const wfc_State *state);
 
 int wfc_patternPresent(const wfc_State *state, int patt, int x, int y);
@@ -588,6 +590,35 @@ wfc_State* wfc_init(
     state->ripple.a = malloc(WFC__A2D_SIZE(state->ripple));
 
     return state;
+}
+
+wfc_State* wfc_clone(const wfc_State *state) {
+    wfc_State *clone = malloc(sizeof(*clone));
+
+    *clone = *state;
+
+    int pattCnt = state->wave.d23;
+    size_t pattsSz = (size_t)pattCnt * sizeof(*state->patts);
+    clone->patts = malloc(pattsSz);
+    memcpy(clone->patts, state->patts, pattsSz);
+
+    clone->overlaps.a = malloc(WFC__A4D_SIZE(state->overlaps));
+    memcpy(clone->overlaps.a, state->overlaps.a,
+        WFC__A4D_SIZE(state->overlaps));
+
+    clone->wave.a = malloc(WFC__A3D_SIZE(state->wave));
+    memcpy(clone->wave.a, state->wave.a,
+        WFC__A3D_SIZE(state->wave));
+
+    clone->entropies.a = malloc(WFC__A2D_SIZE(state->entropies));
+    memcpy(clone->entropies.a, state->entropies.a,
+        WFC__A2D_SIZE(state->entropies));
+
+    clone->ripple.a = malloc(WFC__A2D_SIZE(state->ripple));
+    memcpy(clone->ripple.a, state->ripple.a,
+        WFC__A2D_SIZE(state->ripple));
+
+    return clone;
 }
 
 int wfc_patternCount(const wfc_State *state) {

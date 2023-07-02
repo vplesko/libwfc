@@ -486,6 +486,55 @@ cleanup:
     return ret;
 }
 
+int testClone(void) {
+    enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
+
+    int ret = 0;
+
+    wfc_State *clone = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,5,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    {
+        wfc_State *state = wfc_init(
+            n, 0, sizeof(*src),
+            srcW, srcH, (unsigned char*)&src,
+            dstW, dstH);
+
+        clone = wfc_clone(state);
+
+        wfc_free(state);
+    }
+
+    int status;
+    while (!(status = wfc_iterate(clone)));
+    if (status <= 0) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+    wfc_render(clone, (unsigned char*)&src, (unsigned char*)&dst);
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            PRINT_TEST_FAIL();
+            ret = 1;
+            goto cleanup;
+        }
+    }
+
+cleanup:
+    wfc_free(clone);
+
+    return ret;
+}
+
 int main(void) {
     unsigned seed = (unsigned)time(NULL);
     srand(seed);
@@ -505,7 +554,8 @@ int main(void) {
         testPatternCountBasic() != 0 ||
         testPatternCountHFlip() != 0 ||
         testPatternCountVFlip() != 0 ||
-        testPatternCountHVFlip() != 0) {
+        testPatternCountHVFlip() != 0 ||
+        testClone() != 0) {
         printf("Seed was: %u\n", seed);
         return 1;
     }

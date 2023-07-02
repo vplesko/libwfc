@@ -372,6 +372,120 @@ int testSrcBiggerThanDst(void) {
     return 0;
 }
 
+int testPatternCountBasic(void) {
+    enum { n = 2, srcW = 3, srcH = 3 };
+
+    int ret = 0;
+
+    wfc_State *state = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,
+        5,5,6,
+        5,6,6,
+    };
+
+    state = wfc_init(n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        16, 16);
+
+    if (wfc_patternCount(state) != 8) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
+int testPatternCountHFlip(void) {
+    enum { n = 2, srcW = 3, srcH = 2 };
+
+    int ret = 0;
+
+    wfc_State *state = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        1,2,1,
+        3,4,3,
+    };
+
+    state = wfc_init(n, wfc_optHFlip, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        16, 16);
+
+    if (wfc_patternCount(state) != 6) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
+int testPatternCountVFlip(void) {
+    enum { n = 2, srcW = 2, srcH = 3 };
+
+    int ret = 0;
+
+    wfc_State *state = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        1,2,
+        3,4,
+        1,2,
+    };
+
+    state = wfc_init(n, wfc_optVFlip, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        16, 16);
+
+    if (wfc_patternCount(state) != 6) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
+int testPatternCountHVFlip(void) {
+    enum { n = 2, srcW = 2, srcH = 2 };
+
+    int ret = 0;
+
+    wfc_State *state = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        1,2,
+        2,1,
+    };
+
+    state = wfc_init(n, wfc_optVFlip, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        16, 16);
+
+    if (wfc_patternCount(state) != 2) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
 int main(void) {
     unsigned seed = (unsigned)time(NULL);
     srand(seed);
@@ -387,7 +501,11 @@ int main(void) {
         testPattern() != 0 ||
         testWide() != 0 ||
         testTall() != 0 ||
-        testSrcBiggerThanDst() != 0) {
+        testSrcBiggerThanDst() != 0 ||
+        testPatternCountBasic() != 0 ||
+        testPatternCountHFlip() != 0 ||
+        testPatternCountVFlip() != 0 ||
+        testPatternCountHVFlip() != 0) {
         printf("Seed was: %u\n", seed);
         return 1;
     }

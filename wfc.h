@@ -220,7 +220,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
     }
 
     patts = malloc((size_t)pattCnt * sizeof(*patts));
-    pattCnt = 0;
+    int pattInd = 0;
     for (int i = 0; i < wfc__patternCombinationCnt(src.d03, src.d13); ++i) {
         struct wfc__Pattern patt = {0};
         wfc__indToPatternCombination(src.d13, i, &patt);
@@ -228,15 +228,16 @@ struct wfc__Pattern* wfc__gatherPatterns(
         if (!wfc__usesOnlyAllowedOptions(patt.tf, options)) continue;
 
         int seenBefore = 0;
-        for (int i1 = 0; !seenBefore && i1 < pattCnt; ++i1) {
+        for (int i1 = 0; !seenBefore && i1 < pattInd; ++i1) {
             if (wfc__patternsEq(n, src, patt, patts[i1])) {
                 ++patts[i1].freq;
                 seenBefore = 1;
             }
         }
 
-        if (!seenBefore) patts[pattCnt++] = patt;
+        if (!seenBefore) patts[pattInd++] = patt;
     }
+    assert(pattInd == pattCnt);
 
     *cnt = pattCnt;
     return patts;

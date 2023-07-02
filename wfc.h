@@ -161,11 +161,11 @@ void wfc__coordsPattToSrc(
     if (sC1 != NULL) *sC1 = sC1_;
 }
 
-int wfc__patternCombinationCnt(int d0, int d1) {
+int wfc__pattCombCnt(int d0, int d1) {
     return d0 * d1 * wfc__tfCnt;
 }
 
-void wfc__indToPatternCombination(int d1, int ind, struct wfc__Pattern *patt) {
+void wfc__indToPattComb(int d1, int ind, struct wfc__Pattern *patt) {
     wfc__indToCoords2d(d1, ind / wfc__tfCnt, &patt->c0, &patt->c1);
     patt->tf = ind % wfc__tfCnt;
 }
@@ -202,15 +202,15 @@ struct wfc__Pattern* wfc__gatherPatterns(
     struct wfc__Pattern *patts = NULL;
 
     int pattCnt = 0;
-    for (int i = 0; i < wfc__patternCombinationCnt(src.d03, src.d13); ++i) {
+    for (int i = 0; i < wfc__pattCombCnt(src.d03, src.d13); ++i) {
         struct wfc__Pattern patt = {0};
-        wfc__indToPatternCombination(src.d13, i, &patt);
+        wfc__indToPattComb(src.d13, i, &patt);
         if (!wfc__usesOnlyAllowedOptions(patt.tf, options)) continue;
 
         int seenBefore = 0;
         for (int i1 = 0; !seenBefore && i1 < i; ++i1) {
             struct wfc__Pattern patt1 = {0};
-            wfc__indToPatternCombination(src.d13, i1, &patt1);
+            wfc__indToPattComb(src.d13, i1, &patt1);
             if (!wfc__usesOnlyAllowedOptions(patt1.tf, options)) continue;
 
             if (wfc__patternsEq(n, src, patt, patt1)) seenBefore = 1;
@@ -221,9 +221,9 @@ struct wfc__Pattern* wfc__gatherPatterns(
 
     patts = malloc((size_t)pattCnt * sizeof(*patts));
     int pattInd = 0;
-    for (int i = 0; i < wfc__patternCombinationCnt(src.d03, src.d13); ++i) {
+    for (int i = 0; i < wfc__pattCombCnt(src.d03, src.d13); ++i) {
         struct wfc__Pattern patt = {0};
-        wfc__indToPatternCombination(src.d13, i, &patt);
+        wfc__indToPattComb(src.d13, i, &patt);
         patt.freq = 1;
         if (!wfc__usesOnlyAllowedOptions(patt.tf, options)) continue;
 

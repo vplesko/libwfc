@@ -47,7 +47,7 @@ int testHFlipN1(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, WFC_TRANSF_HFLIP, sizeof(*src),
+        n, wfc_optHFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -76,7 +76,7 @@ int testVFlipN1(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, WFC_TRANSF_VFLIP, sizeof(*src),
+        n, wfc_optVFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -105,7 +105,7 @@ int testHVFlipN1(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
+        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -163,7 +163,7 @@ int testHFlipN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, WFC_TRANSF_HFLIP, sizeof(*src),
+        n, wfc_optHFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -192,7 +192,7 @@ int testVFlipN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, WFC_TRANSF_VFLIP, sizeof(*src),
+        n, wfc_optVFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -221,7 +221,7 @@ int testHVFlipN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
+        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -293,7 +293,7 @@ int testWide(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
+        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -324,7 +324,7 @@ int testTall(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
+        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -355,7 +355,7 @@ int testSrcBiggerThanDst(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, WFC_TRANSF_HFLIP | WFC_TRANSF_VFLIP, sizeof(*src),
+        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();

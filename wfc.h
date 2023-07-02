@@ -125,20 +125,24 @@ void wfc__indToCoords2d(int d1, int ind, int *c0, int *c1) {
     *c1 = c1_;
 }
 
-// wfc code
-
 WFC__A2D_DEF(uint8_t, u8);
 WFC__A2D_DEF(float, f);
 WFC__A3D_DEF(uint8_t, u8);
 WFC__A3D_DEF(const uint8_t, cu8);
 WFC__A4D_DEF(uint8_t, u8);
 
-#define WFC_TRANSF_C0FLIP 1
-#define WFC_TRANSF_C1FLIP 2
-#define WFC__TRANSF_MAX 3
+// wfc code
 
-#define WFC_TRANSF_HFLIP WFC_TRANSF_C1FLIP
-#define WFC_TRANSF_VFLIP WFC_TRANSF_C0FLIP
+enum {
+    wfc_optHFlip = 2,
+    wfc_optVFlip = 1,
+};
+
+enum {
+    wfc__tfC0Flip = 1,
+    wfc__tfC1Flip = 2,
+    wfc__tfCnt = 4,
+};
 
 struct wfc__Pattern {
     int c0, c1;
@@ -150,11 +154,26 @@ void wfc__coordsPattToSrc(
     int n,
     struct wfc__Pattern patt, int pc0, int pc1,
     int *c0, int *c1) {
-    int c0_ = patt.c0 + (patt.transf & WFC_TRANSF_C0FLIP ? n - 1 - pc0 : pc0);
-    int c1_ = patt.c1 + (patt.transf & WFC_TRANSF_C1FLIP ? n - 1 - pc1 : pc1);
+    int c0_ = patt.c0 + (patt.transf & wfc__tfC0Flip ? n - 1 - pc0 : pc0);
+    int c1_ = patt.c1 + (patt.transf & wfc__tfC1Flip ? n - 1 - pc1 : pc1);
 
     if (c0 != NULL) *c0 = c0_;
     if (c1 != NULL) *c1 = c1_;
+}
+
+int wfc__patternCombinationCnt(int d0, int d1) {
+    return d0 * d1 * wfc__tfCnt;
+}
+
+void wfc__indToPatternCombination(int d1, int ind, struct wfc__Pattern *patt) {
+    wfc__indToCoords2d(d1, ind / wfc__tfCnt, &patt->c0, &patt->c1);
+    patt->transf = ind % wfc__tfCnt;
+}
+
+int wfc__usesOnlyAllowedOptions(int tf, int options) {
+    if ((tf & wfc__tfC0Flip) && !(options & wfc_optVFlip)) return 0;
+    if ((tf & wfc__tfC1Flip) && !(options & wfc_optHFlip)) return 0;
+    return 1;
 }
 
 int wfc__patternsEq(
@@ -177,31 +196,22 @@ int wfc__patternsEq(
     return 1;
 }
 
-int wfc__patternCombinationCnt(int d0, int d1) {
-    return d0 * d1 * WFC__TRANSF_MAX;
-}
-
-void wfc__indToPatternCombination(int d1, int ind, struct wfc__Pattern *patt) {
-    wfc__indToCoords2d(d1, ind / WFC__TRANSF_MAX, &patt->c0, &patt->c1);
-    patt->transf = ind % WFC__TRANSF_MAX;
-}
-
 // @TODO test number of patterns when the API is introduced for that
 struct wfc__Pattern* wfc__gatherPatterns(
-    int n, int transf, const struct wfc__A3d_cu8 src, int *cnt) {
+    int n, int options, const struct wfc__A3d_cu8 src, int *cnt) {
     struct wfc__Pattern *patts = NULL;
 
     int pattCnt = 0;
     for (int i = 0; i < wfc__patternCombinationCnt(src.d03, src.d13); ++i) {
         struct wfc__Pattern patt = {0};
         wfc__indToPatternCombination(src.d13, i, &patt);
-        if ((patt.transf & ~transf) != 0) continue;
+        if (!wfc__usesOnlyAllowedOptions(patt.transf, options)) continue;
 
         int seenBefore = 0;
         for (int i1 = 0; !seenBefore && i1 < i; ++i1) {
             struct wfc__Pattern patt1 = {0};
             wfc__indToPatternCombination(src.d13, i1, &patt1);
-            if ((patt1.transf & ~transf) != 0) continue;
+            if (!wfc__usesOnlyAllowedOptions(patt1.transf, options)) continue;
 
             if (wfc__patternsEq(n, src, patt, patt1)) seenBefore = 1;
         }
@@ -215,7 +225,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
         struct wfc__Pattern patt = {0};
         wfc__indToPatternCombination(src.d13, i, &patt);
         patt.freq = 1;
-        if ((patt.transf & ~transf) != 0) continue;
+        if (!wfc__usesOnlyAllowedOptions(patt.transf, options)) continue;
 
         int seenBefore = 0;
         for (int i1 = 0; !seenBefore && i1 < pattCnt; ++i1) {
@@ -496,7 +506,7 @@ void wfc__render(
 }
 
 int wfc_generate(
-    int n, int transf, int bytesPerPixel,
+    int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
     assert(n > 0);
@@ -524,7 +534,7 @@ int wfc_generate(
     struct wfc__A3d_u8 dstA = {dstH, dstW, bytesPerPixel, dst};
 
     int pattCnt;
-    patts = wfc__gatherPatterns(n, transf, srcA, &pattCnt);
+    patts = wfc__gatherPatterns(n, options, srcA, &pattCnt);
 
     overlaps = wfc__calcOverlaps(n, srcA, pattCnt, patts);
 

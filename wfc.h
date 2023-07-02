@@ -177,57 +177,55 @@ int wfc__patternsEq(
     return 1;
 }
 
+int wfc__patternCombinationCnt(int d0, int d1) {
+    return d0 * d1 * WFC__TRANSF_MAX;
+}
+
+void wfc__indToPatternCombination(int d1, int ind, struct wfc__Pattern *patt) {
+    wfc__indToCoords2d(d1, ind / WFC__TRANSF_MAX, &patt->c0, &patt->c1);
+    patt->transf = ind % WFC__TRANSF_MAX;
+}
+
+// @TODO test number of patterns when the API is introduced for that
 struct wfc__Pattern* wfc__gatherPatterns(
     int n, int transf, const struct wfc__A3d_cu8 src, int *cnt) {
     struct wfc__Pattern *patts = NULL;
 
     int pattCnt = 0;
-    for (int i = 0; i < src.d03 * src.d13; ++i) {
-        for (int t = 0; t <= WFC__TRANSF_MAX; ++t) {
-            if ((t & ~transf) != 0) continue;
+    for (int i = 0; i < wfc__patternCombinationCnt(src.d03, src.d13); ++i) {
+        struct wfc__Pattern patt = {0};
+        wfc__indToPatternCombination(src.d13, i, &patt);
+        if ((patt.transf & ~transf) != 0) continue;
 
-            struct wfc__Pattern patt = {0};
-            wfc__indToCoords2d(src.d13, i, &patt.c0, &patt.c1);
-            patt.transf = t;
+        int seenBefore = 0;
+        for (int i1 = 0; !seenBefore && i1 < i; ++i1) {
+            struct wfc__Pattern patt1 = {0};
+            wfc__indToPatternCombination(src.d13, i1, &patt1);
+            if ((patt1.transf & ~transf) != 0) continue;
 
-            int seenBefore = 0;
-            for (int i1 = 0; !seenBefore && i1 < i; ++i1) {
-                for (int t1 = 0; t1 <= WFC__TRANSF_MAX; ++t1) {
-                    if ((t1 & ~transf) != 0) continue;
-
-                    struct wfc__Pattern patt1 = {0};
-                    wfc__indToCoords2d(src.d13, i1, &patt1.c0, &patt1.c1);
-                    patt1.transf = t1;
-
-                    if (wfc__patternsEq(n, src, patt, patt1)) seenBefore = 1;
-                }
-            }
-
-            if (!seenBefore) ++pattCnt;
+            if (wfc__patternsEq(n, src, patt, patt1)) seenBefore = 1;
         }
+
+        if (!seenBefore) ++pattCnt;
     }
 
     patts = malloc((size_t)pattCnt * sizeof(*patts));
     pattCnt = 0;
-    for (int i = 0; i < src.d03 * src.d13; ++i) {
-        for (int t = 0; t <= WFC__TRANSF_MAX; ++t) {
-            if ((t & ~transf) != 0) continue;
+    for (int i = 0; i < wfc__patternCombinationCnt(src.d03, src.d13); ++i) {
+        struct wfc__Pattern patt = {0};
+        wfc__indToPatternCombination(src.d13, i, &patt);
+        patt.freq = 1;
+        if ((patt.transf & ~transf) != 0) continue;
 
-            struct wfc__Pattern patt = {0};
-            wfc__indToCoords2d(src.d13, i, &patt.c0, &patt.c1);
-            patt.transf = t;
-            patt.freq = 1;
-
-            int seenBefore = 0;
-            for (int i1 = 0; !seenBefore && i1 < pattCnt; ++i1) {
-                if (wfc__patternsEq(n, src, patt, patts[i1])) {
-                    ++patts[i1].freq;
-                    seenBefore = 1;
-                }
+        int seenBefore = 0;
+        for (int i1 = 0; !seenBefore && i1 < pattCnt; ++i1) {
+            if (wfc__patternsEq(n, src, patt, patts[i1])) {
+                ++patts[i1].freq;
+                seenBefore = 1;
             }
-
-            if (!seenBefore) patts[pattCnt++] = patt;
         }
+
+        if (!seenBefore) patts[pattCnt++] = patt;
     }
 
     *cnt = pattCnt;

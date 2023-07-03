@@ -41,7 +41,11 @@ int wfc_patternPresent(const wfc_State *state, int patt, int x, int y);
 const unsigned char* wfc_pixelToRender(const wfc_State *state,
     int patt, const unsigned char *src);
 
-int wfc_iterate(wfc_State *state);
+int wfc_done(wfc_State *state);
+
+int wfc_status(wfc_State *state);
+
+void wfc_step(wfc_State *state);
 
 void wfc_render(
     const wfc_State *state,
@@ -512,6 +516,7 @@ void wfc__propagate(
 }
 
 struct wfc_State {
+    int status;
     int n, bytesPerPixel;
     int sD0, sD1;
     struct wfc__Pattern *patts;
@@ -530,12 +535,11 @@ int wfc_generate(
     wfc_State *state = wfc_init(n, options, bytesPerPixel,
         srcW, srcH, src, dstW, dstH);
 
-    int status;
-    while (!(status = wfc_iterate(state)));
+    while (!wfc_done(state)) wfc_step(state);
 
-    if (status < 0) {
-        ret = 1;
-    } else if (status > 0) {
+    if (wfc_status(state) < 0) {
+        ret = -1;
+    } else if (wfc_status(state) > 0) {
         wfc_render(state, src, dst);
     }
 
@@ -565,6 +569,7 @@ wfc_State* wfc_init(
 
     wfc_State *state = malloc(sizeof(*state));
 
+    state->status = 0;
     state->n = n;
     state->bytesPerPixel = bytesPerPixel;
     state->sD0 = srcA.d03;
@@ -640,7 +645,15 @@ const unsigned char* wfc_pixelToRender(const wfc_State *state,
     return &WFC__A3D_GET_WRAP(srcA, sC0, sC1, 0);
 }
 
-int wfc_iterate(wfc_State *state) {
+int wfc_done(wfc_State *state) {
+    return state->status != 0;
+}
+
+int wfc_status(wfc_State *state) {
+    return state->status;
+}
+
+void wfc_step(wfc_State *state) {
     int pattCnt = state->wave.d23;
 
     {
@@ -659,10 +672,12 @@ int wfc_iterate(wfc_State *state) {
 
         if (minPatts == 0) {
             // contradiction reached
-            return -1;
+            state->status = -1;
+            return;
         } else if (maxPatts == 1) {
             // WFC completed
-            return 1;
+            state->status = 1;
+            return;
         }
     }
 
@@ -674,8 +689,6 @@ int wfc_iterate(wfc_State *state) {
 
     wfc__propagate(state->n, obsC0, obsC1, state->overlaps,
         state->ripple, state->wave);
-
-    return 0;
 }
 
 void wfc_render(

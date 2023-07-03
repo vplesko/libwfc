@@ -512,9 +512,8 @@ int testClone(void) {
         wfc_free(state);
     }
 
-    int status;
-    while (!(status = wfc_iterate(clone)));
-    if (status <= 0) {
+    while (!wfc_done(clone)) wfc_step(clone);
+    if (wfc_status(clone) <= 0) {
         PRINT_TEST_FAIL();
         ret = 1;
         goto cleanup;

@@ -13,7 +13,8 @@
 
 // public declarations
 
-// @TODO input validation (and ret err status instead of asserting)
+// @TODO input validation
+// @TODO return a code for client error instead of asserting
 
 enum {
     wfc_optHFlip = 0x2,
@@ -231,7 +232,6 @@ int wfc__patternsEq(
     return 1;
 }
 
-// @TODO test number of patterns when the API is introduced for that
 struct wfc__Pattern* wfc__gatherPatterns(
     int n, int options, const struct wfc__A3d_cu8 src, int *cnt) {
     struct wfc__Pattern *patts = NULL;
@@ -550,7 +550,6 @@ wfc_State* wfc_init(
     int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH) {
-    // @TODO instead, return a code for client error
     assert(n > 0);
     assert(bytesPerPixel > 0);
     assert(n <= srcW);

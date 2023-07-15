@@ -19,6 +19,7 @@ void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
 }
 
+// @TODO rand seed as arg
 int parseArgs(int argc, char *argv[],
     const char **imagePath, int *wfcN, int *dstW, int *dstH) {
     if (argc < 5) {
@@ -53,6 +54,30 @@ int parseArgs(int argc, char *argv[],
     *dstH = (int)l;
 
     return 0;
+}
+
+void wfcBlitAveraged(const wfc_State *wfc, int bytesPerPixel,
+    const unsigned char *src,
+    int dstW, int dstH, unsigned char *dst) {
+    int pattCnt = wfc_patternCount(wfc);
+
+    for (int j = 0; j < dstH; ++j) {
+        for (int i = 0; i < dstW; ++i) {
+            for (int b = 0; b < bytesPerPixel; ++b) {
+                int sum = 0, cnt = 0;
+                for (int p = 0; p < pattCnt; ++p) {
+                    if (wfc_patternAvailable(wfc, p, i, j)) {
+                        const unsigned char* px = wfc_pixelToBlit(wfc, p, src);
+                        sum += (int)px[b];
+                        ++cnt;
+                    }
+                }
+
+                unsigned char avg = (unsigned char)(sum / cnt);
+                dst[j * dstW * bytesPerPixel + i * bytesPerPixel + b] = avg;
+            }
+        }
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -155,13 +180,16 @@ int main(int argc, char *argv[]) {
         // update
 
         if (wfc_status(wfc) == 0) {
-            if (wfc_step(wfc) < 0) {
+            int status = wfc_step(wfc);
+            if (status < 0) {
                 logError("WFC step failed.");
                 ret = 1;
                 goto cleanup;
-            }
-            wfc_blit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-            if (wfc_status(wfc) > 0) {
+            } else if (status == 0) {
+                wfcBlitAveraged(wfc, bytesPerPixel,
+                    surfaceSrc->pixels, dstW, dstH, surfaceDst->pixels);
+            } else {
+                wfc_blit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
                 logInfo("WFC completed.");
             }
         }

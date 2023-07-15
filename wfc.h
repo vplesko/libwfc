@@ -14,7 +14,7 @@
 // public declarations
 
 // @TODO input validation
-// @TODO return a code for client error instead of asserting
+// @TODO (maybe) return a code for client error instead of asserting
 
 enum {
     wfc_optHFlip = 0x2,
@@ -535,9 +535,9 @@ int wfc_generate(
 
     while (!wfc_step(state));
 
-    if (wfc_step(state) < 0) {
+    if (wfc_status(state) < 0) {
         ret = -1;
-    } else if (wfc_step(state) > 0) {
+    } else if (wfc_status(state) > 0) {
         wfc_blit(state, src, dst);
     }
 
@@ -603,6 +603,15 @@ int wfc_step(wfc_State *state) {
 
     int pattCnt = state->wave.d23;
 
+    wfc__calcEntropies(state->patts, state->wave, state->entropies);
+
+    int obsC0, obsC1;
+    wfc__observeOne(pattCnt, state->patts, state->entropies, state->wave,
+        &obsC0, &obsC1);
+
+    wfc__propagate(state->n, obsC0, obsC1, state->overlaps,
+        state->ripple, state->wave);
+
     {
         int minPatts = pattCnt, maxPatts = 0;
         for (int c0 = 0; c0 < state->wave.d03; ++c0) {
@@ -620,24 +629,13 @@ int wfc_step(wfc_State *state) {
         if (minPatts == 0) {
             // contradiction reached
             state->status = -1;
-            return state->status;
         } else if (maxPatts == 1) {
             // WFC completed
             state->status = 1;
-            return state->status;
         }
     }
 
-    wfc__calcEntropies(state->patts, state->wave, state->entropies);
-
-    int obsC0, obsC1;
-    wfc__observeOne(pattCnt, state->patts, state->entropies, state->wave,
-        &obsC0, &obsC1);
-
-    wfc__propagate(state->n, obsC0, obsC1, state->overlaps,
-        state->ripple, state->wave);
-
-    return 0;
+    return state->status;
 }
 
 void wfc_blit(

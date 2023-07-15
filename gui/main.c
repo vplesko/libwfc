@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -8,6 +9,7 @@
 #include "wfc.h"
 
 const int screenW = 640, screenH = 480;
+const Uint32 ticksPerFrame = 1000 / 60;
 
 void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
@@ -49,106 +51,14 @@ int parseArgs(int argc, char *argv[],
     return 0;
 }
 
-int loadAndWfcGenerateTextures(const char *path, int n, int dstW, int dstH,
-    SDL_Renderer *renderer, SDL_Texture **texSrc, SDL_Texture **texDst) {
-    int ret = 0;
-
-    void *srcPixels = NULL;
-    void *dstPixels = NULL;
-    SDL_Surface *srcSurface = NULL;
-    SDL_Surface *dstSurface = NULL;
-
-    srcSurface = IMG_Load(path);
-    if (srcSurface == NULL) {
-        logError(IMG_GetError());
-        ret = 1;
-        goto cleanup;
-    }
-
-    {
-        SDL_Surface *converted = SDL_ConvertSurfaceFormat(srcSurface,
-            SDL_PIXELFORMAT_RGBA32, 0);
-        if (converted == NULL) {
-            logError(SDL_GetError());
-            ret = 1;
-            goto cleanup;
-        }
-
-        SDL_FreeSurface(srcSurface);
-        srcSurface = converted;
-    }
-
-    const int bytesPerPixel = srcSurface->format->BytesPerPixel;
-    const int srcW = srcSurface->w, srcH = srcSurface->h;
-
-    if (SDL_MUSTLOCK(srcSurface)) {
-        srcPixels = malloc(srcW * srcH * bytesPerPixel);
-
-        SDL_LockSurface(srcSurface);
-        memcpy(srcPixels, srcSurface->pixels, srcW * srcH * bytesPerPixel);
-        SDL_UnlockSurface(srcSurface);
-    }
-
-    dstPixels = malloc(dstW * dstH * bytesPerPixel);
-    if (wfc_generate(
-            n, 0, bytesPerPixel,
-            srcW, srcH, srcPixels != NULL ? srcPixels : srcSurface->pixels,
-            dstW, dstH, dstPixels) != 0) {
-        logError("WFC failed.");
-        ret = 1;
-        goto cleanup;
-    }
-
-    dstSurface = SDL_CreateRGBSurfaceWithFormatFrom(
-        dstPixels, dstW, dstH,
-        8 * bytesPerPixel, dstW * bytesPerPixel, srcSurface->format->format);
-    if (dstSurface == NULL) {
-        logError(SDL_GetError());
-        ret = 1;
-        goto cleanup;
-    }
-
-    *texSrc = SDL_CreateTextureFromSurface(renderer, srcSurface);
-    if (*texSrc == NULL) {
-        logError(SDL_GetError());
-        ret = 1;
-        goto cleanup;
-    }
-
-    *texDst = SDL_CreateTextureFromSurface(renderer, dstSurface);
-    if (*texDst == NULL) {
-        logError(SDL_GetError());
-        ret = 1;
-        goto cleanup;
-    }
-
-cleanup:
-    if (dstSurface != NULL) SDL_FreeSurface(dstSurface);
-    if (srcSurface != NULL) SDL_FreeSurface(srcSurface);
-    free(dstPixels);
-    free(srcPixels);
-
-    return ret;
-}
-
-void renderTexture(SDL_Renderer *renderer, SDL_Texture *texture, int x, int y) {
-    SDL_Rect rect;
-    rect.x = x;
-    rect.y = y;
-    SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
-
-    SDL_RenderCopy(renderer, texture, NULL, &rect);
-}
-
 int main(int argc, char *argv[]) {
     int ret = 0;
 
     int calledSdlInit = 0;
     int calledImgInit = 0;
     SDL_Window *window = NULL;
-    SDL_Renderer *renderer = NULL;
-    SDL_Texture *texSrc = NULL;
-    SDL_Texture *texDst = NULL;
+    SDL_Surface *surfaceSrc = NULL;
+    SDL_Surface *surfaceDst = NULL;
 
     const char *imagePath;
     int wfcN, dstW, dstH;
@@ -181,29 +91,50 @@ int main(int argc, char *argv[]) {
         ret = 1;
         goto cleanup;
     }
-
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
-    if (renderer == NULL) {
-        logError(SDL_GetError());
-        ret = 1;
-        goto cleanup;
-    }
+    SDL_Surface *surfaceWin = SDL_GetWindowSurface(window);
 
     srand((unsigned)time(NULL));
 
-    if (loadAndWfcGenerateTextures(imagePath, wfcN, dstW, dstH,
-            renderer, &texSrc, &texDst) != 0) {
+    surfaceSrc = IMG_Load(imagePath);
+    if (surfaceSrc == NULL) {
+        logError(IMG_GetError());
+        ret = 1;
+        goto cleanup;
+    }
+    {
+        SDL_Surface *surfaceConv = SDL_ConvertSurfaceFormat(surfaceSrc,
+            SDL_PIXELFORMAT_RGBA32, 0);
+        if (surfaceConv == NULL) {
+            logError(SDL_GetError());
+            ret = 1;
+            goto cleanup;
+        }
+
+        SDL_FreeSurface(surfaceSrc);
+        surfaceSrc = surfaceConv;
+    }
+    assert(surfaceSrc->format->palette == NULL);
+    assert(!SDL_MUSTLOCK(surfaceSrc));
+    const int bytesPerPixel = surfaceSrc->format->BytesPerPixel;
+    const int srcW = surfaceSrc->w, srcH = surfaceSrc->h;
+
+    surfaceDst = SDL_CreateRGBSurfaceWithFormat(0,
+        dstW, dstH, bytesPerPixel * 8, surfaceSrc->format->format);
+    assert(surfaceDst->format->palette == NULL);
+    assert(!SDL_MUSTLOCK(surfaceDst));
+
+    if (wfc_generate(wfcN, 0, bytesPerPixel,
+        srcW, srcH, surfaceSrc->pixels,
+        dstW, dstH, surfaceDst->pixels) != 0) {
+        logError("WFC failed.");
         ret = 1;
         goto cleanup;
     }
 
-    int texSrcW, texSrcH;
-    SDL_QueryTexture(texSrc, NULL, NULL, &texSrcW, &texSrcH);
-    int texDstH;
-    SDL_QueryTexture(texDst, NULL, NULL, NULL, &texDstH);
-
     int quit = 0;
     while (!quit) {
+        Uint32 ticksPrev = SDL_GetTicks();
+
         // input
 
         SDL_Event e;
@@ -219,19 +150,22 @@ int main(int argc, char *argv[]) {
 
         // render
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff);
-        SDL_RenderClear(renderer);
+        SDL_BlitSurface(surfaceSrc, NULL, surfaceWin,
+            &(SDL_Rect){0, (dstH - srcH) / 2, srcW, srcH});
+        SDL_BlitSurface(surfaceDst, NULL, surfaceWin,
+            &(SDL_Rect){srcW + 4, 0, dstW, dstH});
 
-        renderTexture(renderer, texSrc, 0, (texDstH - texSrcH) / 2);
-        renderTexture(renderer, texDst, texSrcW + 4, 0);
+        SDL_UpdateWindowSurface(window);
 
-        SDL_RenderPresent(renderer);
+        Uint32 ticksCurr = SDL_GetTicks();
+        if (ticksCurr - ticksPrev < ticksPerFrame) {
+            SDL_Delay(ticksPerFrame - (ticksCurr - ticksPrev));
+        }
     }
 
 cleanup:
-    if (texDst != NULL) SDL_DestroyTexture(texDst);
-    if (texSrc != NULL) SDL_DestroyTexture(texSrc);
-    if (renderer != NULL) SDL_DestroyRenderer(renderer);
+    if (surfaceDst != NULL) SDL_FreeSurface(surfaceDst);
+    if (surfaceSrc != NULL) SDL_FreeSurface(surfaceSrc);
     if (window != NULL) SDL_DestroyWindow(window);
     if (calledImgInit) IMG_Quit();
     if (calledSdlInit) SDL_Quit();

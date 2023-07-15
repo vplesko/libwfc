@@ -11,6 +11,10 @@
 const int screenW = 640, screenH = 480;
 const Uint32 ticksPerFrame = 1000 / 60;
 
+void logInfo(const char *msg) {
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
+}
+
 void logError(const char *msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
 }
@@ -157,6 +161,9 @@ int main(int argc, char *argv[]) {
                 goto cleanup;
             }
             wfc_blit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
+            if (wfc_status(wfc) > 0) {
+                logInfo("WFC completed.");
+            }
         }
 
         // render

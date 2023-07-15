@@ -13,7 +13,7 @@
 
 // public declarations
 
-// @TODO input validation
+// @TODO input validation (and ret err status instead of asserting)
 
 enum {
     wfc_optHFlip = 0x2,
@@ -32,26 +32,24 @@ wfc_State* wfc_init(
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH);
 
-wfc_State* wfc_clone(const wfc_State *state);
+int wfc_status(const wfc_State *state);
 
-int wfc_patternCount(const wfc_State *state);
+int wfc_step(wfc_State *state);
 
-int wfc_patternPresent(const wfc_State *state, int patt, int x, int y);
-
-const unsigned char* wfc_pixelToRender(const wfc_State *state,
-    int patt, const unsigned char *src);
-
-int wfc_done(wfc_State *state);
-
-int wfc_status(wfc_State *state);
-
-void wfc_step(wfc_State *state);
-
-void wfc_render(
+void wfc_blit(
     const wfc_State *state,
     const unsigned char *src, unsigned char *dst);
 
+wfc_State* wfc_clone(const wfc_State *state);
+
 void wfc_free(wfc_State *state);
+
+int wfc_patternCount(const wfc_State *state);
+
+int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
+
+const unsigned char* wfc_pixelToBlit(const wfc_State *state,
+    int patt, const unsigned char *src);
 
 // basic utility
 
@@ -535,12 +533,12 @@ int wfc_generate(
     wfc_State *state = wfc_init(n, options, bytesPerPixel,
         srcW, srcH, src, dstW, dstH);
 
-    while (!wfc_done(state)) wfc_step(state);
+    while (!wfc_step(state));
 
-    if (wfc_status(state) < 0) {
+    if (wfc_step(state) < 0) {
         ret = -1;
-    } else if (wfc_status(state) > 0) {
-        wfc_render(state, src, dst);
+    } else if (wfc_step(state) > 0) {
+        wfc_blit(state, src, dst);
     }
 
     wfc_free(state);
@@ -597,63 +595,13 @@ wfc_State* wfc_init(
     return state;
 }
 
-wfc_State* wfc_clone(const wfc_State *state) {
-    wfc_State *clone = malloc(sizeof(*clone));
-
-    *clone = *state;
-
-    int pattCnt = state->wave.d23;
-    size_t pattsSz = (size_t)pattCnt * sizeof(*state->patts);
-    clone->patts = malloc(pattsSz);
-    memcpy(clone->patts, state->patts, pattsSz);
-
-    clone->overlaps.a = malloc(WFC__A4D_SIZE(state->overlaps));
-    memcpy(clone->overlaps.a, state->overlaps.a,
-        WFC__A4D_SIZE(state->overlaps));
-
-    clone->wave.a = malloc(WFC__A3D_SIZE(state->wave));
-    memcpy(clone->wave.a, state->wave.a,
-        WFC__A3D_SIZE(state->wave));
-
-    clone->entropies.a = malloc(WFC__A2D_SIZE(state->entropies));
-    memcpy(clone->entropies.a, state->entropies.a,
-        WFC__A2D_SIZE(state->entropies));
-
-    clone->ripple.a = malloc(WFC__A2D_SIZE(state->ripple));
-    memcpy(clone->ripple.a, state->ripple.a,
-        WFC__A2D_SIZE(state->ripple));
-
-    return clone;
-}
-
-int wfc_patternCount(const wfc_State *state) {
-    return state->wave.d23;
-}
-
-int wfc_patternPresent(const wfc_State *state, int patt, int x, int y) {
-    return WFC__A3D_GET(state->wave, y, x, patt);
-}
-
-const unsigned char* wfc_pixelToRender(const wfc_State *state,
-    int patt, const unsigned char *src) {
-    struct wfc__A3d_cu8 srcA =
-        {state->sD0, state->sD1, state->bytesPerPixel, src};
-
-    int sC0, sC1;
-    wfc__coordsPattToSrc(state->n, state->patts[patt], 0, 0, &sC0, &sC1);
-
-    return &WFC__A3D_GET_WRAP(srcA, sC0, sC1, 0);
-}
-
-int wfc_done(wfc_State *state) {
-    return state->status != 0;
-}
-
-int wfc_status(wfc_State *state) {
+int wfc_status(const wfc_State *state) {
     return state->status;
 }
 
-void wfc_step(wfc_State *state) {
+int wfc_step(wfc_State *state) {
+    if (state->status != 0) return state->status;
+
     int pattCnt = state->wave.d23;
 
     {
@@ -673,11 +621,11 @@ void wfc_step(wfc_State *state) {
         if (minPatts == 0) {
             // contradiction reached
             state->status = -1;
-            return;
+            return state->status;
         } else if (maxPatts == 1) {
             // WFC completed
             state->status = 1;
-            return;
+            return state->status;
         }
     }
 
@@ -689,9 +637,11 @@ void wfc_step(wfc_State *state) {
 
     wfc__propagate(state->n, obsC0, obsC1, state->overlaps,
         state->ripple, state->wave);
+
+    return 0;
 }
 
-void wfc_render(
+void wfc_blit(
     const wfc_State *state,
     const unsigned char *src, unsigned char *dst) {
     assert(dst != NULL);
@@ -725,11 +675,61 @@ void wfc_render(
     }
 }
 
+wfc_State* wfc_clone(const wfc_State *state) {
+    wfc_State *clone = malloc(sizeof(*clone));
+
+    *clone = *state;
+
+    int pattCnt = state->wave.d23;
+    size_t pattsSz = (size_t)pattCnt * sizeof(*state->patts);
+    clone->patts = malloc(pattsSz);
+    memcpy(clone->patts, state->patts, pattsSz);
+
+    clone->overlaps.a = malloc(WFC__A4D_SIZE(state->overlaps));
+    memcpy(clone->overlaps.a, state->overlaps.a,
+        WFC__A4D_SIZE(state->overlaps));
+
+    clone->wave.a = malloc(WFC__A3D_SIZE(state->wave));
+    memcpy(clone->wave.a, state->wave.a,
+        WFC__A3D_SIZE(state->wave));
+
+    clone->entropies.a = malloc(WFC__A2D_SIZE(state->entropies));
+    memcpy(clone->entropies.a, state->entropies.a,
+        WFC__A2D_SIZE(state->entropies));
+
+    clone->ripple.a = malloc(WFC__A2D_SIZE(state->ripple));
+    memcpy(clone->ripple.a, state->ripple.a,
+        WFC__A2D_SIZE(state->ripple));
+
+    return clone;
+}
+
 void wfc_free(wfc_State *state) {
+    if (state == NULL) return;
+
     free(state->ripple.a);
     free(state->entropies.a);
     free(state->wave.a);
     free(state->overlaps.a);
     free(state->patts);
     free(state);
+}
+
+int wfc_patternCount(const wfc_State *state) {
+    return state->wave.d23;
+}
+
+int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
+    return WFC__A3D_GET(state->wave, y, x, patt);
+}
+
+const unsigned char* wfc_pixelToBlit(const wfc_State *state,
+    int patt, const unsigned char *src) {
+    struct wfc__A3d_cu8 srcA =
+        {state->sD0, state->sD1, state->bytesPerPixel, src};
+
+    int sC0, sC1;
+    wfc__coordsPattToSrc(state->n, state->patts[patt], 0, 0, &sC0, &sC1);
+
+    return &WFC__A3D_GET_WRAP(srcA, sC0, sC1, 0);
 }

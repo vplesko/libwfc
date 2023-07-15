@@ -512,14 +512,14 @@ int testClone(void) {
         wfc_free(state);
     }
 
-    while (!wfc_done(clone)) wfc_step(clone);
+    while (!wfc_step(clone));
     if (wfc_status(clone) <= 0) {
         PRINT_TEST_FAIL();
         ret = 1;
         goto cleanup;
     }
 
-    wfc_render(clone, (unsigned char*)&src, (unsigned char*)&dst);
+    wfc_blit(clone, (unsigned char*)&src, (unsigned char*)&dst);
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();

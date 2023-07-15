@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
     SDL_Window *window = NULL;
     SDL_Surface *surfaceSrc = NULL;
     SDL_Surface *surfaceDst = NULL;
+    wfc_State *wfc = NULL;
 
     const char *imagePath;
     int wfcN, dstW, dstH;
@@ -82,7 +83,7 @@ int main(int argc, char *argv[]) {
     }
     calledImgInit = 1;
 
-    window = SDL_CreateWindow("Demo",
+    window = SDL_CreateWindow("libwfc - GUI",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         screenW, screenH,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
@@ -123,10 +124,11 @@ int main(int argc, char *argv[]) {
     assert(surfaceDst->format->palette == NULL);
     assert(!SDL_MUSTLOCK(surfaceDst));
 
-    if (wfc_generate(wfcN, 0, bytesPerPixel,
+    wfc = wfc_init(wfcN, 0, bytesPerPixel,
         srcW, srcH, surfaceSrc->pixels,
-        dstW, dstH, surfaceDst->pixels) != 0) {
-        logError("WFC failed.");
+        dstW, dstH);
+    if (wfc == NULL) {
+        logError("WFC init failed.");
         ret = 1;
         goto cleanup;
     }
@@ -148,6 +150,15 @@ int main(int argc, char *argv[]) {
 
         // update
 
+        if (wfc_status(wfc) == 0) {
+            if (wfc_step(wfc) < 0) {
+                logError("WFC step failed.");
+                ret = 1;
+                goto cleanup;
+            }
+            wfc_blit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
+        }
+
         // render
 
         SDL_BlitSurface(surfaceSrc, NULL, surfaceWin,
@@ -164,6 +175,7 @@ int main(int argc, char *argv[]) {
     }
 
 cleanup:
+    if (wfc != NULL) wfc_free(wfc);
     if (surfaceDst != NULL) SDL_FreeSurface(surfaceDst);
     if (surfaceSrc != NULL) SDL_FreeSurface(surfaceSrc);
     if (window != NULL) SDL_DestroyWindow(window);

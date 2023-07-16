@@ -549,7 +549,7 @@ void wfc__propagate(
 struct wfc_State {
     int status;
     int n, bytesPerPixel;
-    int sD0, sD1;
+    int srcD0, srcD1, dstD0, dstD1;
     struct wfc__Pattern *patts;
     struct wfc__A4d_u8 overlaps;
     struct wfc__A3d_u8 wave;
@@ -602,8 +602,10 @@ wfc_State* wfc_init(
     state->status = 0;
     state->n = n;
     state->bytesPerPixel = bytesPerPixel;
-    state->sD0 = srcA.d03;
-    state->sD1 = srcA.d13;
+    state->srcD0 = srcH;
+    state->srcD1 = srcW;
+    state->dstD0 = dstH;
+    state->dstD1 = dstW;
 
     int pattCnt;
     state->patts = wfc__gatherPatterns(n, options, srcA, &pattCnt);
@@ -677,14 +679,14 @@ void wfc_blit(
     assert(dst != NULL);
 
     struct wfc__A3d_cu8 srcA =
-        {state->sD0, state->sD1, state->bytesPerPixel, src};
+        {state->srcD0, state->srcD1, state->bytesPerPixel, src};
     struct wfc__A3d_u8 dstA =
-        {state->wave.d03, state->wave.d13, state->bytesPerPixel, dst};
+        {state->dstD0, state->dstD1, state->bytesPerPixel, dst};
 
     int pattCnt = state->wave.d23;
 
-    for (int c0 = 0; c0 < state->wave.d03; ++c0) {
-        for (int c1 = 0; c1 < state->wave.d13; ++c1) {
+    for (int c0 = 0; c0 < state->dstD0; ++c0) {
+        for (int c1 = 0; c1 < state->dstD1; ++c1) {
             int patt = 0;
             for (int p = 0; p < pattCnt; ++p) {
                 if (WFC__A3D_GET(state->wave, c0, c1, p)) {
@@ -756,7 +758,7 @@ int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
 const unsigned char* wfc_pixelToBlit(const wfc_State *state,
     int patt, const unsigned char *src) {
     struct wfc__A3d_cu8 srcA =
-        {state->sD0, state->sD1, state->bytesPerPixel, src};
+        {state->srcD0, state->srcD1, state->bytesPerPixel, src};
 
     int sC0, sC1;
     wfc__coordsPattToSrc(state->n, state->patts[patt], 0, 0, &sC0, &sC1);

@@ -487,22 +487,24 @@ cleanup:
 }
 
 int testPatternCountRotate(void) {
-    enum { n = 2, srcW = 2, srcH = 2 };
+    enum { n = 2, srcW = 4, srcH = 4 };
 
     int ret = 0;
 
     wfc_State *state = NULL;
 
     uint32_t src[srcW * srcH] = {
-        1,2,
-        3,4,
+        0,0,0,0,
+        0,0,1,0,
+        0,1,1,0,
+        0,0,0,0,
     };
 
     state = wfc_init(n, wfc_optRotate, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         16, 16);
 
-    if (wfc_patternCount(state) != 8) {
+    if (wfc_patternCount(state) != 13) {
         PRINT_TEST_FAIL();
         ret = 1;
         goto cleanup;
@@ -588,7 +590,7 @@ int testPatternCountVFlipRotate(void) {
         srcW, srcH, (unsigned char*)&src,
         16, 16);
 
-    if (wfc_patternCount(state) != 23) {
+    if (wfc_patternCount(state) != 28) {
         PRINT_TEST_FAIL();
         ret = 1;
         goto cleanup;

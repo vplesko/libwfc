@@ -203,17 +203,17 @@ void wfc__coordsPattToSrc(
     if (patt.tf & wfc__tfC1Flip) tfC1 = n - 1 - tfC1;
 
     {
-        int tmpC0 = tfC0;
-        int tmpC1 = tfC1;
-
         // rot270 is rot90 plus rot180 (both in bitmask and as transformation)
         if (patt.tf & wfc__tfRot90) {
+            int tmpC0 = tfC0;
+            int tmpC1 = tfC1;
+
             tfC0 = n - 1 - tmpC1;
             tfC1 = tmpC0;
         }
         if (patt.tf & wfc__tfRot180) {
-            tfC0 = n - 1 - tmpC0;
-            tfC1 = n - 1 - tmpC1;
+            tfC0 = n - 1 - tfC0;
+            tfC1 = n - 1 - tfC1;
         }
     }
 

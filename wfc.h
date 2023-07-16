@@ -17,8 +17,9 @@
 // @TODO (maybe) return a code for client error instead of asserting
 
 enum {
-    wfc_optHFlip = 0x2,
-    wfc_optVFlip = 0x1,
+    wfc_optHFlip = 1 << 1,
+    wfc_optVFlip = 1 << 0,
+    wfc_optRotate = 1 << 2,
 };
 
 typedef struct wfc_State wfc_State;
@@ -174,10 +175,15 @@ WFC__A4D_DEF(uint8_t, u8);
 
 // wfc code
 
+// @TODO some combs are equivalent, so work in gathering patts gets duplicated
 enum {
-    wfc__tfC0Flip = 0x1,
-    wfc__tfC1Flip = 0x2,
-    wfc__tfCnt = 0x4,
+    wfc__tfC0Flip = 1 << 0,
+    wfc__tfC1Flip = 1 << 1,
+    wfc__tfRot90 = 1 << 2,
+    wfc__tfRot180 = 1 << 3,
+    wfc__tfRot270 = wfc__tfRot90 | wfc__tfRot180,
+
+    wfc__tfCnt = 1 << 4,
 };
 
 struct wfc__Pattern {
@@ -190,8 +196,29 @@ void wfc__coordsPattToSrc(
     int n,
     struct wfc__Pattern patt, int pC0, int pC1,
     int *sC0, int *sC1) {
-    int sC0_ = patt.c0 + (patt.tf & wfc__tfC0Flip ? n - 1 - pC0 : pC0);
-    int sC1_ = patt.c1 + (patt.tf & wfc__tfC1Flip ? n - 1 - pC1 : pC1);
+    int tfC0 = pC0;
+    int tfC1 = pC1;
+
+    if (patt.tf & wfc__tfC0Flip) tfC0 = n - 1 - tfC0;
+    if (patt.tf & wfc__tfC1Flip) tfC1 = n - 1 - tfC1;
+
+    {
+        int tmpC0 = tfC0;
+        int tmpC1 = tfC1;
+
+        // rot270 is rot90 plus rot180 (both in bitmask and as transformation)
+        if (patt.tf & wfc__tfRot90) {
+            tfC0 = n - 1 - tmpC1;
+            tfC1 = tmpC0;
+        }
+        if (patt.tf & wfc__tfRot180) {
+            tfC0 = n - 1 - tmpC0;
+            tfC1 = n - 1 - tmpC1;
+        }
+    }
+
+    int sC0_ = patt.c0 + tfC0;
+    int sC1_ = patt.c1 + tfC1;
 
     if (sC0 != NULL) *sC0 = sC0_;
     if (sC1 != NULL) *sC1 = sC1_;
@@ -209,6 +236,12 @@ void wfc__indToPattComb(int d1, int ind, struct wfc__Pattern *patt) {
 int wfc__usesOnlyAllowedOptions(int tf, int options) {
     if ((tf & wfc__tfC0Flip) && !(options & wfc_optVFlip)) return 0;
     if ((tf & wfc__tfC1Flip) && !(options & wfc_optHFlip)) return 0;
+
+    if ((tf & (wfc__tfRot90 | wfc__tfRot180 | wfc__tfRot270)) &&
+        !(options & wfc_optRotate)) {
+        return 0;
+    }
+
     return 1;
 }
 

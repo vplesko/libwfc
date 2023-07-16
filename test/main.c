@@ -486,6 +486,149 @@ cleanup:
     return ret;
 }
 
+int testPatternCountRotate(void) {
+    enum { n = 2, srcW = 2, srcH = 2 };
+
+    int ret = 0;
+
+    wfc_State *state = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        1,2,
+        3,4,
+    };
+
+    state = wfc_init(n, wfc_optRotate, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        16, 16);
+
+    if (wfc_patternCount(state) != 8) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
+int testPatternCountRotateCentralSymmetric(void) {
+    enum { n = 2, srcW = 2, srcH = 2 };
+
+    int ret = 0;
+
+    wfc_State *state = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        1,2,
+        2,1,
+    };
+
+    state = wfc_init(n, wfc_optRotate, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        16, 16);
+
+    if (wfc_patternCount(state) != 2) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
+int testPatternCountHFlipRotate(void) {
+    enum { n = 2, srcW = 3, srcH = 3 };
+
+    int ret = 0;
+
+    wfc_State *state = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        1,1,3,
+        2,2,3,
+        3,3,3,
+    };
+
+    state = wfc_init(n, wfc_optHFlip | wfc_optRotate, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        16, 16);
+
+    if (wfc_patternCount(state) != 28) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
+int testPatternCountVFlipRotate(void) {
+    enum { n = 2, srcW = 3, srcH = 3 };
+
+    int ret = 0;
+
+    wfc_State *state = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        1,1,3,
+        2,2,3,
+        3,3,3,
+    };
+
+    state = wfc_init(n, wfc_optVFlip | wfc_optRotate, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        16, 16);
+
+    if (wfc_patternCount(state) != 23) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
+int testPatternCountHVFlipRotate(void) {
+    enum { n = 2, srcW = 2, srcH = 2 };
+
+    int ret = 0;
+
+    wfc_State *state = NULL;
+
+    uint32_t src[srcW * srcH] = {
+        1,2,
+        3,4,
+    };
+
+    state = wfc_init(
+        n, wfc_optHFlip | wfc_optVFlip | wfc_optRotate, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        16, 16);
+
+    if (wfc_patternCount(state) != 8) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
 int testClone(void) {
     enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
@@ -554,6 +697,11 @@ int main(void) {
         testPatternCountHFlip() != 0 ||
         testPatternCountVFlip() != 0 ||
         testPatternCountHVFlip() != 0 ||
+        testPatternCountRotate() != 0 ||
+        testPatternCountRotateCentralSymmetric() != 0 ||
+        testPatternCountHFlipRotate() != 0 ||
+        testPatternCountVFlipRotate() != 0 ||
+        testPatternCountHVFlipRotate() != 0 ||
         testClone() != 0) {
         printf("Seed was: %u\n", seed);
         return 1;

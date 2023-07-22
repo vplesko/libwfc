@@ -204,11 +204,10 @@ struct wfc__Pattern {
     int freq;
 };
 
-// @TODO add wrapping to this function, update callers to not do it themselves
 void wfc__coordsPattToSrc(
     int n,
     struct wfc__Pattern patt, int pC0, int pC1,
-    int *sC0, int *sC1) {
+    int sD0, int sD1, int *sC0, int *sC1) {
     int tfC0 = pC0;
     int tfC1 = pC1;
 
@@ -231,8 +230,8 @@ void wfc__coordsPattToSrc(
         }
     }
 
-    int sC0_ = patt.c0 + tfC0;
-    int sC1_ = patt.c1 + tfC1;
+    int sC0_ = wfc__indWrap(patt.c0 + tfC0, sD0);
+    int sC1_ = wfc__indWrap(patt.c1 + tfC1, sD1);
 
     if (sC0 != NULL) *sC0 = sC0_;
     if (sC1 != NULL) *sC1 = sC1_;
@@ -337,13 +336,15 @@ int wfc__patternsEq(
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             int sAC0, sAC1;
-            wfc__coordsPattToSrc(n, pattA, i, j, &sAC0, &sAC1);
+            wfc__coordsPattToSrc(n, pattA, i, j, src.d03, src.d13,
+                &sAC0, &sAC1);
 
             int sBC0, sBC1;
-            wfc__coordsPattToSrc(n, pattB, i, j, &sBC0, &sBC1);
+            wfc__coordsPattToSrc(n, pattB, i, j, src.d03, src.d13,
+                &sBC0, &sBC1);
 
-            const uint8_t *pxA = &WFC__A3D_GET_WRAP(src, sAC0, sAC1, 0);
-            const uint8_t *pxB = &WFC__A3D_GET_WRAP(src, sBC0, sBC1, 0);
+            const uint8_t *pxA = &WFC__A3D_GET(src, sAC0, sAC1, 0);
+            const uint8_t *pxB = &WFC__A3D_GET(src, sBC0, sBC1, 0);
 
             if (memcmp(pxA, pxB, (size_t)src.d23) != 0) return 0;
         }
@@ -431,16 +432,18 @@ int wfc__overlapMatches(
             int pAC1 = overlapPAC1 + j;
 
             int sAC0, sAC1;
-            wfc__coordsPattToSrc(n, pattA, pAC0, pAC1, &sAC0, &sAC1);
+            wfc__coordsPattToSrc(n, pattA, pAC0, pAC1, src.d03, src.d13,
+                &sAC0, &sAC1);
 
             int pBC0 = overlapPBC0 + i;
             int pBC1 = overlapPBC1 + j;
 
             int sBC0, sBC1;
-            wfc__coordsPattToSrc(n, pattB, pBC0, pBC1, &sBC0, &sBC1);
+            wfc__coordsPattToSrc(n, pattB, pBC0, pBC1, src.d03, src.d13,
+                &sBC0, &sBC1);
 
-            const uint8_t *pxA = &WFC__A3D_GET_WRAP(src, sAC0, sAC1, 0);
-            const uint8_t *pxB = &WFC__A3D_GET_WRAP(src, sBC0, sBC1, 0);
+            const uint8_t *pxA = &WFC__A3D_GET(src, sAC0, sAC1, 0);
+            const uint8_t *pxB = &WFC__A3D_GET(src, sBC0, sBC1, 0);
 
             if (memcmp(pxA, pxB, (size_t)src.d23) != 0) return 0;
         }
@@ -875,10 +878,11 @@ void wfc_blit(
             }
 
             int sC0, sC1;
-            wfc__coordsPattToSrc(state->n, state->patts[patt], pC0, pC1,
+            wfc__coordsPattToSrc(
+                state->n, state->patts[patt], pC0, pC1, srcA.d03, srcA.d13,
                 &sC0, &sC1);
 
-            const uint8_t *srcPx = &WFC__A3D_GET_WRAP(srcA, sC0, sC1, 0);
+            const uint8_t *srcPx = &WFC__A3D_GET(srcA, sC0, sC1, 0);
             uint8_t *dstPx = &WFC__A3D_GET(dstA, c0, c1, 0);
 
             memcpy(dstPx, srcPx, (size_t)state->bytesPerPixel);
@@ -946,7 +950,9 @@ const unsigned char* wfc_pixelToBlit(const wfc_State *state,
     wfc__coordsDstToWave(y, x, state->wave, NULL, NULL, &pC0, &pC1);
 
     int sC0, sC1;
-    wfc__coordsPattToSrc(state->n, state->patts[patt], pC0, pC1, &sC0, &sC1);
+    wfc__coordsPattToSrc(
+        state->n, state->patts[patt], pC0, pC1, srcA.d03, srcA.d13,
+        &sC0, &sC1);
 
-    return &WFC__A3D_GET_WRAP(srcA, sC0, sC1, 0);
+    return &WFC__A3D_GET(srcA, sC0, sC1, 0);
 }

@@ -165,6 +165,9 @@ int main(int argc, char *argv[]) {
     }
     int wfcBlitComplete = 0;
 
+    const int scaleMin = 1, scaleMax = 8;
+    int scale = 1;
+
     int quit = 0;
     while (!quit) {
         Uint32 ticksPrev = SDL_GetTicks();
@@ -176,7 +179,13 @@ int main(int argc, char *argv[]) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
             } else if (e.type == SDL_KEYDOWN && e.key.repeat == 0) {
-                if (e.key.keysym.sym == SDLK_ESCAPE) quit = 1;
+                if (e.key.keysym.sym == SDLK_ESCAPE) {
+                    quit = 1;
+                } else if (e.key.keysym.sym == SDLK_KP_PLUS) {
+                    if (scale * 2 <= scaleMax) scale *= 2;
+                } else if (e.key.keysym.sym == SDLK_KP_MINUS) {
+                    if (scale / 2 >= scaleMin) scale /= 2;
+                }
             }
         }
 
@@ -198,10 +207,16 @@ int main(int argc, char *argv[]) {
 
         // render
 
-        SDL_BlitSurface(surfaceSrc, NULL, surfaceWin,
-            &(SDL_Rect){0, (dstH - srcH) / 2, srcW, srcH});
-        SDL_BlitSurface(surfaceDst, NULL, surfaceWin,
-            &(SDL_Rect){srcW + 4, 0, dstW, dstH});
+        SDL_FillRect(surfaceWin, NULL, SDL_MapRGB(surfaceWin->format, 0, 0, 0));
+
+        SDL_BlitScaled(surfaceSrc, NULL, surfaceWin,
+            &(SDL_Rect){
+                0, (scale * dstH - scale * srcH) / 2,
+                scale * srcW, scale * srcH});
+        SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
+            &(SDL_Rect){
+                scale * srcW + 4, 0,
+                scale * dstW, scale * dstH});
 
         SDL_UpdateWindowSurface(window);
 

@@ -217,14 +217,13 @@ void wfc__coordsPattToSrc(
         if (patt.tf & wfc__tfC0Flip) tfC0 = n - 1 - tfC0;
         if (patt.tf & wfc__tfC1Flip) tfC1 = n - 1 - tfC1;
 
-        // @TODO 90 and 270 are reversed, re-reverse them
         // rot270 is rot90 plus rot180 (both in bitmask and as transformation)
         if (patt.tf & wfc__tfRot90) {
             int tmpC0 = tfC0;
             int tmpC1 = tfC1;
 
-            tfC0 = n - 1 - tmpC1;
-            tfC1 = tmpC0;
+            tfC0 = tmpC1;
+            tfC1 = n - 1 - tmpC0;
         }
         if (patt.tf & wfc__tfRot180) {
             tfC0 = n - 1 - tfC0;
@@ -260,17 +259,16 @@ void wfc__fillPattEdges(int n, int sD0, int sD1,
             edgeC1Lo = tmpC1Hi;
             edgeC1Hi = tmpC1Lo;
         }
-        // @TODO 90 and 270 are reversed, re-reverse them
         if (patt->tf & wfc__tfRot90) {
             int tmpC0Lo = edgeC0Lo;
             int tmpC0Hi = edgeC0Hi;
             int tmpC1Lo = edgeC1Lo;
             int tmpC1Hi = edgeC1Hi;
 
-            edgeC0Lo = tmpC1Lo;
-            edgeC0Hi = tmpC1Hi;
-            edgeC1Lo = tmpC0Hi;
-            edgeC1Hi = tmpC0Lo;
+            edgeC0Lo = tmpC1Hi;
+            edgeC0Hi = tmpC1Lo;
+            edgeC1Lo = tmpC0Lo;
+            edgeC1Hi = tmpC0Hi;
         }
 
         if (patt->tf & wfc__tfC1Flip) {

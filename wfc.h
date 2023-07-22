@@ -19,7 +19,17 @@
 enum {
     wfc_optHFlip = 1 << 1,
     wfc_optVFlip = 1 << 0,
+
+    wfc_optC0Flip = wfc_optVFlip,
+    wfc_optC1Flip = wfc_optHFlip,
+
     wfc_optRotate = 1 << 2,
+
+    wfc_optHEdgeFix = 1 << 4,
+    wfc_optVEdgeFix = 1 << 3,
+
+    wfc_optC0EdgeFix = wfc_optVEdgeFix,
+    wfc_optC1EdgeFix = wfc_optHEdgeFix,
 };
 
 typedef struct wfc_State wfc_State;
@@ -51,7 +61,7 @@ int wfc_patternCount(const wfc_State *state);
 int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
 
 const unsigned char* wfc_pixelToBlit(const wfc_State *state,
-    int patt, const unsigned char *src);
+    int patt, int x, int y, const unsigned char *src);
 
 // basic utility
 
@@ -189,9 +199,12 @@ enum {
 struct wfc__Pattern {
     int c0, c1;
     int tf;
+
+    int edgeC0Lo, edgeC0Hi, edgeC1Lo, edgeC1Hi;
     int freq;
 };
 
+// @TODO add wrapping to this function, update callers to not do it themselves
 void wfc__coordsPattToSrc(
     int n,
     struct wfc__Pattern patt, int pC0, int pC1,
@@ -199,10 +212,12 @@ void wfc__coordsPattToSrc(
     int tfC0 = pC0;
     int tfC1 = pC1;
 
-    if (patt.tf & wfc__tfC0Flip) tfC0 = n - 1 - tfC0;
-    if (patt.tf & wfc__tfC1Flip) tfC1 = n - 1 - tfC1;
-
+    // map from patt space to src space
     {
+        if (patt.tf & wfc__tfC0Flip) tfC0 = n - 1 - tfC0;
+        if (patt.tf & wfc__tfC1Flip) tfC1 = n - 1 - tfC1;
+
+        // @TODO 90 and 270 are reversed, re-reverse them
         // rot270 is rot90 plus rot180 (both in bitmask and as transformation)
         if (patt.tf & wfc__tfRot90) {
             int tmpC0 = tfC0;
@@ -224,6 +239,75 @@ void wfc__coordsPattToSrc(
     if (sC1 != NULL) *sC1 = sC1_;
 }
 
+void wfc__fillPattEdges(int n, int sD0, int sD1,
+    struct wfc__Pattern *patt) {
+    int edgeC0Lo = patt->c0 == 0;
+    int edgeC0Hi = patt->c0 + n == sD0;
+    int edgeC1Lo = patt->c1 == 0;
+    int edgeC1Hi = patt->c1 + n == sD1;
+
+    // map from src space to patt space
+    {
+        // rot270 is rot90 plus rot180 (both in bitmask and as transformation)
+        if (patt->tf & wfc__tfRot180) {
+            int tmpC0Lo = edgeC0Lo;
+            int tmpC0Hi = edgeC0Hi;
+            int tmpC1Lo = edgeC1Lo;
+            int tmpC1Hi = edgeC1Hi;
+
+            edgeC0Lo = tmpC0Hi;
+            edgeC0Hi = tmpC0Lo;
+            edgeC1Lo = tmpC1Hi;
+            edgeC1Hi = tmpC1Lo;
+        }
+        // @TODO 90 and 270 are reversed, re-reverse them
+        if (patt->tf & wfc__tfRot90) {
+            int tmpC0Lo = edgeC0Lo;
+            int tmpC0Hi = edgeC0Hi;
+            int tmpC1Lo = edgeC1Lo;
+            int tmpC1Hi = edgeC1Hi;
+
+            edgeC0Lo = tmpC1Lo;
+            edgeC0Hi = tmpC1Hi;
+            edgeC1Lo = tmpC0Hi;
+            edgeC1Hi = tmpC0Lo;
+        }
+
+        if (patt->tf & wfc__tfC1Flip) {
+            int tmp = edgeC1Lo;
+            edgeC1Lo = edgeC1Hi;
+            edgeC1Hi = tmp;
+        }
+        if (patt->tf & wfc__tfC0Flip) {
+            int tmp = edgeC0Lo;
+            edgeC0Lo = edgeC0Hi;
+            edgeC0Hi = tmp;
+        }
+    }
+
+    patt->edgeC0Lo = edgeC0Lo;
+    patt->edgeC0Hi = edgeC0Hi;
+    patt->edgeC1Lo = edgeC1Lo;
+    patt->edgeC1Hi = edgeC1Hi;
+}
+
+void wfc__coordsDstToWave(
+    int dC0, int dC1,
+    const struct wfc__A3d_u8 wave,
+    int *wC0, int *wC1,
+    int *offC0, int *offC1) {
+    int wC0_ = wfc__min_i(dC0, wave.d03 - 1);
+    int wC1_ = wfc__min_i(dC1, wave.d13 - 1);
+
+    int offC0_ = dC0 - wC0_;
+    int offC1_ = dC1 - wC1_;
+
+    if (wC0 != NULL) *wC0 = wC0_;
+    if (wC1 != NULL) *wC1 = wC1_;
+    if (offC0 != NULL) *offC0 = offC0_;
+    if (offC1 != NULL) *offC1 = offC1_;
+}
+
 int wfc__pattCombCnt(int d0, int d1) {
     return d0 * d1 * wfc__tfCnt;
 }
@@ -233,14 +317,18 @@ void wfc__indToPattComb(int d1, int ind, struct wfc__Pattern *patt) {
     patt->tf = ind % wfc__tfCnt;
 }
 
-int wfc__usesOnlyAllowedOptions(int tf, int options) {
-    if ((tf & wfc__tfC0Flip) && !(options & wfc_optVFlip)) return 0;
-    if ((tf & wfc__tfC1Flip) && !(options & wfc_optHFlip)) return 0;
+int wfc__satisfiesOptions(int n, int options, int sD0, int sD1,
+    struct wfc__Pattern patt) {
+    if ((patt.tf & wfc__tfC0Flip) && !(options & wfc_optC0Flip)) return 0;
+    if ((patt.tf & wfc__tfC1Flip) && !(options & wfc_optC1Flip)) return 0;
 
-    if ((tf & (wfc__tfRot90 | wfc__tfRot180 | wfc__tfRot270)) &&
+    if ((patt.tf & (wfc__tfRot90 | wfc__tfRot180 | wfc__tfRot270)) &&
         !(options & wfc_optRotate)) {
         return 0;
     }
+
+    if ((options & wfc_optC0EdgeFix) && patt.c0 + n > sD0) return 0;
+    if ((options & wfc_optC1EdgeFix) && patt.c1 + n > sD1) return 0;
 
     return 1;
 }
@@ -273,13 +361,17 @@ struct wfc__Pattern* wfc__gatherPatterns(
     for (int i = 0; i < wfc__pattCombCnt(src.d03, src.d13); ++i) {
         struct wfc__Pattern patt = {0};
         wfc__indToPattComb(src.d13, i, &patt);
-        if (!wfc__usesOnlyAllowedOptions(patt.tf, options)) continue;
+        if (!wfc__satisfiesOptions(n, options, src.d03, src.d13, patt)) {
+            continue;
+        }
 
         int seenBefore = 0;
         for (int i1 = 0; !seenBefore && i1 < i; ++i1) {
             struct wfc__Pattern patt1 = {0};
             wfc__indToPattComb(src.d13, i1, &patt1);
-            if (!wfc__usesOnlyAllowedOptions(patt1.tf, options)) continue;
+            if (!wfc__satisfiesOptions(n, options, src.d03, src.d13, patt1)) {
+                continue;
+            }
 
             if (wfc__patternsEq(n, src, patt, patt1)) seenBefore = 1;
         }
@@ -292,13 +384,23 @@ struct wfc__Pattern* wfc__gatherPatterns(
     for (int i = 0; i < wfc__pattCombCnt(src.d03, src.d13); ++i) {
         struct wfc__Pattern patt = {0};
         wfc__indToPattComb(src.d13, i, &patt);
+        if (!wfc__satisfiesOptions(n, options, src.d03, src.d13, patt)) {
+            continue;
+        }
+
+        wfc__fillPattEdges(n, src.d03, src.d13, &patt);
         patt.freq = 1;
-        if (!wfc__usesOnlyAllowedOptions(patt.tf, options)) continue;
 
         int seenBefore = 0;
         for (int i1 = 0; !seenBefore && i1 < pattInd; ++i1) {
             if (wfc__patternsEq(n, src, patt, patts[i1])) {
+                patts[i1].edgeC0Lo |= patt.edgeC0Lo;
+                patts[i1].edgeC0Hi |= patt.edgeC0Hi;
+                patts[i1].edgeC1Lo |= patt.edgeC1Lo;
+                patts[i1].edgeC1Hi |= patt.edgeC1Hi;
+
                 ++patts[i1].freq;
+
                 seenBefore = 1;
             }
         }
@@ -373,6 +475,38 @@ struct wfc__A4d_u8 wfc__calcOverlaps(
     }
 
     return overlaps;
+}
+
+void wfc__restrictEdges(
+    int options,
+    const struct wfc__Pattern *patts,
+    struct wfc__A3d_u8 wave) {
+    int d0 = wave.d03, d1 = wave.d13, pattCnt = wave.d23;
+
+    if (options & wfc_optC0EdgeFix) {
+        for (int i = 0; i < d1; ++i) {
+            for (int p = 0; p < pattCnt; ++p) {
+                if (WFC__A3D_GET(wave, 0, i, p) && !patts[p].edgeC0Lo) {
+                    WFC__A3D_GET(wave, 0, i, p) = 0;
+                }
+                if (WFC__A3D_GET(wave, d0 - 1, i, p) && !patts[p].edgeC0Hi) {
+                    WFC__A3D_GET(wave, d0 - 1, i, p) = 0;
+                }
+            }
+        }
+    }
+    if (options & wfc_optC1EdgeFix) {
+        for (int i = 0; i < d0; ++i) {
+            for (int p = 0; p < pattCnt; ++p) {
+                if (WFC__A3D_GET(wave, i, 0, p) && !patts[p].edgeC1Lo) {
+                    WFC__A3D_GET(wave, i, 0, p) = 0;
+                }
+                if (WFC__A3D_GET(wave, i, d1 - 1, p) && !patts[p].edgeC1Hi) {
+                    WFC__A3D_GET(wave, i, d1 - 1, p) = 0;
+                }
+            }
+        }
+    }
 }
 
 void wfc__calcEntropies(
@@ -467,7 +601,7 @@ void wfc__observeOne(
     WFC__A3D_GET(wave, chosenC0, chosenC1, chosenPatt) = 1;
 }
 
-int wfc__propagateOnto(
+int wfc__propagateOntoDelta(
     int n, int nC0, int nC1, int dC0, int dC1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
@@ -500,8 +634,9 @@ int wfc__propagateOnto(
     return oldAvailPattCnt != newAvailPattCnt;
 }
 
-int wfc__propagateNeighbours(
-    int n, int nC0, int nC1,
+int wfc__propagateOntoNeighbours(
+    int n, int options,
+    int nC0, int nC1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave) {
@@ -509,7 +644,15 @@ int wfc__propagateNeighbours(
 
     for (int dC0 = -(n - 1); dC0 <= n - 1; ++dC0) {
         for (int dC1 = -(n - 1); dC1 <= n - 1; ++dC1) {
-            if (wfc__propagateOnto(n, nC0, nC1, dC0, dC1, overlaps, wave)) {
+            if (((options & wfc_optC0EdgeFix) &&
+                    (nC0 + dC0 < 0 || nC0 + dC0 >= wave.d03)) ||
+                ((options & wfc_optC1EdgeFix) &&
+                    (nC1 + dC1 < 0 || nC1 + dC1 >= wave.d13))) {
+                continue;
+            }
+
+            if (wfc__propagateOntoDelta(n, nC0, nC1, dC0, dC1,
+                    overlaps, wave)) {
                 WFC__A2D_GET_WRAP(ripple, nC0 + dC0, nC1 + dC1) = 1;
                 modified = 1;
             }
@@ -519,14 +662,11 @@ int wfc__propagateNeighbours(
     return modified;
 }
 
-void wfc__propagate(
-    int n, int seedC0, int seedC1,
+void wfc__propagateFromRipple(
+    int n, int options,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave) {
-    memset(ripple.a, 0, WFC__A2D_SIZE(ripple));
-    WFC__A2D_GET(ripple, seedC0, seedC1) = 1;
-
     int modified = 1;
     while (modified) {
         modified = 0;
@@ -535,7 +675,7 @@ void wfc__propagate(
             for (int nC1 = 0; nC1 < wave.d13; ++nC1) {
                 if (!WFC__A2D_GET(ripple, nC0, nC1)) continue;
 
-                if (wfc__propagateNeighbours(n, nC0, nC1,
+                if (wfc__propagateOntoNeighbours(n, options, nC0, nC1,
                         overlaps, ripple, wave)) {
                     modified = 1;
                 }
@@ -546,9 +686,57 @@ void wfc__propagate(
     }
 }
 
+void wfc__propagateFromAll(
+    int n, int options,
+    const struct wfc__A4d_u8 overlaps,
+    struct wfc__A2d_u8 ripple,
+    struct wfc__A3d_u8 wave) {
+    memset(ripple.a, 1, WFC__A2D_SIZE(ripple));
+
+    wfc__propagateFromRipple(n, options, overlaps, ripple, wave);
+}
+
+void wfc__propagateFromSeed(
+    int n, int options,
+    int seedC0, int seedC1,
+    const struct wfc__A4d_u8 overlaps,
+    struct wfc__A2d_u8 ripple,
+    struct wfc__A3d_u8 wave) {
+    memset(ripple.a, 0, WFC__A2D_SIZE(ripple));
+    WFC__A2D_GET(ripple, seedC0, seedC1) = 1;
+
+    wfc__propagateFromRipple(n, options, overlaps, ripple, wave);
+}
+
+int wfc__calcStatus(const struct wfc__A3d_u8 wave) {
+    int minPatts = wave.d23, maxPatts = 0;
+    for (int c0 = 0; c0 < wave.d03; ++c0) {
+        for (int c1 = 0; c1 < wave.d13; ++c1) {
+            int cntPatts = 0;
+            for (int p = 0; p < wave.d23; ++p) {
+                if (WFC__A3D_GET(wave, c0, c1, p)) ++cntPatts;
+            }
+
+            if (cntPatts < minPatts) minPatts = cntPatts;
+            if (cntPatts > maxPatts) maxPatts = cntPatts;
+        }
+    }
+
+    if (minPatts == 0) {
+        // contradiction reached
+        return -1;
+    }
+    if (maxPatts == 1) {
+        // WFC completed
+        return 1;
+    }
+    // still in progress
+    return 0;
+}
+
 struct wfc_State {
     int status;
-    int n, bytesPerPixel;
+    int n, options, bytesPerPixel;
     int srcD0, srcD1, dstD0, dstD1;
     struct wfc__Pattern *patts;
     struct wfc__A4d_u8 overlaps;
@@ -601,6 +789,7 @@ wfc_State* wfc_init(
 
     state->status = 0;
     state->n = n;
+    state->options = options;
     state->bytesPerPixel = bytesPerPixel;
     state->srcD0 = srcH;
     state->srcD1 = srcW;
@@ -613,18 +802,27 @@ wfc_State* wfc_init(
     state->overlaps = wfc__calcOverlaps(n, srcA, pattCnt, state->patts);
 
     state->wave.d03 = dstH;
+    if (options & wfc_optC0EdgeFix) state->wave.d03 -= n - 1;
     state->wave.d13 = dstW;
+    if (options & wfc_optC1EdgeFix) state->wave.d13 -= n - 1;
     state->wave.d23 = pattCnt;
     state->wave.a = malloc(WFC__A3D_SIZE(state->wave));
     for (int i = 0; i < WFC__A3D_LEN(state->wave); ++i) state->wave.a[i] = 1;
 
-    state->entropies.d02 = dstH;
-    state->entropies.d12 = dstW;
+    state->entropies.d02 = state->wave.d03;
+    state->entropies.d12 = state->wave.d13;
     state->entropies.a = malloc(WFC__A2D_SIZE(state->entropies));
 
-    state->ripple.d02 = dstH;
-    state->ripple.d12 = dstW;
+    state->ripple.d02 = state->wave.d03;
+    state->ripple.d12 = state->wave.d13;
     state->ripple.a = malloc(WFC__A2D_SIZE(state->ripple));
+
+    if (options & (wfc_optC0EdgeFix | wfc_optC1EdgeFix)) {
+        wfc__restrictEdges(options, state->patts, state->wave);
+        wfc__propagateFromAll(n, options,
+            state->overlaps, state->ripple, state->wave);
+        state->status = wfc__calcStatus(state->wave);
+    }
 
     return state;
 }
@@ -644,31 +842,11 @@ int wfc_step(wfc_State *state) {
     wfc__observeOne(pattCnt, state->patts, state->entropies, state->wave,
         &obsC0, &obsC1);
 
-    wfc__propagate(state->n, obsC0, obsC1, state->overlaps,
-        state->ripple, state->wave);
+    wfc__propagateFromSeed(state->n, state->options,
+        obsC0, obsC1,
+        state->overlaps, state->ripple, state->wave);
 
-    {
-        int minPatts = pattCnt, maxPatts = 0;
-        for (int c0 = 0; c0 < state->wave.d03; ++c0) {
-            for (int c1 = 0; c1 < state->wave.d13; ++c1) {
-                int cntPatts = 0;
-                for (int p = 0; p < pattCnt; ++p) {
-                    if (WFC__A3D_GET(state->wave, c0, c1, p)) ++cntPatts;
-                }
-
-                if (cntPatts < minPatts) minPatts = cntPatts;
-                if (cntPatts > maxPatts) maxPatts = cntPatts;
-            }
-        }
-
-        if (minPatts == 0) {
-            // contradiction reached
-            state->status = -1;
-        } else if (maxPatts == 1) {
-            // WFC completed
-            state->status = 1;
-        }
-    }
+    state->status = wfc__calcStatus(state->wave);
 
     return state->status;
 }
@@ -687,16 +865,19 @@ void wfc_blit(
 
     for (int c0 = 0; c0 < state->dstD0; ++c0) {
         for (int c1 = 0; c1 < state->dstD1; ++c1) {
+            int wC0, wC1, pC0, pC1;
+            wfc__coordsDstToWave(c0, c1, state->wave, &wC0, &wC1, &pC0, &pC1);
+
             int patt = 0;
             for (int p = 0; p < pattCnt; ++p) {
-                if (WFC__A3D_GET(state->wave, c0, c1, p)) {
+                if (WFC__A3D_GET(state->wave, wC0, wC1, p)) {
                     patt = p;
                     break;
                 }
             }
 
             int sC0, sC1;
-            wfc__coordsPattToSrc(state->n, state->patts[patt], 0, 0,
+            wfc__coordsPattToSrc(state->n, state->patts[patt], pC0, pC1,
                 &sC0, &sC1);
 
             const uint8_t *srcPx = &WFC__A3D_GET_WRAP(srcA, sC0, sC1, 0);
@@ -752,16 +933,22 @@ int wfc_patternCount(const wfc_State *state) {
 }
 
 int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
-    return WFC__A3D_GET(state->wave, y, x, patt);
+    int wC0, wC1;
+    wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
+
+    return WFC__A3D_GET(state->wave, wC0, wC1, patt);
 }
 
 const unsigned char* wfc_pixelToBlit(const wfc_State *state,
-    int patt, const unsigned char *src) {
+    int patt, int x, int y, const unsigned char *src) {
     struct wfc__A3d_cu8 srcA =
         {state->srcD0, state->srcD1, state->bytesPerPixel, src};
 
+    int pC0, pC1;
+    wfc__coordsDstToWave(y, x, state->wave, NULL, NULL, &pC0, &pC1);
+
     int sC0, sC1;
-    wfc__coordsPattToSrc(state->n, state->patts[patt], 0, 0, &sC0, &sC1);
+    wfc__coordsPattToSrc(state->n, state->patts[patt], pC0, pC1, &sC0, &sC1);
 
     return &WFC__A3D_GET_WRAP(srcA, sC0, sC1, 0);
 }

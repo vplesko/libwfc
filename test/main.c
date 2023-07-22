@@ -238,6 +238,132 @@ int testHVFlipN3(void) {
     return 0;
 }
 
+int testVEdgeFixN3(void) {
+    enum { n = 3, srcW = 5, srcH = 5, dstW = 16, dstH = 16 };
+
+    uint32_t src[srcW * srcH] = {
+        1,1,1,1,1,
+        3,3,3,3,3,
+        3,3,3,3,3,
+        3,3,3,3,3,
+        2,2,2,2,2,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, wfc_optVEdgeFix, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] < 1 || dst[i] > 3) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int testHEdgeFixN3(void) {
+    enum { n = 3, srcW = 5, srcH = 5, dstW = 16, dstH = 16 };
+
+    uint32_t src[srcW * srcH] = {
+        1,3,3,3,2,
+        1,3,3,3,2,
+        1,3,3,3,2,
+        1,3,3,3,2,
+        1,3,3,3,2,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, wfc_optHEdgeFix, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] < 1 || dst[i] > 3) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int testHVEdgeFixN3(void) {
+    enum { n = 3, srcW = 5, srcH = 5, dstW = 16, dstH = 16 };
+
+    uint32_t src[srcW * srcH] = {
+        1,1,1,1,1,
+        1,2,2,2,1,
+        1,2,2,2,1,
+        1,2,2,2,1,
+        1,1,1,1,1,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, wfc_optHEdgeFix | wfc_optVEdgeFix, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] < 1 || dst[i] > 2) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int testHVEdgeFixOneSolution(void) {
+    enum { n = 2, srcW = 4, srcH = 4, dstW = 5, dstH = 5 };
+
+    uint32_t src[srcW * srcH] = {
+        1,1,1,2,
+        4,5,5,2,
+        4,5,5,2,
+        4,3,3,3,
+    };
+    uint32_t dst[dstW * dstH];
+
+    if (wfc_generate(
+        n, wfc_optHEdgeFix | wfc_optVEdgeFix, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    uint32_t expected[dstW * dstH] = {
+        1,1,1,1,2,
+        4,5,5,5,2,
+        4,5,5,5,2,
+        4,5,5,5,2,
+        4,3,3,3,3,
+    };
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != expected[i]) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int testPattern(void) {
     enum { n = 2, srcW = 3, srcH = 3, dstW = 32, dstH = 32 };
 
@@ -275,6 +401,44 @@ int testPattern(void) {
                 PRINT_TEST_FAIL();
                 return 1;
             }
+        }
+    }
+
+    return 0;
+}
+
+int testHVEdgeFixPattern(void) {
+    enum { n = 2, srcW = 4, srcH = 4, dstW = 32, dstH = 32 };
+
+    uint32_t src[srcW * srcH] = {
+        0,0,0,0,
+        0,1,1,0,
+        0,1,1,0,
+        0,0,0,0,
+    };
+    uint32_t dst[dstW * dstH];
+
+    int options = wfc_optHEdgeFix | wfc_optVEdgeFix |
+        wfc_optHFlip | wfc_optVFlip | wfc_optRotate;
+
+    if (wfc_generate(
+        n, options, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != 0) {
+        PRINT_TEST_FAIL();
+        return 1;
+    }
+
+    for (int i = 0; i < dstW; ++i) {
+        if (dst[0 * dstW + i] != 0 || dst[(dstH - 1) * dstW + i] != 0) {
+            PRINT_TEST_FAIL();
+            return 1;
+        }
+    }
+    for (int i = 0; i < dstH; ++i) {
+        if (dst[i * dstW + 0] != 0 || dst[i * dstW + (dstW - 1)] != 0) {
+            PRINT_TEST_FAIL();
+            return 1;
         }
     }
 
@@ -691,7 +855,12 @@ int main(void) {
         testHFlipN3() != 0 ||
         testVFlipN3() != 0 ||
         testHVFlipN3() != 0 ||
+        testVEdgeFixN3() != 0 ||
+        testHEdgeFixN3() != 0 ||
+        testHVEdgeFixN3() != 0 ||
+        testHVEdgeFixOneSolution() != 0 ||
         testPattern() != 0 ||
+        testHVEdgeFixPattern() != 0 ||
         testWide() != 0 ||
         testTall() != 0 ||
         testSrcBiggerThanDst() != 0 ||

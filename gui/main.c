@@ -67,7 +67,9 @@ void wfcBlitAveraged(const wfc_State *wfc, int bytesPerPixel,
                 int sum = 0, cnt = 0;
                 for (int p = 0; p < pattCnt; ++p) {
                     if (wfc_patternAvailable(wfc, p, i, j)) {
-                        const unsigned char* px = wfc_pixelToBlit(wfc, p, src);
+                        const unsigned char* px =
+                            wfc_pixelToBlit(wfc, p, i, j, src);
+
                         sum += (int)px[b];
                         ++cnt;
                     }
@@ -161,6 +163,7 @@ int main(int argc, char *argv[]) {
         ret = 1;
         goto cleanup;
     }
+    int wfcBlitComplete = 0;
 
     int quit = 0;
     while (!quit) {
@@ -179,19 +182,18 @@ int main(int argc, char *argv[]) {
 
         // update
 
-        if (wfc_status(wfc) == 0) {
-            int status = wfc_step(wfc);
-            if (status < 0) {
-                logError("WFC step failed.");
-                ret = 1;
-                goto cleanup;
-            } else if (status == 0) {
-                wfcBlitAveraged(wfc, bytesPerPixel,
-                    surfaceSrc->pixels, dstW, dstH, surfaceDst->pixels);
-            } else {
-                wfc_blit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-                logInfo("WFC completed.");
-            }
+        int status = wfc_step(wfc);
+        if (status < 0) {
+            logError("WFC step failed.");
+            ret = 1;
+            goto cleanup;
+        } else if (status == 0) {
+            wfcBlitAveraged(wfc, bytesPerPixel,
+                surfaceSrc->pixels, dstW, dstH, surfaceDst->pixels);
+        } else if (!wfcBlitComplete) {
+            wfc_blit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
+            wfcBlitComplete = 1;
+            logInfo("WFC completed.");
         }
 
         // render

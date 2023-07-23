@@ -6,6 +6,10 @@
 #include "cmd_args.h"
 #include "wfc_wrap.h"
 
+void logInfo(const char *msg) {
+    fprintf(stdout, "%s\n", msg);
+}
+
 void logError(const char *msg) {
     fprintf(stderr, "%s\n", msg);
 }
@@ -17,6 +21,7 @@ int main(int argc, char *argv[]) {
 
     unsigned char *srcPixels = NULL;
     unsigned char *dstPixels = NULL;
+    struct WfcWrapper wfc = {0};
 
     struct Args args;
     if (parseArgs(argc, argv, &args) != 0) {
@@ -36,14 +41,33 @@ int main(int argc, char *argv[]) {
     srand((unsigned)time(NULL));
 
     dstPixels = malloc(args.dstW * args.dstH * bytesPerPixel);
-    if (wfcGenerate(
+
+    if (wfcInit(
             args.wfcN, 0, bytesPerPixel,
             srcW, srcH, srcPixels,
-            args.dstW, args.dstH, dstPixels) != 0) {
-        logError("WFC failed.");
+            args.dstW, args.dstH,
+            &wfc) != 0) {
+        logError("WFC init failed.");
         ret = 1;
         goto cleanup;
     }
+
+    while (1) {
+        int status = wfcStep(&wfc);
+        if (status < 0) {
+            if (wfcBacktrack(&wfc) != 0) {
+                logError("WFC step failed.");
+                ret = 1;
+                goto cleanup;
+            } else {
+                logInfo("WFC is backtracking.");
+            }
+        } else if (status > 0) {
+            break;
+        }
+    }
+
+    wfcBlit(wfc, srcPixels, dstPixels);
 
     // dummy printout to make sure the compiler doesn't optimize anything away
     uint32_t dummy = 0;
@@ -53,6 +77,7 @@ int main(int argc, char *argv[]) {
     printf("%u\n", dummy);
 
 cleanup:
+    wfcFree(wfc);
     free(dstPixels);
     stbi_image_free(srcPixels);
 

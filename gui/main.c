@@ -133,14 +133,20 @@ int main(int argc, char *argv[]) {
 
         // update
 
-        int status = wfcStep(wfc);
+        int status = wfcStep(&wfc);
         if (status < 0) {
-            logError("WFC step failed.");
-            ret = 1;
-            goto cleanup;
+            if (wfcBacktrack(&wfc) != 0) {
+                logError("WFC step failed.");
+                ret = 1;
+                goto cleanup;
+            } else {
+                logInfo("WFC is backtracking.");
+                wfcBlitAveraged(wfc, surfaceSrc->pixels,
+                    args.dstW, args.dstH, surfaceDst->pixels);
+            }
         } else if (status == 0) {
-            wfcBlitAveraged(wfc,
-                surfaceSrc->pixels, args.dstW, args.dstH, surfaceDst->pixels);
+            wfcBlitAveraged(wfc, surfaceSrc->pixels,
+                args.dstW, args.dstH, surfaceDst->pixels);
         } else if (!wfcBlitComplete) {
             wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
             wfcBlitComplete = 1;

@@ -47,7 +47,7 @@ int testHFlipN1(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHFlip, sizeof(*src),
+        n, wfc_optFlipH, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -76,7 +76,7 @@ int testVFlipN1(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optVFlip, sizeof(*src),
+        n, wfc_optFlipV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -105,7 +105,7 @@ int testHVFlipN1(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
+        n, wfc_optFlipH | wfc_optFlipV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -163,7 +163,7 @@ int testHFlipN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHFlip, sizeof(*src),
+        n, wfc_optFlipH, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -192,7 +192,7 @@ int testVFlipN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optVFlip, sizeof(*src),
+        n, wfc_optFlipV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -221,7 +221,7 @@ int testHVFlipN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
+        n, wfc_optFlipH | wfc_optFlipV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -251,7 +251,7 @@ int testVEdgeFixN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optVEdgeFix, sizeof(*src),
+        n, wfc_optEdgeFixV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -281,7 +281,7 @@ int testHEdgeFixN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHEdgeFix, sizeof(*src),
+        n, wfc_optEdgeFixH, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -311,7 +311,7 @@ int testHVEdgeFixN3(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHEdgeFix | wfc_optVEdgeFix, sizeof(*src),
+        n, wfc_optEdgeFixH | wfc_optEdgeFixV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -340,7 +340,7 @@ int testHVEdgeFixOneSolution(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHEdgeFix | wfc_optVEdgeFix, sizeof(*src),
+        n, wfc_optEdgeFixH | wfc_optEdgeFixV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -418,8 +418,8 @@ int testHVEdgeFixPattern(void) {
     };
     uint32_t dst[dstW * dstH];
 
-    int options = wfc_optHEdgeFix | wfc_optVEdgeFix |
-        wfc_optHFlip | wfc_optVFlip | wfc_optRotate;
+    int options = wfc_optEdgeFixH | wfc_optEdgeFixV |
+        wfc_optFlipH | wfc_optFlipV | wfc_optRotate;
 
     if (wfc_generate(
         n, options, sizeof(*src),
@@ -457,7 +457,7 @@ int testWide(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
+        n, wfc_optFlipH | wfc_optFlipV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -488,7 +488,7 @@ int testTall(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
+        n, wfc_optFlipH | wfc_optFlipV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -519,7 +519,7 @@ int testSrcBiggerThanDst(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optHFlip | wfc_optVFlip, sizeof(*src),
+        n, wfc_optFlipH | wfc_optFlipV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -577,7 +577,7 @@ int testPatternCountHFlip(void) {
         3,4,3,
     };
 
-    state = wfc_init(n, wfc_optHFlip, sizeof(*src),
+    state = wfc_init(n, wfc_optFlipH, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         16, 16);
 
@@ -606,7 +606,7 @@ int testPatternCountVFlip(void) {
         1,2,
     };
 
-    state = wfc_init(n, wfc_optVFlip, sizeof(*src),
+    state = wfc_init(n, wfc_optFlipV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         16, 16);
 
@@ -634,7 +634,7 @@ int testPatternCountHVFlip(void) {
         2,1,
     };
 
-    state = wfc_init(n, wfc_optVFlip, sizeof(*src),
+    state = wfc_init(n, wfc_optFlipV, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         16, 16);
 
@@ -721,7 +721,7 @@ int testPatternCountHFlipRotate(void) {
         3,3,3,
     };
 
-    state = wfc_init(n, wfc_optHFlip | wfc_optRotate, sizeof(*src),
+    state = wfc_init(n, wfc_optFlipH | wfc_optRotate, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         16, 16);
 
@@ -750,7 +750,7 @@ int testPatternCountVFlipRotate(void) {
         3,3,3,
     };
 
-    state = wfc_init(n, wfc_optVFlip | wfc_optRotate, sizeof(*src),
+    state = wfc_init(n, wfc_optFlipV | wfc_optRotate, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         16, 16);
 
@@ -779,7 +779,7 @@ int testPatternCountHVFlipRotate(void) {
     };
 
     state = wfc_init(
-        n, wfc_optHFlip | wfc_optVFlip | wfc_optRotate, sizeof(*src),
+        n, wfc_optFlipH | wfc_optFlipV | wfc_optRotate, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         16, 16);
 

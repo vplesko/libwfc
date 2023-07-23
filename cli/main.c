@@ -1,49 +1,13 @@
-#include <stdlib.h>
 #include <time.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "cmd_args.h"
 #include "wfc_wrap.h"
 
 void logError(const char *msg) {
     fprintf(stderr, "%s\n", msg);
-}
-
-int parseArgs(int argc, char *argv[],
-    const char **imagePath, int *wfcN, int *dstW, int *dstH) {
-    if (argc < 5) {
-        logError("Invalid arguments.");
-        return 1;
-    }
-
-    *imagePath = argv[1];
-
-    long l;
-    char *end;
-
-    l = strtol(argv[2], &end, 0);
-    if (*end != '\0') {
-        logError("Invalid arguments.");
-        return 1;
-    }
-    *wfcN = (int)l;
-
-    l = strtol(argv[3], &end, 0);
-    if (*end != '\0') {
-        logError("Invalid arguments.");
-        return 1;
-    }
-    *dstW = (int)l;
-
-    l = strtol(argv[4], &end, 0);
-    if (*end != '\0') {
-        logError("Invalid arguments.");
-        return 1;
-    }
-    *dstH = (int)l;
-
-    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -57,6 +21,7 @@ int main(int argc, char *argv[]) {
     const char *imagePath;
     int wfcN, dstW, dstH;
     if (parseArgs(argc, argv, &imagePath, &wfcN, &dstW, &dstH) != 0) {
+        logError("Invalid arguments.");
         ret = 1;
         goto cleanup;
     }

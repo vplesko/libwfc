@@ -29,9 +29,8 @@ int main(int argc, char *argv[]) {
     SDL_Surface *surfaceDst = NULL;
     struct WfcWrapper wfc = {0};
 
-    const char *imagePath;
-    int wfcN, dstW, dstH;
-    if (parseArgs(argc, argv, &imagePath, &wfcN, &dstW, &dstH) != 0) {
+    struct Args args;
+    if (parseArgs(argc, argv, &args) != 0) {
         logError("Invalid arguments.");
         ret = 1;
         goto cleanup;
@@ -65,7 +64,7 @@ int main(int argc, char *argv[]) {
 
     srand((unsigned)time(NULL));
 
-    surfaceSrc = IMG_Load(imagePath);
+    surfaceSrc = IMG_Load(args.imagePath);
     if (surfaceSrc == NULL) {
         logError(IMG_GetError());
         ret = 1;
@@ -89,14 +88,14 @@ int main(int argc, char *argv[]) {
     const int srcW = surfaceSrc->w, srcH = surfaceSrc->h;
 
     surfaceDst = SDL_CreateRGBSurfaceWithFormat(0,
-        dstW, dstH, bytesPerPixel * 8, surfaceSrc->format->format);
+        args.dstW, args.dstH, bytesPerPixel * 8, surfaceSrc->format->format);
     assert(surfaceDst->format->palette == NULL);
     assert(!SDL_MUSTLOCK(surfaceDst));
 
     if (wfcInit(
-            wfcN, 0, bytesPerPixel,
+            args.wfcN, 0, bytesPerPixel,
             srcW, srcH, surfaceSrc->pixels,
-            dstW, dstH,
+            args.dstW, args.dstH,
             &wfc) != 0) {
         logError("WFC init failed.");
         ret = 1;
@@ -141,7 +140,7 @@ int main(int argc, char *argv[]) {
             goto cleanup;
         } else if (status == 0) {
             wfcBlitAveraged(wfc,
-                surfaceSrc->pixels, dstW, dstH, surfaceDst->pixels);
+                surfaceSrc->pixels, args.dstW, args.dstH, surfaceDst->pixels);
         } else if (!wfcBlitComplete) {
             wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
             wfcBlitComplete = 1;
@@ -154,12 +153,12 @@ int main(int argc, char *argv[]) {
 
         SDL_BlitScaled(surfaceSrc, NULL, surfaceWin,
             &(SDL_Rect){
-                0, (scale * dstH - scale * srcH) / 2,
+                0, (scale * args.dstH - scale * srcH) / 2,
                 scale * srcW, scale * srcH});
         SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
             &(SDL_Rect){
                 scale * srcW + 4, 0,
-                scale * dstW, scale * dstH});
+                scale * args.dstW, scale * args.dstH});
 
         SDL_UpdateWindowSurface(window);
 

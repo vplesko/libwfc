@@ -18,16 +18,15 @@ int main(int argc, char *argv[]) {
     unsigned char *srcPixels = NULL;
     unsigned char *dstPixels = NULL;
 
-    const char *imagePath;
-    int wfcN, dstW, dstH;
-    if (parseArgs(argc, argv, &imagePath, &wfcN, &dstW, &dstH) != 0) {
+    struct Args args;
+    if (parseArgs(argc, argv, &args) != 0) {
         logError("Invalid arguments.");
         ret = 1;
         goto cleanup;
     }
 
     int srcW, srcH;
-    srcPixels = stbi_load(imagePath, &srcW, &srcH, NULL, bytesPerPixel);
+    srcPixels = stbi_load(args.imagePath, &srcW, &srcH, NULL, bytesPerPixel);
     if (srcPixels == NULL) {
         logError(stbi_failure_reason());
         ret = 1;
@@ -36,11 +35,11 @@ int main(int argc, char *argv[]) {
 
     srand((unsigned)time(NULL));
 
-    dstPixels = malloc(dstW * dstH * bytesPerPixel);
+    dstPixels = malloc(args.dstW * args.dstH * bytesPerPixel);
     if (wfcGenerate(
-            wfcN, 0, bytesPerPixel,
+            args.wfcN, 0, bytesPerPixel,
             srcW, srcH, srcPixels,
-            dstW, dstH, dstPixels) != 0) {
+            args.dstW, args.dstH, dstPixels) != 0) {
         logError("WFC failed.");
         ret = 1;
         goto cleanup;
@@ -48,7 +47,7 @@ int main(int argc, char *argv[]) {
 
     // dummy printout to make sure the compiler doesn't optimize anything away
     uint32_t dummy = 0;
-    for (int i = 0; i < dstW * dstH * bytesPerPixel; ++i) {
+    for (int i = 0; i < args.dstW * args.dstH * bytesPerPixel; ++i) {
         dummy += dstPixels[i];
     }
     printf("%u\n", dummy);

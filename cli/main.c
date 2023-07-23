@@ -6,14 +6,6 @@
 #include "cmd_args.h"
 #include "wfc_wrap.h"
 
-void logInfo(const char *msg) {
-    fprintf(stdout, "%s\n", msg);
-}
-
-void logError(const char *msg) {
-    fprintf(stderr, "%s\n", msg);
-}
-
 int main(int argc, char *argv[]) {
     int ret = 0;
 
@@ -25,7 +17,6 @@ int main(int argc, char *argv[]) {
 
     struct Args args;
     if (parseArgs(argc, argv, &args) != 0) {
-        logError("Invalid arguments.");
         ret = 1;
         goto cleanup;
     }
@@ -33,7 +24,7 @@ int main(int argc, char *argv[]) {
     int srcW, srcH;
     srcPixels = stbi_load(args.imagePath, &srcW, &srcH, NULL, bytesPerPixel);
     if (srcPixels == NULL) {
-        logError(stbi_failure_reason());
+        fprintf(stderr, "%s\n", stbi_failure_reason());
         ret = 1;
         goto cleanup;
     }
@@ -47,7 +38,7 @@ int main(int argc, char *argv[]) {
             srcW, srcH, srcPixels,
             args.dstW, args.dstH,
             &wfc) != 0) {
-        logError("WFC init failed.");
+        fprintf(stderr, "WFC init failed.\n");
         ret = 1;
         goto cleanup;
     }
@@ -56,11 +47,11 @@ int main(int argc, char *argv[]) {
         int status = wfcStep(&wfc);
         if (status < 0) {
             if (wfcBacktrack(&wfc) != 0) {
-                logError("WFC step failed.");
+                fprintf(stderr, "WFC step failed.\n");
                 ret = 1;
                 goto cleanup;
             } else {
-                logInfo("WFC is backtracking.");
+                fprintf(stdout, "WFC is backtracking.\n");
             }
         } else if (status > 0) {
             break;

@@ -11,14 +11,6 @@
 const int screenW = 640, screenH = 480;
 const Uint32 ticksPerFrame = 1000 / 60;
 
-void logInfo(const char *msg) {
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
-}
-
-void logError(const char *msg) {
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", msg);
-}
-
 int main(int argc, char *argv[]) {
     int ret = 0;
 
@@ -31,13 +23,12 @@ int main(int argc, char *argv[]) {
 
     struct Args args;
     if (parseArgs(argc, argv, &args) != 0) {
-        logError("Invalid arguments.");
         ret = 1;
         goto cleanup;
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        logError(SDL_GetError());
+        fprintf(stderr, "%s\n", SDL_GetError());
         ret = 1;
         goto cleanup;
     }
@@ -45,7 +36,7 @@ int main(int argc, char *argv[]) {
 
     int sdlImgInitFlags = IMG_INIT_JPG | IMG_INIT_PNG;
     if ((IMG_Init(sdlImgInitFlags) & sdlImgInitFlags) != sdlImgInitFlags) {
-        logError(SDL_GetError());
+        fprintf(stderr, "%s\n", SDL_GetError());
         ret = 1;
         goto cleanup;
     }
@@ -56,7 +47,7 @@ int main(int argc, char *argv[]) {
         screenW, screenH,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     if (window == NULL) {
-        logError(SDL_GetError());
+        fprintf(stderr, "%s\n", SDL_GetError());
         ret = 1;
         goto cleanup;
     }
@@ -66,7 +57,7 @@ int main(int argc, char *argv[]) {
 
     surfaceSrc = IMG_Load(args.imagePath);
     if (surfaceSrc == NULL) {
-        logError(IMG_GetError());
+        fprintf(stderr, "%s\n", IMG_GetError());
         ret = 1;
         goto cleanup;
     }
@@ -74,7 +65,7 @@ int main(int argc, char *argv[]) {
         SDL_Surface *surfaceConv = SDL_ConvertSurfaceFormat(surfaceSrc,
             SDL_PIXELFORMAT_RGBA32, 0);
         if (surfaceConv == NULL) {
-            logError(SDL_GetError());
+            fprintf(stderr, "%s\n", SDL_GetError());
             ret = 1;
             goto cleanup;
         }
@@ -97,7 +88,7 @@ int main(int argc, char *argv[]) {
             srcW, srcH, surfaceSrc->pixels,
             args.dstW, args.dstH,
             &wfc) != 0) {
-        logError("WFC init failed.");
+        fprintf(stderr, "WFC init failed.\n");
         ret = 1;
         goto cleanup;
     }
@@ -136,11 +127,11 @@ int main(int argc, char *argv[]) {
         int status = wfcStep(&wfc);
         if (status < 0) {
             if (wfcBacktrack(&wfc) != 0) {
-                logError("WFC step failed.");
+                fprintf(stderr, "WFC step failed.\n");
                 ret = 1;
                 goto cleanup;
             } else {
-                logInfo("WFC is backtracking.");
+                fprintf(stdout, "WFC is backtracking.\n");
                 wfcBlitAveraged(wfc, surfaceSrc->pixels,
                     args.dstW, args.dstH, surfaceDst->pixels);
             }
@@ -150,7 +141,7 @@ int main(int argc, char *argv[]) {
         } else if (!wfcBlitComplete) {
             wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
             wfcBlitComplete = 1;
-            logInfo("WFC completed.");
+            fprintf(stdout, "WFC completed.\n");
         }
 
         // render

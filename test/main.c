@@ -22,13 +22,13 @@ int testBasicN1(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -51,13 +51,13 @@ int testHFlipN1(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -80,13 +80,13 @@ int testVFlipN1(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -109,13 +109,13 @@ int testHVFlipN1(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -138,13 +138,13 @@ int testBasicN3(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -167,13 +167,13 @@ int testHFlipN3(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -196,13 +196,13 @@ int testVFlipN3(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -225,13 +225,13 @@ int testHVFlipN3(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -255,13 +255,13 @@ int testVEdgeFixN3(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] < 1 || dst[i] > 3) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -285,13 +285,13 @@ int testHEdgeFixN3(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] < 1 || dst[i] > 3) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -315,13 +315,13 @@ int testHVEdgeFixN3(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] < 1 || dst[i] > 2) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -344,7 +344,7 @@ int testHVEdgeFixOneSolution(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     uint32_t expected[dstW * dstH] = {
@@ -357,7 +357,7 @@ int testHVEdgeFixOneSolution(void) {
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != expected[i]) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -379,7 +379,7 @@ int testPattern(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
@@ -388,7 +388,7 @@ int testPattern(void) {
 
         if (dst[i] != 0 && dst[i] != 1 && dst[i] != 2) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
         if (dst[i] == 2) {
             int l = x > 0 ? x - 1 : dstW - 1;
@@ -399,7 +399,7 @@ int testPattern(void) {
             if (dst[y * dstW + l] == 0 || dst[y * dstW + r] == 0 ||
                 dst[u * dstW + x] == 0 || dst[d * dstW + x] == 0) {
                 PRINT_TEST_FAIL();
-                return 1;
+                return -1;
             }
         }
     }
@@ -426,19 +426,19 @@ int testHVEdgeFixPattern(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW; ++i) {
         if (dst[0 * dstW + i] != 0 || dst[(dstH - 1) * dstW + i] != 0) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
     for (int i = 0; i < dstH; ++i) {
         if (dst[i * dstW + 0] != 0 || dst[i * dstW + (dstW - 1)] != 0) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -461,13 +461,13 @@ int testWide(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 0 && dst[i] != 1) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -492,13 +492,13 @@ int testTall(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 0 && dst[i] != 1) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 
@@ -523,13 +523,13 @@ int testSrcBiggerThanDst(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
-        return 1;
+        return -1;
     }
 
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 0 && dst[i] != 1) {
             PRINT_TEST_FAIL();
-            return 1;
+            return -1;
         }
     }
 

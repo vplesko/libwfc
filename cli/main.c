@@ -4,7 +4,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include "wfc.h"
+#include "wfc_wrap.h"
 
 void logError(const char *msg) {
     fprintf(stderr, "%s\n", msg);
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     srand((unsigned)time(NULL));
 
     dstPixels = malloc(dstW * dstH * bytesPerPixel);
-    if (wfc_generate(
+    if (wfcGenerate(
             wfcN, 0, bytesPerPixel,
             srcW, srcH, srcPixels,
             dstW, dstH, dstPixels) != 0) {

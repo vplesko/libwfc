@@ -6,7 +6,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
-#include "wfc.h"
+#include "wfc_wrap.h"
 
 const int screenW = 640, screenH = 480;
 const Uint32 ticksPerFrame = 1000 / 60;
@@ -56,32 +56,6 @@ int parseArgs(int argc, char *argv[],
     return 0;
 }
 
-void wfcBlitAveraged(const wfc_State *wfc, int bytesPerPixel,
-    const unsigned char *src,
-    int dstW, int dstH, unsigned char *dst) {
-    int pattCnt = wfc_patternCount(wfc);
-
-    for (int j = 0; j < dstH; ++j) {
-        for (int i = 0; i < dstW; ++i) {
-            for (int b = 0; b < bytesPerPixel; ++b) {
-                int sum = 0, cnt = 0;
-                for (int p = 0; p < pattCnt; ++p) {
-                    if (wfc_patternAvailable(wfc, p, i, j)) {
-                        const unsigned char* px =
-                            wfc_pixelToBlit(wfc, p, i, j, src);
-
-                        sum += (int)px[b];
-                        ++cnt;
-                    }
-                }
-
-                unsigned char avg = (unsigned char)(sum / cnt);
-                dst[j * dstW * bytesPerPixel + i * bytesPerPixel + b] = avg;
-            }
-        }
-    }
-}
-
 int main(int argc, char *argv[]) {
     int ret = 0;
 
@@ -90,7 +64,7 @@ int main(int argc, char *argv[]) {
     SDL_Window *window = NULL;
     SDL_Surface *surfaceSrc = NULL;
     SDL_Surface *surfaceDst = NULL;
-    wfc_State *wfc = NULL;
+    struct WfcWrapper wfc = {0};
 
     const char *imagePath;
     int wfcN, dstW, dstH;
@@ -155,10 +129,11 @@ int main(int argc, char *argv[]) {
     assert(surfaceDst->format->palette == NULL);
     assert(!SDL_MUSTLOCK(surfaceDst));
 
-    wfc = wfc_init(wfcN, 0, bytesPerPixel,
-        srcW, srcH, surfaceSrc->pixels,
-        dstW, dstH);
-    if (wfc == NULL) {
+    if (wfcInit(
+            wfcN, 0, bytesPerPixel,
+            srcW, srcH, surfaceSrc->pixels,
+            dstW, dstH,
+            &wfc) != 0) {
         logError("WFC init failed.");
         ret = 1;
         goto cleanup;
@@ -195,16 +170,16 @@ int main(int argc, char *argv[]) {
 
         // update
 
-        int status = wfc_step(wfc);
+        int status = wfcStep(wfc);
         if (status < 0) {
             logError("WFC step failed.");
             ret = 1;
             goto cleanup;
         } else if (status == 0) {
-            wfcBlitAveraged(wfc, bytesPerPixel,
+            wfcBlitAveraged(wfc,
                 surfaceSrc->pixels, dstW, dstH, surfaceDst->pixels);
         } else if (!wfcBlitComplete) {
-            wfc_blit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
+            wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
             wfcBlitComplete = 1;
             logInfo("WFC completed.");
         }
@@ -231,7 +206,7 @@ int main(int argc, char *argv[]) {
     }
 
 cleanup:
-    if (wfc != NULL) wfc_free(wfc);
+    wfcFree(wfc);
     if (surfaceDst != NULL) SDL_FreeSurface(surfaceDst);
     if (surfaceSrc != NULL) SDL_FreeSurface(surfaceSrc);
     if (window != NULL) SDL_DestroyWindow(window);

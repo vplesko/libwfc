@@ -64,9 +64,33 @@ int args__parseInt(const char *str, int *dst) {
     return 0;
 }
 
+int args_checkAllFlagsKnown(
+    int argc, char *argv[],
+    size_t len, const struct args_Descr *descrs) {
+    for (int a = 1; a < argc; a += 2) {
+        int known = 0;
+
+        for (size_t i = 0; i < len; ++i) {
+            if (strcmp(argv[a] + 1, descrs[i]._name) == 0) {
+                known = 1;
+                break;
+            }
+        }
+
+        if (!known) {
+            fprintf(stderr, "Invalid arguments.\n");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 int args_parse(
     int argc, char *argv[],
     size_t len, const struct args_Descr *descrs) {
+    if (args_checkAllFlagsKnown(argc, argv, len, descrs) < 0) return -1;
+
     for (size_t i = 0; i < len; ++i) {
         const struct args_Descr *descr = &descrs[i];
 

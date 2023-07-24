@@ -42,7 +42,6 @@ struct args_Descr args_argString(const char *name, const char **dst) {
 /*
     @TODO verify:
         required params given
-        no unknown flags
         all req params before opt
         no more params than known
         no flags named help
@@ -86,11 +85,9 @@ int args_checkAllFlagsKnown(
     return 0;
 }
 
-int args_parse(
+int args_parseFlags(
     int argc, char *argv[],
     size_t len, const struct args_Descr *descrs) {
-    if (args_checkAllFlagsKnown(argc, argv, len, descrs) < 0) return -1;
-
     for (size_t i = 0; i < len; ++i) {
         const struct args_Descr *descr = &descrs[i];
 
@@ -131,6 +128,15 @@ int args_parse(
             return -1;
         }
     }
+
+    return 0;
+}
+
+int args_parse(
+    int argc, char *argv[],
+    size_t len, const struct args_Descr *descrs) {
+    if (args_checkAllFlagsKnown(argc, argv, len, descrs) < 0) return -1;
+    if (args_parseFlags(argc, argv, len, descrs) < 0) return -1;
 
     return 0;
 }

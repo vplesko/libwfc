@@ -6,7 +6,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
-#include "cmd_args.h"
+#include "wfc_args.h"
 #include "wfc_wrap.h"
 
 const int screenW = 640, screenH = 480;

@@ -4,7 +4,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include "cmd_args.h"
+#include "wfc_args.h"
 #include "wfc_wrap.h"
 
 int main(int argc, char *argv[]) {

@@ -39,7 +39,6 @@ struct ArgDescr argString(const char *name, const char **dst) {
 
 // @TODO optional with default vals
 // @TODO params (no name)
-// @TODO assert that calls ok
 /*
     @TODO verify:
         required params given
@@ -52,6 +51,19 @@ struct ArgDescr argString(const char *name, const char **dst) {
 // @TODO bools with -- and no value (meaning true)
 // @TODO helpful error msgs
 // @TODO help text
+
+int parseArgValInt(const char *str, int *dst) {
+    long l;
+    char *end;
+    l = strtol(str, &end, 0);
+    if (*end != '\0') return -1;
+
+    int i = (int)l;
+    if (i != l) return -1;
+
+    if (dst != NULL) *dst = i;
+    return 0;
+}
 
 int parseArgs(
     int argc, char *argv[],
@@ -69,16 +81,8 @@ int parseArgs(
                 }
 
                 if (descr->type == argTypeInt) {
-                    long l;
-                    char *end;
-                    l = strtol(argv[a + 1], &end, 0);
-                    if (*end != '\0') {
-                        fprintf(stderr, "Invalid arguments.\n");
-                        return -1;
-                    }
-
-                    int i = (int)l;
-                    if (i != l) {
+                    int i;
+                    if (parseArgValInt(argv[a + 1], &i) < 0) {
                         fprintf(stderr, "Invalid arguments.\n");
                         return -1;
                     }
@@ -86,7 +90,7 @@ int parseArgs(
                     if (descr->dst != NULL) *(int*)descr->dst = i;
                 } else if (descr->type == argTypeString) {
                     if (descr->dst != NULL) {
-                        *(const char **)descr->dst = argv[a + 1];
+                        *(const char**)descr->dst = argv[a + 1];
                     }
                 }
 
@@ -99,35 +103,6 @@ int parseArgs(
             fprintf(stderr, "Invalid arguments.\n");
             return -1;
         }
-    }
-
-    return 0;
-}
-
-struct WfcArgs {
-    const char *imagePath;
-    int wfcN;
-    int dstW, dstH;
-};
-
-// @TODO rand seed as arg
-int parseWfcArgs(int argc, char *argv[], struct WfcArgs *args) {
-    struct ArgDescr flag[] = {
-        // @TODO turn path into a param
-        argString("path", &args->imagePath),
-        argInt("n", &args->wfcN),
-        argInt("w", &args->dstW),
-        argInt("h", &args->dstH),
-    };
-    if (parseArgs(argc, argv, sizeof(flag) / sizeof(*flag), flag) < 0) {
-        return -1;
-    }
-
-    if (args->wfcN <= 0 ||
-        args->dstW <= 0 || args->dstH <= 0 ||
-        args->wfcN > args->dstW || args->wfcN > args->dstH) {
-        fprintf(stderr, "Invalid arguments.\n");
-        return -1;
     }
 
     return 0;

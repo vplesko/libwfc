@@ -3,10 +3,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+enum ArgType {
+    argTypeInt,
+    argTypeString,
+};
+
 struct ArgDescr {
     const char *name;
+    enum ArgType type;
 
-    int *dst;
+    void *dst;
 };
 
 struct ArgDescr argInt(const char *name, int *dst) {
@@ -15,6 +21,18 @@ struct ArgDescr argInt(const char *name, int *dst) {
 
     return (struct ArgDescr){
         .name = name,
+        .type = argTypeInt,
+        .dst = dst,
+    };
+}
+
+struct ArgDescr argString(const char *name, const char **dst) {
+    assert(name != NULL);
+    assert(strlen(name) > 0);
+
+    return (struct ArgDescr){
+        .name = name,
+        .type = argTypeString,
         .dst = dst,
     };
 }
@@ -48,21 +66,32 @@ int parseArgs(
                     return -1;
                 }
 
-                long l;
-                char *end;
-                l = strtol(argv[a + 1], &end, 0);
-                if (*end != '\0') {
-                    fprintf(stderr, "Invalid arguments.\n");
-                    return -1;
-                }
+                if (descr->type == argTypeInt) {
+                    long l;
+                    char *end;
+                    l = strtol(argv[a + 1], &end, 0);
+                    if (*end != '\0') {
+                        fprintf(stderr, "Invalid arguments.\n");
+                        return -1;
+                    }
 
-                int i = (int)l;
-                if (i != l) {
-                    fprintf(stderr, "Invalid arguments.\n");
-                    return -1;
-                }
+                    int i = (int)l;
+                    if (i != l) {
+                        fprintf(stderr, "Invalid arguments.\n");
+                        return -1;
+                    }
 
-                if (descr->dst != NULL) *descr->dst = i;
+                    if (descr->dst != NULL) *(int*)descr->dst = i;
+                } else if (descr->type == argTypeString) {
+                    if (argv[a + 1][0] == '-') {
+                        fprintf(stderr, "Invalid arguments.\n");
+                        return -1;
+                    }
+
+                    if (descr->dst != NULL) {
+                        *(const char **)descr->dst = argv[a + 1];
+                    }
+                }
 
                 found = 1;
                 break;
@@ -78,14 +107,14 @@ int parseArgs(
     return 0;
 }
 
-struct Args {
+struct WfcArgs {
     const char *imagePath;
     int wfcN;
     int dstW, dstH;
 };
 
 // @TODO rand seed as arg
-int parseWfcArgs(int argc, char *argv[], struct Args *args) {
+int parseWfcArgs(int argc, char *argv[], struct WfcArgs *args) {
     if (argc < 5) {
         fprintf(stderr, "Invalid arguments.\n");
         return -1;

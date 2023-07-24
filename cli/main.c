@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
     unsigned char *dstPixels = NULL;
     struct WfcWrapper wfc = {0};
 
-    struct Args args;
+    struct WfcArgs args;
     if (parseWfcArgs(argc, argv, &args) != 0) {
         ret = 1;
         goto cleanup;

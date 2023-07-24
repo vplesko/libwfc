@@ -56,6 +56,9 @@ int main(int argc, char *argv[]) {
 
     srand((unsigned)time(NULL));
 
+    int wfcOptions = 0;
+    if (args.wfcRot) wfcOptions |= wfc_optRotate;
+
     surfaceSrc = IMG_Load(args.imagePath);
     if (surfaceSrc == NULL) {
         fprintf(stderr, "%s\n", IMG_GetError());
@@ -85,7 +88,7 @@ int main(int argc, char *argv[]) {
     assert(!SDL_MUSTLOCK(surfaceDst));
 
     if (wfcInit(
-            args.wfcN, 0, bytesPerPixel,
+            args.wfcN, wfcOptions, bytesPerPixel,
             srcW, srcH, surfaceSrc->pixels,
             args.dstW, args.dstH,
             &wfc) != 0) {

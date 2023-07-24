@@ -37,6 +37,8 @@ struct ArgDescr argString(const char *name, const char **dst) {
     };
 }
 
+// @TODO optional with default vals
+// @TODO params (no name)
 // @TODO assert that calls ok
 /*
     @TODO verify:
@@ -83,11 +85,6 @@ int parseArgs(
 
                     if (descr->dst != NULL) *(int*)descr->dst = i;
                 } else if (descr->type == argTypeString) {
-                    if (argv[a + 1][0] == '-') {
-                        fprintf(stderr, "Invalid arguments.\n");
-                        return -1;
-                    }
-
                     if (descr->dst != NULL) {
                         *(const char **)descr->dst = argv[a + 1];
                     }
@@ -115,36 +112,23 @@ struct WfcArgs {
 
 // @TODO rand seed as arg
 int parseWfcArgs(int argc, char *argv[], struct WfcArgs *args) {
-    if (argc < 5) {
-        fprintf(stderr, "Invalid arguments.\n");
+    struct ArgDescr flag[] = {
+        // @TODO turn path into a param
+        argString("path", &args->imagePath),
+        argInt("n", &args->wfcN),
+        argInt("w", &args->dstW),
+        argInt("h", &args->dstH),
+    };
+    if (parseArgs(argc, argv, sizeof(flag) / sizeof(*flag), flag) < 0) {
         return -1;
     }
 
-    args->imagePath = argv[1];
-
-    long l;
-    char *end;
-
-    l = strtol(argv[2], &end, 0);
-    if (*end != '\0') {
+    if (args->wfcN <= 0 ||
+        args->dstW <= 0 || args->dstH <= 0 ||
+        args->wfcN > args->dstW || args->wfcN > args->dstH) {
         fprintf(stderr, "Invalid arguments.\n");
         return -1;
     }
-    args->wfcN = (int)l;
-
-    l = strtol(argv[3], &end, 0);
-    if (*end != '\0') {
-        fprintf(stderr, "Invalid arguments.\n");
-        return -1;
-    }
-    args->dstW = (int)l;
-
-    l = strtol(argv[4], &end, 0);
-    if (*end != '\0') {
-        fprintf(stderr, "Invalid arguments.\n");
-        return -1;
-    }
-    args->dstH = (int)l;
 
     return 0;
 }

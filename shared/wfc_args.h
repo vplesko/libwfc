@@ -3,6 +3,7 @@
 struct Args {
     const char *imagePath;
     int wfcN;
+    int wfcRot;
     int dstW, dstH;
 };
 
@@ -11,6 +12,7 @@ int parseArgs(int argc, char *argv[], struct Args *args) {
     struct args_Descr flag[] = {
         args_argString(NULL, &args->imagePath),
         args_argInt("n", &args->wfcN),
+        args_argBool("rot", &args->wfcRot),
         args_argInt("w", &args->dstW),
         args_argInt("h", &args->dstH),
     };

@@ -5,6 +5,7 @@
 
 enum args__Type {
     args__TypeInt,
+    args__TypeBool,
     args__TypeString,
 };
 
@@ -25,6 +26,16 @@ struct args_Descr args_argInt(const char *name, int *dst) {
     };
 }
 
+struct args_Descr args_argBool(const char *name, int *dst) {
+    if (name != NULL) assert(strlen(name) > 0);
+
+    return (struct args_Descr){
+        ._name = name,
+        ._type = args__TypeBool,
+        ._dst = dst,
+    };
+}
+
 struct args_Descr args_argString(const char *name, const char **dst) {
     if (name != NULL) assert(strlen(name) > 0);
 
@@ -35,15 +46,12 @@ struct args_Descr args_argString(const char *name, const char **dst) {
     };
 }
 
-// @TODO optional with default vals
-/*
-    @TODO verify:
-        all req params before opt
-        no flags named help
-*/
 // @TODO bools with -- and no value (meaning true)
+// @TODO optional with default vals
+// @TODO verify all req params before opt
 // @TODO helpful error msgs
 // @TODO help text
+// @TODO no flags named help
 
 int args__parseVal(const char *str, const struct args_Descr *descr) {
     if (descr->_type == args__TypeInt) {
@@ -62,6 +70,26 @@ int args__parseVal(const char *str, const struct args_Descr *descr) {
         }
 
         if (descr->_dst != NULL) *(int*)descr->_dst = i;
+    } else if (descr->_type == args__TypeBool) {
+        int b;
+        if (strcmp(str, "t") == 0 ||
+            strcmp(str, "T") == 0 ||
+            strcmp(str, "true") == 0 ||
+            strcmp(str, "True") == 0 ||
+            strcmp(str, "1") == 0) {
+            b = 1;
+        } else if (strcmp(str, "f") == 0 ||
+            strcmp(str, "F") == 0 ||
+            strcmp(str, "false") == 0 ||
+            strcmp(str, "False") == 0 ||
+            strcmp(str, "0") == 0) {
+            b = 0;
+        } else {
+            fprintf(stderr, "Invalid arguments.\n");
+            return -1;
+        }
+
+        if (descr->_dst != NULL) *(int*)descr->_dst = b;
     } else if (descr->_type == args__TypeString) {
         if (descr->_dst != NULL) {
             *(const char**)descr->_dst = str;

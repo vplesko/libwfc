@@ -9,8 +9,7 @@ struct Args {
 // @TODO rand seed as arg
 int parseArgs(int argc, char *argv[], struct Args *args) {
     struct args_Descr flag[] = {
-        // @TODO turn path into a param
-        args_argString("path", &args->imagePath),
+        args_argString(NULL, &args->imagePath),
         args_argInt("n", &args->wfcN),
         args_argInt("w", &args->dstW),
         args_argInt("h", &args->dstH),

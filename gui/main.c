@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
@@ -22,7 +23,7 @@ int main(int argc, char *argv[]) {
     struct WfcWrapper wfc = {0};
 
     struct Args args;
-    if (parseArgs(argc, argv, &args) != 0) {
+    if (parseWfcArgs(argc, argv, &args) != 0) {
         ret = 1;
         goto cleanup;
     }

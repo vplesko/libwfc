@@ -1,21 +1,21 @@
 #include "args.h"
 
-struct WfcArgs {
+struct Args {
     const char *imagePath;
     int wfcN;
     int dstW, dstH;
 };
 
 // @TODO rand seed as arg
-int parseWfcArgs(int argc, char *argv[], struct WfcArgs *args) {
-    struct ArgDescr flag[] = {
+int parseArgs(int argc, char *argv[], struct Args *args) {
+    struct args_Descr flag[] = {
         // @TODO turn path into a param
-        argString("path", &args->imagePath),
-        argInt("n", &args->wfcN),
-        argInt("w", &args->dstW),
-        argInt("h", &args->dstH),
+        args_argString("path", &args->imagePath),
+        args_argInt("n", &args->wfcN),
+        args_argInt("w", &args->dstW),
+        args_argInt("h", &args->dstH),
     };
-    if (parseArgs(argc, argv, sizeof(flag) / sizeof(*flag), flag) < 0) {
+    if (args_parse(argc, argv, sizeof(flag) / sizeof(*flag), flag) < 0) {
         return -1;
     }
 

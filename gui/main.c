@@ -22,8 +22,8 @@ int main(int argc, char *argv[]) {
     SDL_Surface *surfaceDst = NULL;
     struct WfcWrapper wfc = {0};
 
-    struct WfcArgs args;
-    if (parseWfcArgs(argc, argv, &args) != 0) {
+    struct Args args;
+    if (parseArgs(argc, argv, &args) != 0) {
         ret = 1;
         goto cleanup;
     }

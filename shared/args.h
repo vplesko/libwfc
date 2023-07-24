@@ -38,9 +38,7 @@ struct args_Descr args_argString(const char *name, const char **dst) {
 // @TODO optional with default vals
 /*
     @TODO verify:
-        required params given
         all req params before opt
-        no more params than known
         no flags named help
 */
 // @TODO bools with -- and no value (meaning true)
@@ -168,6 +166,17 @@ int args__parseParams(
             fprintf(stderr, "Invalid arguments.\n");
             return -1;
         }
+    }
+
+    while (a < argc) {
+        int isFlag = argv[a][0] == '-';
+
+        if (!isFlag) {
+            fprintf(stderr, "Invalid arguments.\n");
+            return -1;
+        }
+
+        a += 1 + isFlag;
     }
 
     return 0;

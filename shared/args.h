@@ -42,10 +42,9 @@ struct args_Descr args_argString(const char *name, const char **dst) {
 /*
     @TODO verify:
         required params given
-        no duplicate flags
         no unknown flags
-        no more params than known
         all req params before opt
+        no more params than known
         no flags named help
 */
 // @TODO bools with -- and no value (meaning true)
@@ -75,6 +74,11 @@ int args_parse(
 
         for (int a = 1; a < argc; a += 2) {
             if (strcmp(argv[a] + 1, descr->_name) == 0) {
+                if (found) {
+                    fprintf(stderr, "Invalid arguments.\n");
+                    return -1;
+                }
+
                 if (a + 1 >= argc) {
                     fprintf(stderr, "Invalid arguments.\n");
                     return -1;
@@ -95,7 +99,6 @@ int args_parse(
                 }
 
                 found = 1;
-                break;
             }
         }
 

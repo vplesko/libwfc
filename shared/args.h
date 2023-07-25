@@ -101,11 +101,23 @@ int args__parseVal(const char *str, const struct args_Descr *descr) {
     return 0;
 }
 
-int args__isFlag(const char *arg) {
+int args__paramIsFlag(const struct args_Descr *descr) {
+    return descr->_name != NULL;
+}
+
+int args__paramIsPos(const struct args_Descr *descr) {
+    return descr->_name == NULL;
+}
+
+int args__argIsFlag(const char *arg) {
     return arg[0] == '-';
 }
 
-const char* args__flagName(const char *arg) {
+int args__argIsPos(const char *arg) {
+    return arg[0] != '-';
+}
+
+const char* args__argFlagName(const char *arg) {
     return arg + 1 + (arg[1] == '-');
 }
 
@@ -117,11 +129,11 @@ int args__checkAllFlagsKnown(
     int argc, char *argv[],
     size_t len, const struct args_Descr *descrs) {
     for (int a = 1; a < argc;) {
-        if (args__isFlag(argv[a])) {
+        if (args__argIsFlag(argv[a])) {
             int known = 0;
             for (size_t i = 0; i < len; ++i) {
-                if (descrs[i]._name != NULL &&
-                    strcmp(args__flagName(argv[a]), descrs[i]._name) == 0) {
+                if (args__paramIsFlag(&descrs[i]) &&
+                    strcmp(args__argFlagName(argv[a]), descrs[i]._name) == 0) {
                     known = 1;
                     break;
                 }
@@ -139,11 +151,11 @@ int args__checkAllFlagsKnown(
     return 0;
 }
 
-void args__assertAllReqParamsBeforeOpt(
+void args__assertAllReqPosBeforeOpt(
     size_t len, const struct args_Descr *descrs) {
     int foundOpt = 0;
     for (size_t i = 0; i < len; ++i) {
-        if (descrs[i]._name == NULL) {
+        if (args__paramIsPos(&descrs[i])) {
             if (foundOpt) assert(!descrs[i]._required);
 
             if (!descrs[i]._required) foundOpt = 1;
@@ -156,13 +168,13 @@ int args__parseFlags(
     size_t len, const struct args_Descr *descrs) {
     for (size_t i = 0; i < len; ++i) {
         const struct args_Descr *descr = &descrs[i];
-        if (descr->_name == NULL) continue;
+        if (!args__paramIsFlag(descr)) continue;
 
         int found = 0;
 
         for (int a = 1; a < argc;) {
-            if (args__isFlag(argv[a]) &&
-                strcmp(args__flagName(argv[a]), descr->_name) == 0) {
+            if (args__argIsFlag(argv[a]) &&
+                strcmp(args__argFlagName(argv[a]), descr->_name) == 0) {
                 if (found) {
                     fprintf(stderr, "Invalid arguments.\n");
                     return -1;
@@ -199,19 +211,19 @@ int args__parseFlags(
     return 0;
 }
 
-int args__parseParams(
+int args__parsePos(
     int argc, char *argv[],
     size_t len, const struct args_Descr *descrs) {
     size_t i = 0;
     int a = 1;
     while (i < len && a < argc) {
         const struct args_Descr *descr = &descrs[i];
-        if (descr->_name != NULL) {
+        if (!args__paramIsPos(descr)) {
             ++i;
             continue;
         }
 
-        if (!args__isFlag(argv[a])) {
+        if (args__argIsPos(argv[a])) {
             if (args__parseVal(argv[a], descr) < 0) return -1;
             ++i;
         }
@@ -220,14 +232,14 @@ int args__parseParams(
     }
 
     for (; i < len; ++i) {
-        if (descrs[i]._name == NULL && descrs[i]._required) {
+        if (args__paramIsPos(&descrs[i]) && descrs[i]._required) {
             fprintf(stderr, "Invalid arguments.\n");
             return -1;
         }
     }
 
     while (a < argc) {
-        if (!args__isFlag(argv[a])) {
+        if (args__argIsPos(argv[a])) {
             fprintf(stderr, "Invalid arguments.\n");
             return -1;
         }
@@ -251,10 +263,10 @@ int args_parse(
     if (len > 0) assert(descrs != NULL);
 
     if (args__checkAllFlagsKnown(argc, argv, len, descrs) < 0) return -1;
-    args__assertAllReqParamsBeforeOpt(len, descrs);
+    args__assertAllReqPosBeforeOpt(len, descrs);
 
     if (args__parseFlags(argc, argv, len, descrs) < 0) return -1;
-    if (args__parseParams(argc, argv, len, descrs) < 0) return -1;
+    if (args__parsePos(argc, argv, len, descrs) < 0) return -1;
 
     return 0;
 }

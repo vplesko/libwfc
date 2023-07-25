@@ -15,9 +15,9 @@ int parseArgs(int argc, char *argv[], struct Args *args) {
     struct args_Descr flag[] = {
         args_argString(NULL, 1, &args->imagePath),
         args_argInt("n", 1, &args->wfcN),
+        args_argBool("rot", 0, &args->wfcRot),
         args_argInt("w", 1, &args->dstW),
         args_argInt("h", 1, &args->dstH),
-        args_argBool("rot", 0, &args->wfcRot),
     };
     if (args_parse(argc, argv, sizeof(flag) / sizeof(*flag), flag) < 0) {
         return -1;

@@ -223,10 +223,18 @@ int args__parseParams(
     return 0;
 }
 
-// @TODO add assertions
 int args_parse(
     int argc, char *argv[],
     size_t len, const struct args_Descr *descrs) {
+    assert(argc > 0);
+    assert(argv != NULL);
+    for (int a = 0; a < argc; ++a) {
+        assert(argv[a] != NULL);
+        assert(strlen(argv[a]) > 0);
+    }
+
+    if (len > 0) assert(descrs != NULL);
+
     if (args__checkAllFlagsKnown(argc, argv, len, descrs) < 0) return -1;
 
     if (args__parseFlags(argc, argv, len, descrs) < 0) return -1;

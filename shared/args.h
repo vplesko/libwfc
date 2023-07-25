@@ -12,41 +12,45 @@ enum args__Type {
 struct args_Descr {
     const char *_name;
     enum args__Type _type;
+    int _required;
 
     void *_dst;
 };
 
-struct args_Descr args_argInt(const char *name, int *dst) {
+struct args_Descr args_argInt(const char *name, int required, int *dst) {
     if (name != NULL) assert(strlen(name) > 0);
 
     return (struct args_Descr){
         ._name = name,
         ._type = args__TypeInt,
+        ._required = required,
         ._dst = dst,
     };
 }
 
-struct args_Descr args_argBool(const char *name, int *dst) {
+struct args_Descr args_argBool(const char *name, int required, int *dst) {
     if (name != NULL) assert(strlen(name) > 0);
 
     return (struct args_Descr){
         ._name = name,
         ._type = args__TypeBool,
+        ._required = required,
         ._dst = dst,
     };
 }
 
-struct args_Descr args_argString(const char *name, const char **dst) {
+struct args_Descr args_argString(
+    const char *name, int required, const char **dst) {
     if (name != NULL) assert(strlen(name) > 0);
 
     return (struct args_Descr){
         ._name = name,
         ._type = args__TypeString,
+        ._required = required,
         ._dst = dst,
     };
 }
 
-// @TODO optional with default vals
 // @TODO verify all req params before opt
 // @TODO helpful error msgs
 // @TODO help text
@@ -175,7 +179,7 @@ int args__parseFlags(
             a += 1 + args__needsVal(argv[a]);
         }
 
-        if (!found) {
+        if (descr->_required && !found) {
             fprintf(stderr, "Invalid arguments.\n");
             return -1;
         }
@@ -205,7 +209,7 @@ int args__parseParams(
     }
 
     for (; i < len; ++i) {
-        if (descrs[i]._name == NULL) {
+        if (descrs[i]._name == NULL && descrs[i]._required) {
             fprintf(stderr, "Invalid arguments.\n");
             return -1;
         }

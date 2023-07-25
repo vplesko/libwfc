@@ -10,12 +10,14 @@ struct Args {
 // @TODO add other wfc options as flags
 // @TODO rand seed as arg
 int parseArgs(int argc, char *argv[], struct Args *args) {
+    args->wfcRot = 0;
+
     struct args_Descr flag[] = {
-        args_argString(NULL, &args->imagePath),
-        args_argInt("n", &args->wfcN),
-        args_argBool("rot", &args->wfcRot),
-        args_argInt("w", &args->dstW),
-        args_argInt("h", &args->dstH),
+        args_argString(NULL, 1, &args->imagePath),
+        args_argInt("n", 1, &args->wfcN),
+        args_argInt("w", 1, &args->dstW),
+        args_argInt("h", 1, &args->dstH),
+        args_argBool("rot", 0, &args->wfcRot),
     };
     if (args_parse(argc, argv, sizeof(flag) / sizeof(*flag), flag) < 0) {
         return -1;

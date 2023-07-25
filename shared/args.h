@@ -51,7 +51,6 @@ struct args_Descr args_argString(
     };
 }
 
-// @TODO verify all req params before opt
 // @TODO helpful error msgs
 // @TODO help text
 // @TODO no flags named help
@@ -138,6 +137,18 @@ int args__checkAllFlagsKnown(
     }
 
     return 0;
+}
+
+void args__assertAllReqParamsBeforeOpt(
+    size_t len, const struct args_Descr *descrs) {
+    int foundOpt = 0;
+    for (size_t i = 0; i < len; ++i) {
+        if (descrs[i]._name == NULL) {
+            if (foundOpt) assert(!descrs[i]._required);
+
+            if (!descrs[i]._required) foundOpt = 1;
+        }
+    }
 }
 
 int args__parseFlags(
@@ -240,6 +251,7 @@ int args_parse(
     if (len > 0) assert(descrs != NULL);
 
     if (args__checkAllFlagsKnown(argc, argv, len, descrs) < 0) return -1;
+    args__assertAllReqParamsBeforeOpt(len, descrs);
 
     if (args__parseFlags(argc, argv, len, descrs) < 0) return -1;
     if (args__parseParams(argc, argv, len, descrs) < 0) return -1;

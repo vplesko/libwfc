@@ -12,12 +12,12 @@ struct Args {
 int parseArgs(int argc, char *argv[], struct Args *args) {
     args->wfcRot = 0;
 
-    struct args_Descr flag[] = {
-        args_argString(NULL, 1, &args->imagePath),
-        args_argInt("n", 1, &args->wfcN),
-        args_argBool("rot", 0, &args->wfcRot),
-        args_argInt("w", 1, &args->dstW),
-        args_argInt("h", 1, &args->dstH),
+    struct args_Param flag[] = {
+        args_paramString(NULL, 1, &args->imagePath),
+        args_paramInt("n", 1, &args->wfcN),
+        args_paramBool("rot", 0, &args->wfcRot),
+        args_paramInt("w", 1, &args->dstW),
+        args_paramInt("h", 1, &args->dstH),
     };
     if (args_parse(argc, argv, sizeof(flag) / sizeof(*flag), flag) < 0) {
         return -1;

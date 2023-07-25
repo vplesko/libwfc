@@ -9,7 +9,7 @@ enum args__Type {
     args__TypeString,
 };
 
-struct args_Descr {
+struct args_Param {
     const char *_name;
     enum args__Type _type;
     int _required;
@@ -17,10 +17,10 @@ struct args_Descr {
     void *_dst;
 };
 
-struct args_Descr args_argInt(const char *name, int required, int *dst) {
+struct args_Param args_paramInt(const char *name, int required, int *dst) {
     if (name != NULL) assert(strlen(name) > 0);
 
-    return (struct args_Descr){
+    return (struct args_Param){
         ._name = name,
         ._type = args__TypeInt,
         ._required = required,
@@ -28,10 +28,10 @@ struct args_Descr args_argInt(const char *name, int required, int *dst) {
     };
 }
 
-struct args_Descr args_argBool(const char *name, int required, int *dst) {
+struct args_Param args_paramBool(const char *name, int required, int *dst) {
     if (name != NULL) assert(strlen(name) > 0);
 
-    return (struct args_Descr){
+    return (struct args_Param){
         ._name = name,
         ._type = args__TypeBool,
         ._required = required,
@@ -39,11 +39,11 @@ struct args_Descr args_argBool(const char *name, int required, int *dst) {
     };
 }
 
-struct args_Descr args_argString(
+struct args_Param args_paramString(
     const char *name, int required, const char **dst) {
     if (name != NULL) assert(strlen(name) > 0);
 
-    return (struct args_Descr){
+    return (struct args_Param){
         ._name = name,
         ._type = args__TypeString,
         ._required = required,
@@ -51,12 +51,13 @@ struct args_Descr args_argString(
     };
 }
 
+// @TODO param descriptions
 // @TODO helpful error msgs
 // @TODO help text
 // @TODO no flags named help
 
-int args__parseVal(const char *str, const struct args_Descr *descr) {
-    if (descr->_type == args__TypeInt) {
+int args__parseVal(const char *str, const struct args_Param *param) {
+    if (param->_type == args__TypeInt) {
         long l;
         char *end;
         l = strtol(str, &end, 0);
@@ -71,8 +72,8 @@ int args__parseVal(const char *str, const struct args_Descr *descr) {
             return -1;
         }
 
-        if (descr->_dst != NULL) *(int*)descr->_dst = i;
-    } else if (descr->_type == args__TypeBool) {
+        if (param->_dst != NULL) *(int*)param->_dst = i;
+    } else if (param->_type == args__TypeBool) {
         int b;
         if (strcmp(str, "t") == 0 ||
             strcmp(str, "T") == 0 ||
@@ -91,22 +92,22 @@ int args__parseVal(const char *str, const struct args_Descr *descr) {
             return -1;
         }
 
-        if (descr->_dst != NULL) *(int*)descr->_dst = b;
-    } else if (descr->_type == args__TypeString) {
-        if (descr->_dst != NULL) {
-            *(const char**)descr->_dst = str;
+        if (param->_dst != NULL) *(int*)param->_dst = b;
+    } else if (param->_type == args__TypeString) {
+        if (param->_dst != NULL) {
+            *(const char**)param->_dst = str;
         }
     }
 
     return 0;
 }
 
-int args__paramIsFlag(const struct args_Descr *descr) {
-    return descr->_name != NULL;
+int args__paramIsFlag(const struct args_Param *param) {
+    return param->_name != NULL;
 }
 
-int args__paramIsPos(const struct args_Descr *descr) {
-    return descr->_name == NULL;
+int args__paramIsPos(const struct args_Param *param) {
+    return param->_name == NULL;
 }
 
 int args__argIsFlag(const char *arg) {
@@ -127,13 +128,13 @@ int args__needsVal(const char *arg) {
 
 int args__checkAllFlagsKnown(
     int argc, char *argv[],
-    size_t len, const struct args_Descr *descrs) {
+    size_t len, const struct args_Param *params) {
     for (int a = 1; a < argc;) {
         if (args__argIsFlag(argv[a])) {
             int known = 0;
             for (size_t i = 0; i < len; ++i) {
-                if (args__paramIsFlag(&descrs[i]) &&
-                    strcmp(args__argFlagName(argv[a]), descrs[i]._name) == 0) {
+                if (args__paramIsFlag(&params[i]) &&
+                    strcmp(args__argFlagName(argv[a]), params[i]._name) == 0) {
                     known = 1;
                     break;
                 }
@@ -152,29 +153,29 @@ int args__checkAllFlagsKnown(
 }
 
 void args__assertAllReqPosBeforeOpt(
-    size_t len, const struct args_Descr *descrs) {
+    size_t len, const struct args_Param *params) {
     int foundOpt = 0;
     for (size_t i = 0; i < len; ++i) {
-        if (args__paramIsPos(&descrs[i])) {
-            if (foundOpt) assert(!descrs[i]._required);
+        if (args__paramIsPos(&params[i])) {
+            if (foundOpt) assert(!params[i]._required);
 
-            if (!descrs[i]._required) foundOpt = 1;
+            if (!params[i]._required) foundOpt = 1;
         }
     }
 }
 
 int args__parseFlags(
     int argc, char *argv[],
-    size_t len, const struct args_Descr *descrs) {
+    size_t len, const struct args_Param *params) {
     for (size_t i = 0; i < len; ++i) {
-        const struct args_Descr *descr = &descrs[i];
-        if (!args__paramIsFlag(descr)) continue;
+        const struct args_Param *param = &params[i];
+        if (!args__paramIsFlag(param)) continue;
 
         int found = 0;
 
         for (int a = 1; a < argc;) {
             if (args__argIsFlag(argv[a]) &&
-                strcmp(args__argFlagName(argv[a]), descr->_name) == 0) {
+                strcmp(args__argFlagName(argv[a]), param->_name) == 0) {
                 if (found) {
                     fprintf(stderr, "Invalid arguments.\n");
                     return -1;
@@ -186,14 +187,14 @@ int args__parseFlags(
                         return -1;
                     }
 
-                    if (args__parseVal(argv[a + 1], descr) < 0) return -1;
+                    if (args__parseVal(argv[a + 1], param) < 0) return -1;
                 } else {
-                    if (descr->_type != args__TypeBool) {
+                    if (param->_type != args__TypeBool) {
                         fprintf(stderr, "Invalid arguments.\n");
                         return -1;
                     }
 
-                    *(int*)descr->_dst = 1;
+                    *(int*)param->_dst = 1;
                 }
 
                 found = 1;
@@ -202,7 +203,7 @@ int args__parseFlags(
             a += 1 + args__needsVal(argv[a]);
         }
 
-        if (descr->_required && !found) {
+        if (param->_required && !found) {
             fprintf(stderr, "Invalid arguments.\n");
             return -1;
         }
@@ -213,18 +214,18 @@ int args__parseFlags(
 
 int args__parsePos(
     int argc, char *argv[],
-    size_t len, const struct args_Descr *descrs) {
+    size_t len, const struct args_Param *params) {
     size_t i = 0;
     int a = 1;
     while (i < len && a < argc) {
-        const struct args_Descr *descr = &descrs[i];
-        if (!args__paramIsPos(descr)) {
+        const struct args_Param *param = &params[i];
+        if (!args__paramIsPos(param)) {
             ++i;
             continue;
         }
 
         if (args__argIsPos(argv[a])) {
-            if (args__parseVal(argv[a], descr) < 0) return -1;
+            if (args__parseVal(argv[a], param) < 0) return -1;
             ++i;
         }
 
@@ -232,7 +233,7 @@ int args__parsePos(
     }
 
     for (; i < len; ++i) {
-        if (args__paramIsPos(&descrs[i]) && descrs[i]._required) {
+        if (args__paramIsPos(&params[i]) && params[i]._required) {
             fprintf(stderr, "Invalid arguments.\n");
             return -1;
         }
@@ -252,7 +253,7 @@ int args__parsePos(
 
 int args_parse(
     int argc, char *argv[],
-    size_t len, const struct args_Descr *descrs) {
+    size_t len, const struct args_Param *params) {
     assert(argc > 0);
     assert(argv != NULL);
     for (int a = 0; a < argc; ++a) {
@@ -260,13 +261,13 @@ int args_parse(
         assert(strlen(argv[a]) > 0);
     }
 
-    if (len > 0) assert(descrs != NULL);
+    if (len > 0) assert(params != NULL);
 
-    if (args__checkAllFlagsKnown(argc, argv, len, descrs) < 0) return -1;
-    args__assertAllReqPosBeforeOpt(len, descrs);
+    if (args__checkAllFlagsKnown(argc, argv, len, params) < 0) return -1;
+    args__assertAllReqPosBeforeOpt(len, params);
 
-    if (args__parseFlags(argc, argv, len, descrs) < 0) return -1;
-    if (args__parsePos(argc, argv, len, descrs) < 0) return -1;
+    if (args__parseFlags(argc, argv, len, params) < 0) return -1;
+    if (args__parsePos(argc, argv, len, params) < 0) return -1;
 
     return 0;
 }

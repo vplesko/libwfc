@@ -46,7 +46,6 @@ struct args_Descr args_argString(const char *name, const char **dst) {
     };
 }
 
-// @TODO bools with -- and no value (meaning true)
 // @TODO optional with default vals
 // @TODO verify all req params before opt
 // @TODO helpful error msgs
@@ -99,18 +98,27 @@ int args__parseVal(const char *str, const struct args_Descr *descr) {
     return 0;
 }
 
+int args__isFlag(const char *arg) {
+    return arg[0] == '-';
+}
+
+const char* args__flagName(const char *arg) {
+    return arg + 1 + (arg[1] == '-');
+}
+
+int args__needsVal(const char *arg) {
+    return arg[0] == '-' && arg[1] != '-';
+}
+
 int args__checkAllFlagsKnown(
     int argc, char *argv[],
     size_t len, const struct args_Descr *descrs) {
     for (int a = 1; a < argc;) {
-        int isFlag = argv[a][0] == '-';
-
-        if (isFlag) {
+        if (args__isFlag(argv[a])) {
             int known = 0;
-
             for (size_t i = 0; i < len; ++i) {
                 if (descrs[i]._name != NULL &&
-                    strcmp(argv[a] + 1, descrs[i]._name) == 0) {
+                    strcmp(args__flagName(argv[a]), descrs[i]._name) == 0) {
                     known = 1;
                     break;
                 }
@@ -122,7 +130,7 @@ int args__checkAllFlagsKnown(
             }
         }
 
-        a += 1 + isFlag;
+        a += 1 + args__needsVal(argv[a]);
     }
 
     return 0;
@@ -138,24 +146,33 @@ int args__parseFlags(
         int found = 0;
 
         for (int a = 1; a < argc;) {
-            int isFlag = argv[a][0] == '-';
-
-            if (isFlag && strcmp(argv[a] + 1, descr->_name) == 0) {
+            if (args__isFlag(argv[a]) &&
+                strcmp(args__flagName(argv[a]), descr->_name) == 0) {
                 if (found) {
                     fprintf(stderr, "Invalid arguments.\n");
                     return -1;
                 }
-                if (a + 1 >= argc) {
-                    fprintf(stderr, "Invalid arguments.\n");
-                    return -1;
-                }
 
-                if (args__parseVal(argv[a + 1], descr) < 0) return -1;
+                if (args__needsVal(argv[a])) {
+                    if (a + 1 >= argc) {
+                        fprintf(stderr, "Invalid arguments.\n");
+                        return -1;
+                    }
+
+                    if (args__parseVal(argv[a + 1], descr) < 0) return -1;
+                } else {
+                    if (descr->_type != args__TypeBool) {
+                        fprintf(stderr, "Invalid arguments.\n");
+                        return -1;
+                    }
+
+                    *(int*)descr->_dst = 1;
+                }
 
                 found = 1;
             }
 
-            a += 1 + isFlag;
+            a += 1 + args__needsVal(argv[a]);
         }
 
         if (!found) {
@@ -179,14 +196,12 @@ int args__parseParams(
             continue;
         }
 
-        int isFlag = argv[a][0] == '-';
-
-        if (!isFlag) {
+        if (!args__isFlag(argv[a])) {
             if (args__parseVal(argv[a], descr) < 0) return -1;
             ++i;
         }
 
-        a += 1 + isFlag;
+        a += 1 + args__needsVal(argv[a]);
     }
 
     for (; i < len; ++i) {
@@ -197,19 +212,18 @@ int args__parseParams(
     }
 
     while (a < argc) {
-        int isFlag = argv[a][0] == '-';
-
-        if (!isFlag) {
+        if (!args__isFlag(argv[a])) {
             fprintf(stderr, "Invalid arguments.\n");
             return -1;
         }
 
-        a += 1 + isFlag;
+        a += 1 + args__needsVal(argv[a]);
     }
 
     return 0;
 }
 
+// @TODO add assertions
 int args_parse(
     int argc, char *argv[],
     size_t len, const struct args_Descr *descrs) {

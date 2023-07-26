@@ -4,6 +4,14 @@ CC = clang
 
 BIN_DIR = bin
 
+ifdef WIN
+	CLI_EXE = cli.exe
+	GUI_EXE = gui.exe
+else
+	CLI_EXE = cli
+	GUI_EXE = gui
+endif
+
 HDRS = $(wildcard *.h shared/*.h external/lib/*.h)
 CLI_HDRS = $(wildcard cli/*.h)
 GUI_HDRS = $(wildcard gui/*.h)
@@ -11,31 +19,44 @@ TEST_HDRS = $(wildcard test/*.h)
 BENCHMARK_HDRS = $(wildcard benchmark/*.h)
 
 BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -I./ -Ishared -Iexternal/lib -g -fno-omit-frame-pointer
+ifdef VC
+	BUILD_FLAGS += -D_CRT_SECURE_NO_WARNINGS
+endif
 BUILD_FLAGS_DBG = -O2
 BUILD_FLAGS_REL = -O3 -mavx2
-LINK_FLAGS = -lm
+
+LINK_FLAGS =
+ifndef VC
+	LINK_FLAGS += -lm
+endif
 
 ui: cli gui
 
-cli: $(BIN_DIR)/cli
+cli: $(BIN_DIR)/$(CLI_EXE)
 
-$(BIN_DIR)/cli: cli/main.c $(HDRS) $(CLI_HDRS)
+$(BIN_DIR)/$(CLI_EXE): cli/main.c $(HDRS) $(CLI_HDRS)
 	@mkdir -p $(@D)
 	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS)
 
-gui: $(BIN_DIR)/gui
+gui: $(BIN_DIR)/$(GUI_EXE)
 
-$(BIN_DIR)/gui: gui/main.c $(HDRS) $(GUI_HDRS)
+GUI_LINK_FLAGS = `sdl2-config --cflags --libs` -lSDL2_image
+ifdef VC
+	GUI_LINK_FLAGS += -Xlinker /subsystem:console -lshell32
+endif
+
+$(BIN_DIR)/$(GUI_EXE): gui/main.c $(HDRS) $(GUI_HDRS)
 	@mkdir -p $(@D)
-	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) `sdl2-config --cflags --libs` -lSDL2_image
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) $(GUI_LINK_FLAGS)
 
 test: $(BIN_DIR)/test/done.txt
 
-$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/main $(BIN_DIR)/test/main_asan $(BIN_DIR)/test/main_msan
+# MSan and Valgrind don't work on Windows, so skip them in that case.
+$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/main $(BIN_DIR)/test/main_asan $(ifndef WIN, $(BIN_DIR)/test/main_msan)
 	$(BIN_DIR)/test/main
 	$(BIN_DIR)/test/main_asan
-	$(BIN_DIR)/test/main_msan
-	valgrind -q --leak-check=yes $(BIN_DIR)/test/main
+	$(ifndef WIN, $(BIN_DIR)/test/main_msan)
+	$(ifndef WIN, valgrind -q --leak-check=yes $(BIN_DIR)/test/main)
 	@touch $@
 
 $(BIN_DIR)/test/main: test/main.c $(HDRS) $(TEST_HDRS)

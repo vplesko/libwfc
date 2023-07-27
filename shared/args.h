@@ -51,10 +51,13 @@ struct args_Param args_paramString(
     };
 }
 
+// @TODO assert params have unique names
 // @TODO param descriptions
 // @TODO helpful error msgs
 // @TODO help text
 // @TODO no flags named help
+// @TODO add arg to args_parse to allow ignoring unknown args
+// @TODO revise how bools are parsed
 
 int args__parseVal(const char *str, const struct args_Param *param) {
     if (param->_type == args__TypeInt) {
@@ -127,7 +130,7 @@ int args__needsVal(const char *arg) {
 }
 
 int args__checkAllFlagsKnown(
-    int argc, char *argv[],
+    int argc, char * const *argv,
     size_t len, const struct args_Param *params) {
     for (int a = 1; a < argc;) {
         if (args__argIsFlag(argv[a])) {
@@ -165,7 +168,7 @@ void args__assertAllReqPosBeforeOpt(
 }
 
 int args__parseFlags(
-    int argc, char *argv[],
+    int argc, char * const *argv,
     size_t len, const struct args_Param *params) {
     for (size_t i = 0; i < len; ++i) {
         const struct args_Param *param = &params[i];
@@ -213,7 +216,7 @@ int args__parseFlags(
 }
 
 int args__parsePos(
-    int argc, char *argv[],
+    int argc, char * const *argv,
     size_t len, const struct args_Param *params) {
     size_t i = 0;
     int a = 1;
@@ -252,7 +255,7 @@ int args__parsePos(
 }
 
 int args_parse(
-    int argc, char *argv[],
+    int argc, char * const *argv,
     size_t len, const struct args_Param *params) {
     assert(argc > 0);
     assert(argv != NULL);

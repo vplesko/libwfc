@@ -9,7 +9,7 @@ struct Args {
 
 // @TODO add other wfc options as flags
 // @TODO rand seed as arg
-int parseArgs(int argc, char *argv[], struct Args *args) {
+int parseArgs(int argc, char * const *argv, struct Args *args) {
     args->wfcRot = 0;
 
     struct args_Param flag[] = {

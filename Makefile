@@ -52,11 +52,18 @@ $(BIN_DIR)/$(GUI_EXE): gui/main.c $(HDRS) $(GUI_HDRS)
 test: $(BIN_DIR)/test/done.txt
 
 # MSan and Valgrind don't work on Windows, so skip them in that case.
-$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/main $(BIN_DIR)/test/main_asan $(ifndef WIN, $(BIN_DIR)/test/main_msan)
+TEST_MSAN_PATH =
+TEST_VALGRIND_CMD =
+ifndef WIN
+	TEST_MSAN_PATH = $(BIN_DIR)/test/main_msan
+	TEST_VALGRIND_CMD = valgrind -q --leak-check=yes $(BIN_DIR)/test/main
+endif
+
+$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/main $(BIN_DIR)/test/main_asan $(TEST_MSAN_PATH)
 	$(BIN_DIR)/test/main
 	$(BIN_DIR)/test/main_asan
-	$(ifndef WIN, $(BIN_DIR)/test/main_msan)
-	$(ifndef WIN, valgrind -q --leak-check=yes $(BIN_DIR)/test/main)
+	$(TEST_MSAN_PATH)
+	$(TEST_VALGRIND_CMD)
 	@touch $@
 
 $(BIN_DIR)/test/main: test/main.c $(HDRS) $(TEST_HDRS)

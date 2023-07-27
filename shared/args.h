@@ -56,8 +56,10 @@ struct args_Param args_paramString(
 // @TODO helpful error msgs
 // @TODO help text
 // @TODO no flags named help
-// @TODO add arg to args_parse to allow ignoring unknown args
+// @TODO add arg to args_parse to allow ignoring some args errors
 // @TODO revise how bools are parsed
+// @TODO - allowed as pos value
+// @TODO -- causes further options to be interpreted as pos
 
 int args__parseVal(const char *str, const struct args_Param *param) {
     if (param->_type == args__TypeInt) {

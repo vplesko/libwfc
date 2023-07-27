@@ -1,10 +1,11 @@
+#include "wfc.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include "testing.h"
-#include "wfc.h"
 
 int testBasicN1(void) {
     enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };

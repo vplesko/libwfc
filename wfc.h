@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+// @TODO use bool
+
 // @TODO C++ support
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.

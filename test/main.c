@@ -7,7 +7,8 @@
 
 #include "testing.h"
 
-int testBasicN1(void) {
+// tests functions are static to make it a compile error if any are not called
+static int testBasicN1(void) {
     enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -36,7 +37,7 @@ int testBasicN1(void) {
     return 0;
 }
 
-int testHFlipN1(void) {
+static int testHFlipN1(void) {
     enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -65,7 +66,7 @@ int testHFlipN1(void) {
     return 0;
 }
 
-int testVFlipN1(void) {
+static int testVFlipN1(void) {
     enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -94,7 +95,7 @@ int testVFlipN1(void) {
     return 0;
 }
 
-int testHVFlipN1(void) {
+static int testHVFlipN1(void) {
     enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -123,7 +124,7 @@ int testHVFlipN1(void) {
     return 0;
 }
 
-int testBasicN3(void) {
+static int testBasicN3(void) {
     enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -152,7 +153,7 @@ int testBasicN3(void) {
     return 0;
 }
 
-int testHFlipN3(void) {
+static int testHFlipN3(void) {
     enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -181,7 +182,7 @@ int testHFlipN3(void) {
     return 0;
 }
 
-int testVFlipN3(void) {
+static int testVFlipN3(void) {
     enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -210,7 +211,7 @@ int testVFlipN3(void) {
     return 0;
 }
 
-int testHVFlipN3(void) {
+static int testHVFlipN3(void) {
     enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -239,7 +240,7 @@ int testHVFlipN3(void) {
     return 0;
 }
 
-int testVEdgeFixN3(void) {
+static int testVEdgeFixN3(void) {
     enum { n = 3, srcW = 5, srcH = 5, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -269,7 +270,7 @@ int testVEdgeFixN3(void) {
     return 0;
 }
 
-int testHEdgeFixN3(void) {
+static int testHEdgeFixN3(void) {
     enum { n = 3, srcW = 5, srcH = 5, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -299,7 +300,7 @@ int testHEdgeFixN3(void) {
     return 0;
 }
 
-int testHVEdgeFixN3(void) {
+static int testHVEdgeFixN3(void) {
     enum { n = 3, srcW = 5, srcH = 5, dstW = 16, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -329,7 +330,7 @@ int testHVEdgeFixN3(void) {
     return 0;
 }
 
-int testHVEdgeFixOneSolution(void) {
+static int testHVEdgeFixOneSolution(void) {
     enum { n = 2, srcW = 4, srcH = 4, dstW = 5, dstH = 5 };
 
     uint32_t src[srcW * srcH] = {
@@ -365,7 +366,7 @@ int testHVEdgeFixOneSolution(void) {
     return 0;
 }
 
-int testPattern(void) {
+static int testPattern(void) {
     enum { n = 2, srcW = 3, srcH = 3, dstW = 32, dstH = 32 };
 
     uint32_t src[srcW * srcH] = {
@@ -408,7 +409,7 @@ int testPattern(void) {
     return 0;
 }
 
-int testHVEdgeFixPattern(void) {
+static int testHVEdgeFixPattern(void) {
     enum { n = 2, srcW = 4, srcH = 4, dstW = 32, dstH = 32 };
 
     uint32_t src[srcW * srcH] = {
@@ -446,7 +447,7 @@ int testHVEdgeFixPattern(void) {
     return 0;
 }
 
-int testWide(void) {
+static int testWide(void) {
     enum { n = 2, srcW = 6, srcH = 4, dstW = 32, dstH = 16 };
 
     uint32_t src[srcW * srcH] = {
@@ -475,7 +476,7 @@ int testWide(void) {
     return 0;
 }
 
-int testTall(void) {
+static int testTall(void) {
     enum { n = 2, srcW = 4, srcH = 6, dstW = 16, dstH = 32 };
 
     uint32_t src[srcW * srcH] = {
@@ -506,7 +507,7 @@ int testTall(void) {
     return 0;
 }
 
-int testSrcBiggerThanDst(void) {
+static int testSrcBiggerThanDst(void) {
     enum { n = 2, srcW = 6, srcH = 6, dstW = 4, dstH = 4 };
 
     uint32_t src[srcW * srcH] = {
@@ -537,7 +538,7 @@ int testSrcBiggerThanDst(void) {
     return 0;
 }
 
-int testPatternCountBasic(void) {
+static int testPatternCountBasic(void) {
     enum { n = 2, srcW = 3, srcH = 3 };
 
     int ret = 0;
@@ -566,7 +567,7 @@ cleanup:
     return ret;
 }
 
-int testPatternCountHFlip(void) {
+static int testPatternCountHFlip(void) {
     enum { n = 2, srcW = 3, srcH = 2 };
 
     int ret = 0;
@@ -594,7 +595,7 @@ cleanup:
     return ret;
 }
 
-int testPatternCountVFlip(void) {
+static int testPatternCountVFlip(void) {
     enum { n = 2, srcW = 2, srcH = 3 };
 
     int ret = 0;
@@ -623,7 +624,7 @@ cleanup:
     return ret;
 }
 
-int testPatternCountHVFlip(void) {
+static int testPatternCountHVFlip(void) {
     enum { n = 2, srcW = 2, srcH = 2 };
 
     int ret = 0;
@@ -651,7 +652,7 @@ cleanup:
     return ret;
 }
 
-int testPatternCountRotate(void) {
+static int testPatternCountRotate(void) {
     enum { n = 2, srcW = 4, srcH = 4 };
 
     int ret = 0;
@@ -681,7 +682,7 @@ cleanup:
     return ret;
 }
 
-int testPatternCountRotateCentralSymmetric(void) {
+static int testPatternCountRotateCentralSymmetric(void) {
     enum { n = 2, srcW = 2, srcH = 2 };
 
     int ret = 0;
@@ -709,7 +710,7 @@ cleanup:
     return ret;
 }
 
-int testPatternCountHFlipRotate(void) {
+static int testPatternCountHFlipRotate(void) {
     enum { n = 2, srcW = 3, srcH = 3 };
 
     int ret = 0;
@@ -738,7 +739,7 @@ cleanup:
     return ret;
 }
 
-int testPatternCountVFlipRotate(void) {
+static int testPatternCountVFlipRotate(void) {
     enum { n = 2, srcW = 3, srcH = 3 };
 
     int ret = 0;
@@ -767,7 +768,7 @@ cleanup:
     return ret;
 }
 
-int testPatternCountHVFlipRotate(void) {
+static int testPatternCountHVFlipRotate(void) {
     enum { n = 2, srcW = 2, srcH = 2 };
 
     int ret = 0;
@@ -796,7 +797,7 @@ cleanup:
     return ret;
 }
 
-int testClone(void) {
+static int testClone(void) {
     enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
     int ret = 0;

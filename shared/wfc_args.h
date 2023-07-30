@@ -4,12 +4,14 @@ struct Args {
     int dstW, dstH;
     bool flipH, flipV;
     bool rot;
+    bool edgeH, edgeV;
 };
 
 // @TODO add other wfc options as flags
 // @TODO rand seed as arg
 int parseArgs(int argc, char * const *argv, struct Args *args) {
     bool flip;
+    bool edge;
 
     struct unargs_Param params[] = {
         unargs_stringReq(
@@ -32,6 +34,7 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
             "Height of the generated image.",
             &args->dstH
         ),
+        // @TODO rename to flipH (similar for others)
         unargs_bool(
             "fliph",
             "Enables horizontal flipping of patterns"
@@ -54,6 +57,24 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
             "Enables rotating of patterns.",
             &args->rot
         ),
+        unargs_bool(
+            "edgeh",
+            "Fixes left and right edges"
+            " so that patterns may not wrap around them.",
+            &args->edgeH
+        ),
+        unargs_bool(
+            "edgev",
+            "Fixes upper and lower edges"
+            " so that patterns may not wrap around them.",
+            &args->edgeV
+        ),
+        unargs_bool(
+            "edge",
+            "Fixes all four edges"
+            " so that patterns may not wrap around them.",
+            &edge
+        ),
     };
 
     if (unargs_parse(
@@ -65,6 +86,9 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
 
     if (flip) {
         args->flipH = args->flipV = true;
+    }
+    if (edge) {
+        args->edgeH = args->edgeV = true;
     }
 
     return 0;
@@ -97,6 +121,8 @@ int argsToWfcOptions(struct Args args) {
     if (args.flipH) options |= wfc_optFlipH;
     if (args.flipV) options |= wfc_optFlipV;
     if (args.rot) options |= wfc_optRotate;
+    if (args.edgeH) options |= wfc_optEdgeFixH;
+    if (args.edgeV) options |= wfc_optEdgeFixV;
 
     return options;
 }

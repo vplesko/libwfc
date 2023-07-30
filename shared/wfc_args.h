@@ -1,5 +1,6 @@
 struct Args {
     const char *inPath;
+    const char *outPath;
     unsigned seed;
     int n;
     int dstW, dstH;
@@ -8,22 +9,32 @@ struct Args {
     bool edgeH, edgeV;
 };
 
-int parseArgs(int argc, char * const *argv, struct Args *args) {
+int parseArgs(int argc, char * const *argv, struct Args *args, bool outReq) {
     args->seed = (unsigned)time(NULL);
     bool flip;
     bool edge;
 
-    struct unargs_Param params[] = {
+    unargs_Param paramOut;
+    if (outReq) {
+        paramOut = unargs_stringReq(
+            "o",
+            "Output image file path.",
+            &args->outPath
+        );
+    } else {
+        paramOut = unargs_string(
+            "o",
+            "Output image file path.",
+            "",
+            &args->outPath
+        );
+    }
+
+    unargs_Param params[] = {
         unargs_stringReq(
             NULL,
-            "Input image path.",
+            "Input image file path.",
             &args->inPath
-        ),
-        unargs_unsigned(
-            "seed",
-            "Seed value for the random number generator.",
-            args->seed,
-            &args->seed
         ),
         unargs_intReq(
             "n",
@@ -39,6 +50,13 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
             "h",
             "Height of the generated image.",
             &args->dstH
+        ),
+        paramOut,
+        unargs_unsigned(
+            "seed",
+            "Seed value for the random number generator.",
+            args->seed,
+            &args->seed
         ),
         unargs_bool(
             "flip-h",

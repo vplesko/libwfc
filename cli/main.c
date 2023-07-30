@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     struct WfcWrapper wfc = {0};
 
     struct Args args;
-    if (parseArgs(argc, argv, &args) != 0) {
+    if (parseArgs(argc, argv, &args, true) != 0) {
         ret = 1;
         goto cleanup;
     }

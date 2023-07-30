@@ -34,11 +34,8 @@ SOFTWARE.
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.
 // @TODO allow users to supply their own rand
-// @TODO add restrict where appropriate
 
 // public declarations
-
-// @TODO input validation
 
 enum {
     wfc_optFlipH = 1 << 1,
@@ -800,15 +797,15 @@ wfc_State* wfc_init(
     int dstW, int dstH) {
     assert(n > 0);
     assert(bytesPerPixel > 0);
-    assert(n <= srcW);
-    assert(n <= srcH);
-    assert(n <= dstW);
-    assert(n <= dstH);
     assert(srcW > 0);
     assert(srcH > 0);
     assert(src != NULL);
     assert(dstW > 0);
     assert(dstH > 0);
+    assert(n <= srcW);
+    assert(n <= srcH);
+    assert(n <= dstW);
+    assert(n <= dstH);
 
     struct wfc__A3d_cu8 srcA = {srcH, srcW, bytesPerPixel, src};
 
@@ -855,10 +852,14 @@ wfc_State* wfc_init(
 }
 
 int wfc_status(const wfc_State *state) {
+    assert(state != NULL);
+
     return state->status;
 }
 
 int wfc_step(wfc_State *state) {
+    assert(state != NULL);
+
     if (state->status != 0) return state->status;
 
     int pattCnt = state->wave.d23;
@@ -881,6 +882,8 @@ int wfc_step(wfc_State *state) {
 void wfc_blit(
     const wfc_State *state,
     const unsigned char *src, unsigned char *dst) {
+    assert(state != NULL);
+    assert(src != NULL);
     assert(dst != NULL);
 
     struct wfc__A3d_cu8 srcA =
@@ -917,6 +920,8 @@ void wfc_blit(
 }
 
 wfc_State* wfc_clone(const wfc_State *state) {
+    if (state == NULL) return NULL;
+
     wfc_State *clone = malloc(sizeof(*clone));
 
     *clone = *state;
@@ -957,10 +962,17 @@ void wfc_free(wfc_State *state) {
 }
 
 int wfc_patternCount(const wfc_State *state) {
+    assert(state != NULL);
+
     return state->wave.d23;
 }
 
 bool wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
+    assert(state != NULL);
+    assert(patt >= 0 && patt < state->wave.d23);
+    assert(x >= 0 && x < state->wave.d13);
+    assert(y >= 0 && y < state->wave.d03);
+
     int wC0, wC1;
     wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
 
@@ -969,6 +981,12 @@ bool wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
 
 const unsigned char* wfc_pixelToBlit(const wfc_State *state,
     int patt, int x, int y, const unsigned char *src) {
+    assert(state != NULL);
+    assert(patt >= 0 && patt < state->wave.d23);
+    assert(x >= 0 && x < state->wave.d13);
+    assert(y >= 0 && y < state->wave.d03);
+    assert(src != NULL);
+
     struct wfc__A3d_cu8 srcA =
         {state->srcD0, state->srcD1, state->bytesPerPixel, src};
 

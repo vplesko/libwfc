@@ -777,7 +777,13 @@ void unargs__printDef(const unargs_Param *param) {
     } else if (param->_type == unargs__typeDouble) {
         UNARGS_PRINT_OUT_DOUBLE(param->_def.d);
     } else if (param->_type == unargs__typeString) {
-        UNARGS_PRINT_OUT_STR(param->_def.str);
+        if (param->_def.str == NULL) {
+            UNARGS_PRINT_OUT_STR("<null>");
+        } else {
+            UNARGS_PRINT_OUT_STR("\"");
+            UNARGS_PRINT_OUT_STR(param->_def.str);
+            UNARGS_PRINT_OUT_STR("\"");
+        }
     } else {
         UNARGS_ASSERT(false);
     }

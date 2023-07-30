@@ -6,6 +6,10 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+#define UNARGS_IMPLEMENTATION
+#include "unargs.h"
+
+#include "wfc.h"
 #include "wfc_args.h"
 #include "wfc_wrap.h"
 
@@ -56,9 +60,6 @@ int main(int argc, char *argv[]) {
 
     srand((unsigned)time(NULL));
 
-    int wfcOptions = 0;
-    if (args.rot) wfcOptions |= wfc_optRotate;
-
     surfaceSrc = IMG_Load(args.inPath);
     if (surfaceSrc == NULL) {
         fprintf(stderr, "%s\n", IMG_GetError());
@@ -91,6 +92,8 @@ int main(int argc, char *argv[]) {
         args.dstW, args.dstH, bytesPerPixel * 8, surfaceSrc->format->format);
     assert(surfaceDst->format->palette == NULL);
     assert(!SDL_MUSTLOCK(surfaceDst));
+
+    int wfcOptions = argsToWfcOptions(args);
 
     if (wfcInit(
             args.n, wfcOptions, bytesPerPixel,

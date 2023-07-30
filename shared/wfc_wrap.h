@@ -1,5 +1,3 @@
-#include "wfc.h"
-
 struct WfcWrapper {
     int len, cap;
     struct wfc_State **states;

@@ -4,6 +4,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define UNARGS_IMPLEMENTATION
+#include "unargs.h"
+
+#include "wfc.h"
 #include "wfc_args.h"
 #include "wfc_wrap.h"
 
@@ -24,9 +28,6 @@ int main(int argc, char *argv[]) {
 
     srand((unsigned)time(NULL));
 
-    int wfcOptions = 0;
-    if (args.rot) wfcOptions |= wfc_optRotate;
-
     int srcW, srcH;
     srcPixels = stbi_load(args.inPath, &srcW, &srcH, NULL, bytesPerPixel);
     if (srcPixels == NULL) {
@@ -42,6 +43,8 @@ int main(int argc, char *argv[]) {
     }
 
     dstPixels = malloc(args.dstW * args.dstH * bytesPerPixel);
+
+    int wfcOptions = argsToWfcOptions(args);
 
     if (wfcInit(
             args.n, wfcOptions, bytesPerPixel,

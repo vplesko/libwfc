@@ -970,8 +970,8 @@ int wfc_patternCount(const wfc_State *state) {
 bool wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
     assert(state != NULL);
     assert(patt >= 0 && patt < state->wave.d23);
-    assert(x >= 0 && x < state->wave.d13);
-    assert(y >= 0 && y < state->wave.d03);
+    assert(x >= 0 && x < state->dstD1);
+    assert(y >= 0 && y < state->dstD0);
 
     int wC0, wC1;
     wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
@@ -983,8 +983,8 @@ const unsigned char* wfc_pixelToBlit(const wfc_State *state,
     int patt, int x, int y, const unsigned char *src) {
     assert(state != NULL);
     assert(patt >= 0 && patt < state->wave.d23);
-    assert(x >= 0 && x < state->wave.d13);
-    assert(y >= 0 && y < state->wave.d03);
+    assert(x >= 0 && x < state->dstD1);
+    assert(y >= 0 && y < state->dstD0);
     assert(src != NULL);
 
     struct wfc__A3d_cu8 srcA =

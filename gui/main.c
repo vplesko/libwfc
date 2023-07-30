@@ -82,6 +82,11 @@ int main(int argc, char *argv[]) {
     const int bytesPerPixel = surfaceSrc->format->BytesPerPixel;
     const int srcW = surfaceSrc->w, srcH = surfaceSrc->h;
 
+    if (verifyArgs(args, srcW, srcH) < 0) {
+        ret = 1;
+        goto cleanup;
+    }
+
     surfaceDst = SDL_CreateRGBSurfaceWithFormat(0,
         args.dstW, args.dstH, bytesPerPixel * 8, surfaceSrc->format->format);
     assert(surfaceDst->format->palette == NULL);

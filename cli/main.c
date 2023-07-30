@@ -30,7 +30,13 @@ int main(int argc, char *argv[]) {
     int srcW, srcH;
     srcPixels = stbi_load(args.inPath, &srcW, &srcH, NULL, bytesPerPixel);
     if (srcPixels == NULL) {
-        fprintf(stderr, "%s\n", stbi_failure_reason());
+        fprintf(stderr, "Error opening file %s: %s\n",
+            args.inPath, stbi_failure_reason());
+        ret = 1;
+        goto cleanup;
+    }
+
+    if (verifyArgs(args, srcW, srcH) < 0) {
         ret = 1;
         goto cleanup;
     }

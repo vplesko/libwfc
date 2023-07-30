@@ -46,11 +46,25 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
         return -1;
     }
 
-    // @TODO error messages for each
-    if (args->wfcN <= 0 ||
-        args->dstW <= 0 || args->dstH <= 0 ||
-        args->wfcN > args->dstW || args->wfcN > args->dstH) {
-        fprintf(stderr, "Invalid arguments.\n");
+    return 0;
+}
+
+int verifyArgs(struct Args args, int srcW, int srcH) {
+    if (args.wfcN <= 0) {
+        fprintf(stderr, "N must be positive.\n");
+        return -1;
+    }
+
+    if (args.dstW <= 0 || args.dstH <= 0) {
+        fprintf(stderr, "Output image dimensions must be positive.\n");
+        return -1;
+    }
+
+    if (args.wfcN > srcW || args.wfcN > srcH ||
+        args.wfcN > args.dstW || args.wfcN > args.dstH) {
+        fprintf(stderr,
+            "N must not be greater than"
+            " any input or output image dimensions.\n");
         return -1;
     }
 

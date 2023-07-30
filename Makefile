@@ -47,14 +47,14 @@ $(BIN_DIR)/$(CLI_EXE): cli/main.c $(HDRS) $(CLI_HDRS) $(BIN_DIR)/lib/$(STBI_OBJ)
 
 gui: $(BIN_DIR)/$(GUI_EXE)
 
-GUI_LINK_FLAGS = `sdl2-config --cflags --libs` -lSDL2_image
+GUI_LINK_FLAGS = `sdl2-config --cflags --libs`
 ifdef VC
 	GUI_LINK_FLAGS += -Xlinker /subsystem:console -lshell32
 endif
 
-$(BIN_DIR)/$(GUI_EXE): gui/main.c $(HDRS) $(GUI_HDRS)
+$(BIN_DIR)/$(GUI_EXE): gui/main.c $(HDRS) $(GUI_HDRS) $(BIN_DIR)/lib/$(STBI_OBJ)
 	@mkdir -p $(@D)
-	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) $(GUI_LINK_FLAGS)
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) $(GUI_LINK_FLAGS) $(BIN_DIR)/lib/$(STBI_OBJ)
 
 test: $(BIN_DIR)/test/done.txt
 

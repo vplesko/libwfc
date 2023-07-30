@@ -4,7 +4,8 @@
 #include <time.h>
 
 #include <SDL.h>
-#include <SDL_image.h>
+
+#include "stb_image.h"
 
 #define UNARGS_IMPLEMENTATION
 #include "unargs.h"
@@ -19,9 +20,12 @@ const Uint32 ticksPerFrame = 1000 / 60;
 int main(int argc, char *argv[]) {
     int ret = 0;
 
+    const int bytesPerPixel = 4;
+    const Uint32 surfaceFormat = SDL_PIXELFORMAT_RGBA32;
+
     bool calledSdlInit = false;
-    bool calledImgInit = false;
     SDL_Window *window = NULL;
+    unsigned char *srcPixels = NULL;
     SDL_Surface *surfaceSrc = NULL;
     SDL_Surface *surfaceDst = NULL;
     struct WfcWrapper wfc = {0};
@@ -39,14 +43,6 @@ int main(int argc, char *argv[]) {
     }
     calledSdlInit = true;
 
-    int sdlImgInitFlags = IMG_INIT_JPG | IMG_INIT_PNG;
-    if ((IMG_Init(sdlImgInitFlags) & sdlImgInitFlags) != sdlImgInitFlags) {
-        fprintf(stderr, "%s\n", SDL_GetError());
-        ret = 1;
-        goto cleanup;
-    }
-    calledImgInit = true;
-
     window = SDL_CreateWindow("libwfc - GUI",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         screenW, screenH,
@@ -58,28 +54,25 @@ int main(int argc, char *argv[]) {
     }
     SDL_Surface *surfaceWin = SDL_GetWindowSurface(window);
 
-    surfaceSrc = IMG_Load(args.inPath);
-    if (surfaceSrc == NULL) {
-        fprintf(stderr, "%s\n", IMG_GetError());
+    int srcW, srcH;
+    srcPixels = stbi_load(args.inPath, &srcW, &srcH, NULL, bytesPerPixel);
+    if (srcPixels == NULL) {
+        fprintf(stderr, "Error opening file %s: %s\n",
+            args.inPath, stbi_failure_reason());
         ret = 1;
         goto cleanup;
     }
-    {
-        SDL_Surface *surfaceConv = SDL_ConvertSurfaceFormat(surfaceSrc,
-            SDL_PIXELFORMAT_RGBA32, 0);
-        if (surfaceConv == NULL) {
-            fprintf(stderr, "%s\n", SDL_GetError());
-            ret = 1;
-            goto cleanup;
-        }
 
-        SDL_FreeSurface(surfaceSrc);
-        surfaceSrc = surfaceConv;
+    surfaceSrc = SDL_CreateRGBSurfaceWithFormatFrom(
+        srcPixels, srcW, srcH,
+        bytesPerPixel * 8, srcW * bytesPerPixel, surfaceFormat);
+    if (surfaceSrc == NULL) {
+        fprintf(stderr, "%s\n", SDL_GetError());
+        ret = 1;
+        goto cleanup;
     }
     assert(surfaceSrc->format->palette == NULL);
     assert(!SDL_MUSTLOCK(surfaceSrc));
-    const int bytesPerPixel = surfaceSrc->format->BytesPerPixel;
-    const int srcW = surfaceSrc->w, srcH = surfaceSrc->h;
 
     if (verifyArgs(args, srcW, srcH) < 0) {
         ret = 1;
@@ -180,8 +173,8 @@ cleanup:
     wfcFree(wfc);
     if (surfaceDst != NULL) SDL_FreeSurface(surfaceDst);
     if (surfaceSrc != NULL) SDL_FreeSurface(surfaceSrc);
+    if (srcPixels != NULL) stbi_image_free(srcPixels);
     if (window != NULL) SDL_DestroyWindow(window);
-    if (calledImgInit) IMG_Quit();
     if (calledSdlInit) SDL_Quit();
 
     return ret;

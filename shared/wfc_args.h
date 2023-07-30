@@ -7,7 +7,6 @@ struct Args {
     bool edgeH, edgeV;
 };
 
-// @TODO add other wfc options as flags
 // @TODO rand seed as arg
 int parseArgs(int argc, char * const *argv, struct Args *args) {
     bool flip;

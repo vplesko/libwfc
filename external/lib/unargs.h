@@ -40,6 +40,12 @@ unargs_Param unargs_int(
 unargs_Param unargs_intReq(
     const char *name, const char *desc, int *dst);
 
+unargs_Param unargs_unsigned(
+    const char *name, const char *desc, unsigned def, unsigned *dst);
+
+unargs_Param unargs_unsignedReq(
+    const char *name, const char *desc, unsigned *dst);
+
 unargs_Param unargs_long(
     const char *name, const char *desc, long def, long *dst);
 
@@ -75,6 +81,7 @@ void unargs_help(const char *program, int len, const unargs_Param *params);
 enum unargs__Type {
     unargs__typeBool,
     unargs__typeInt,
+    unargs__typeUnsigned,
     unargs__typeLong,
     unargs__typeFloat,
     unargs__typeDouble,
@@ -89,6 +96,7 @@ struct unargs_Param {
     union {
         bool b;
         int i;
+        unsigned u;
         long l;
         float f;
         double d;
@@ -117,6 +125,11 @@ struct unargs_Param {
 #if !defined(UNARGS_PRINT_OUT_INT)
 #include <stdio.h>
 #define UNARGS_PRINT_OUT_INT(x) fprintf(stdout, "%d", x)
+#endif
+
+#if !defined(UNARGS_PRINT_OUT_UNSIGNED)
+#include <stdio.h>
+#define UNARGS_PRINT_OUT_UNSIGNED(x) fprintf(stdout, "%u", x)
 #endif
 
 #if !defined(UNARGS_PRINT_OUT_LONG)
@@ -152,6 +165,11 @@ struct unargs_Param {
 #if !defined(UNARGS_PRINT_ERR_INT)
 #include <stdio.h>
 #define UNARGS_PRINT_ERR_INT(x) fprintf(stderr, "%d", x)
+#endif
+
+#if !defined(UNARGS_PRINT_ERR_UNSIGNED)
+#include <stdio.h>
+#define UNARGS_PRINT_ERR_UNSIGNED(x) fprintf(stderr, "%u", x)
 #endif
 
 #if !defined(UNARGS_PRINT_ERR_LONG)
@@ -222,6 +240,35 @@ unargs_Param unargs_intReq(
     unargs_Param param;
     param._name = name;
     param._type = unargs__typeInt;
+    param._req = true;
+    param._desc = desc;
+    param._dst = dst;
+
+    return param;
+}
+
+unargs_Param unargs_unsigned(
+    const char *name, const char *desc, unsigned def, unsigned *dst) {
+    if (name != NULL) UNARGS_ASSERT(strlen(name) > 0);
+
+    unargs_Param param;
+    param._name = name;
+    param._type = unargs__typeUnsigned;
+    param._req = false;
+    param._desc = desc;
+    param._def.u = def;
+    param._dst = dst;
+
+    return param;
+}
+
+unargs_Param unargs_unsignedReq(
+    const char *name, const char *desc, unsigned *dst) {
+    if (name != NULL) UNARGS_ASSERT(strlen(name) > 0);
+
+    unargs_Param param;
+    param._name = name;
+    param._type = unargs__typeUnsigned;
     param._req = true;
     param._desc = desc;
     param._dst = dst;
@@ -448,6 +495,8 @@ void unargs__writeDef(unargs_Param *param) {
         if (param->_dst != NULL) *(bool*)param->_dst = param->_def.b;
     } else if (param->_type == unargs__typeInt) {
         if (param->_dst != NULL) *(int*)param->_dst = param->_def.i;
+    } else if (param->_type == unargs__typeUnsigned) {
+        if (param->_dst != NULL) *(unsigned*)param->_dst = param->_def.u;
     } else if (param->_type == unargs__typeLong) {
         if (param->_dst != NULL) *(long*)param->_dst = param->_def.l;
     } else if (param->_type == unargs__typeFloat) {
@@ -463,6 +512,7 @@ void unargs__writeDef(unargs_Param *param) {
 
 void unargs__printTypeOut(enum unargs__Type type) {
     if (type == unargs__typeInt) UNARGS_PRINT_OUT_STR("<int>");
+    else if (type == unargs__typeUnsigned) UNARGS_PRINT_OUT_STR("<unsigned>");
     else if (type == unargs__typeLong) UNARGS_PRINT_OUT_STR("<long>");
     else if (type == unargs__typeFloat) UNARGS_PRINT_OUT_STR("<float>");
     else if (type == unargs__typeDouble) UNARGS_PRINT_OUT_STR("<double>");
@@ -472,6 +522,7 @@ void unargs__printTypeOut(enum unargs__Type type) {
 
 void unargs__printTypeErr(enum unargs__Type type) {
     if (type == unargs__typeInt) UNARGS_PRINT_ERR_STR("<int>");
+    else if (type == unargs__typeUnsigned) UNARGS_PRINT_ERR_STR("<unsigned>");
     else if (type == unargs__typeLong) UNARGS_PRINT_ERR_STR("<long>");
     else if (type == unargs__typeFloat) UNARGS_PRINT_ERR_STR("<float>");
     else if (type == unargs__typeDouble) UNARGS_PRINT_ERR_STR("<double>");
@@ -485,6 +536,22 @@ int unargs__parseLong(const char *str, long *l) {
     if (*end != '\0') {
         unargs__printErrorPrefix();
         UNARGS_PRINT_ERR_STR("Could not parse integer value from '");
+        UNARGS_PRINT_ERR_STR(str);
+        UNARGS_PRINT_ERR_STR("'.");
+        UNARGS_PRINT_ERR_LN();
+        return -1;
+    }
+
+    return 0;
+}
+
+int unargs__parseUnsignedLong(const char *str, unsigned long *ul) {
+    char *end;
+    *ul = strtoul(str, &end, 0);
+    if (*end != '\0') {
+        unargs__printErrorPrefix();
+        UNARGS_PRINT_ERR_STR(
+            "Could not parse non-negative integer value from '");
         UNARGS_PRINT_ERR_STR(str);
         UNARGS_PRINT_ERR_STR("'.");
         UNARGS_PRINT_ERR_LN();
@@ -540,6 +607,21 @@ int unargs__parseVal(const char *str, const unargs_Param *param) {
         }
 
         if (param->_dst != NULL) *(int*)param->_dst = i;
+    } else if (param->_type == unargs__typeUnsigned) {
+        unsigned long ul;
+        if (unargs__parseUnsignedLong(str, &ul) < 0) return -1;
+
+        unsigned u = (unsigned)ul;
+        if (u != ul) {
+            unargs__printErrorPrefix();
+            UNARGS_PRINT_ERR_STR("Could not fit value ");
+            UNARGS_PRINT_ERR_STR(str);
+            UNARGS_PRINT_ERR_STR(" inside an unsigned.");
+            UNARGS_PRINT_ERR_LN();
+            return -1;
+        }
+
+        if (param->_dst != NULL) *(unsigned*)param->_dst = u;
     } else if (param->_type == unargs__typeLong) {
         long l;
         if (unargs__parseLong(str, &l) < 0) return -1;
@@ -686,6 +768,8 @@ int unargs_parse(
 void unargs__printDef(const unargs_Param *param) {
     if (param->_type == unargs__typeInt) {
         UNARGS_PRINT_OUT_INT(param->_def.i);
+    } else if (param->_type == unargs__typeUnsigned) {
+        UNARGS_PRINT_OUT_UNSIGNED(param->_def.u);
     } else if (param->_type == unargs__typeLong) {
         UNARGS_PRINT_OUT_LONG(param->_def.l);
     } else if (param->_type == unargs__typeFloat) {

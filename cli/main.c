@@ -26,8 +26,6 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    srand((unsigned)time(NULL));
-
     int srcW, srcH;
     srcPixels = stbi_load(args.inPath, &srcW, &srcH, NULL, bytesPerPixel);
     if (srcPixels == NULL) {
@@ -44,6 +42,7 @@ int main(int argc, char *argv[]) {
 
     dstPixels = malloc(args.dstW * args.dstH * bytesPerPixel);
 
+    srand(args.seed);
     int wfcOptions = argsToWfcOptions(args);
 
     if (wfcInit(

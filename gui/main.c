@@ -58,8 +58,6 @@ int main(int argc, char *argv[]) {
     }
     SDL_Surface *surfaceWin = SDL_GetWindowSurface(window);
 
-    srand((unsigned)time(NULL));
-
     surfaceSrc = IMG_Load(args.inPath);
     if (surfaceSrc == NULL) {
         fprintf(stderr, "%s\n", IMG_GetError());
@@ -93,6 +91,7 @@ int main(int argc, char *argv[]) {
     assert(surfaceDst->format->palette == NULL);
     assert(!SDL_MUSTLOCK(surfaceDst));
 
+    srand(args.seed);
     int wfcOptions = argsToWfcOptions(args);
 
     if (wfcInit(

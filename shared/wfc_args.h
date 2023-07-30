@@ -1,5 +1,6 @@
 struct Args {
     const char *inPath;
+    unsigned seed;
     int n;
     int dstW, dstH;
     bool flipH, flipV;
@@ -7,8 +8,8 @@ struct Args {
     bool edgeH, edgeV;
 };
 
-// @TODO rand seed as arg
 int parseArgs(int argc, char * const *argv, struct Args *args) {
+    args->seed = (unsigned)time(NULL);
     bool flip;
     bool edge;
 
@@ -17,6 +18,12 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
             NULL,
             "Input image path.",
             &args->inPath
+        ),
+        unargs_unsigned(
+            "seed",
+            "Seed value for the random number generator.",
+            args->seed,
+            &args->seed
         ),
         unargs_intReq(
             "n",

@@ -12,8 +12,7 @@ int wfcInit(
     int dstW, int dstH,
     struct WfcWrapper *wfc) {
     wfc->len = 0;
-    // @TODO make this configurable
-    wfc->cap = 10;
+    wfc->cap = 50;
     wfc->states = malloc((size_t)wfc->cap * sizeof(*wfc->states));
 
     struct wfc_State *state = wfc_init(n, options, bytesPerPixel,
@@ -38,8 +37,7 @@ int wfcStep(struct WfcWrapper *wfc) {
     if (status != 0) return status;
 
     if (wfc->len < wfc->cap) {
-        // @TODO make this configurable
-        if (++wfc->counter == 50) {
+        if (++wfc->counter == 100) {
             wfc->states[wfc->len] = wfc_clone(wfc->states[wfc->len - 1]);
             ++wfc->len;
 

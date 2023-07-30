@@ -3,9 +3,9 @@
 
 struct Args {
     const char *inPath;
-    int wfcN;
+    int n;
     int dstW, dstH;
-    bool wfcRot;
+    bool rot;
 };
 
 // @TODO add other wfc options as flags
@@ -20,7 +20,7 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
         unargs_intReq(
             "n",
             "N parameter for WFC - patterns will be NxN pixels.",
-            &args->wfcN
+            &args->n
         ),
         unargs_intReq(
             "w",
@@ -35,7 +35,7 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
         unargs_bool(
             "rot",
             "Enables rotating of patterns.",
-            &args->wfcRot
+            &args->rot
         ),
     };
 
@@ -50,7 +50,7 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
 }
 
 int verifyArgs(struct Args args, int srcW, int srcH) {
-    if (args.wfcN <= 0) {
+    if (args.n <= 0) {
         fprintf(stderr, "N must be positive.\n");
         return -1;
     }
@@ -60,8 +60,8 @@ int verifyArgs(struct Args args, int srcW, int srcH) {
         return -1;
     }
 
-    if (args.wfcN > srcW || args.wfcN > srcH ||
-        args.wfcN > args.dstW || args.wfcN > args.dstH) {
+    if (args.n > srcW || args.n > srcH ||
+        args.n > args.dstW || args.n > args.dstH) {
         fprintf(stderr,
             "N must not be greater than"
             " any input or output image dimensions.\n");

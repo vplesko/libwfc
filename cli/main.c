@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     srand((unsigned)time(NULL));
 
     int wfcOptions = 0;
-    if (args.wfcRot) wfcOptions |= wfc_optRotate;
+    if (args.rot) wfcOptions |= wfc_optRotate;
 
     int srcW, srcH;
     srcPixels = stbi_load(args.inPath, &srcW, &srcH, NULL, bytesPerPixel);
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     dstPixels = malloc(args.dstW * args.dstH * bytesPerPixel);
 
     if (wfcInit(
-            args.wfcN, wfcOptions, bytesPerPixel,
+            args.n, wfcOptions, bytesPerPixel,
             srcW, srcH, srcPixels,
             args.dstW, args.dstH,
             &wfc) != 0) {

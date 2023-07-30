@@ -5,14 +5,17 @@ CC = clang
 BIN_DIR = bin
 
 ifdef WIN
+	STBI_OBJ = stb_image_impl.obj
 	CLI_EXE = cli.exe
 	GUI_EXE = gui.exe
 else
+	STBI_OBJ = stb_image_impl.o
 	CLI_EXE = cli
 	GUI_EXE = gui
 endif
 
-HDRS = $(wildcard *.h shared/*.h external/lib/*.h)
+LIB_HDRS = $(wildcard external/lib/*.h)
+HDRS = $(wildcard *.h shared/*.h) $(LIB_HDRS)
 CLI_HDRS = $(wildcard cli/*.h)
 GUI_HDRS = $(wildcard gui/*.h)
 TEST_HDRS = $(wildcard test/*.h)
@@ -30,13 +33,17 @@ ifndef VC
 	LINK_FLAGS += -lm
 endif
 
+$(BIN_DIR)/lib/$(STBI_OBJ): shared/stb_image_impl.c $(LIB_HDRS)
+	@mkdir -p $(@D)
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -c -o $@
+
 ui: cli gui
 
 cli: $(BIN_DIR)/$(CLI_EXE)
 
-$(BIN_DIR)/$(CLI_EXE): cli/main.c $(HDRS) $(CLI_HDRS)
+$(BIN_DIR)/$(CLI_EXE): cli/main.c $(HDRS) $(CLI_HDRS) $(BIN_DIR)/lib/$(STBI_OBJ)
 	@mkdir -p $(@D)
-	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS)
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) $(BIN_DIR)/lib/$(STBI_OBJ)
 
 gui: $(BIN_DIR)/$(GUI_EXE)
 
@@ -84,9 +91,9 @@ $(BIN_DIR)/benchmark/done.txt: $(BIN_DIR)/benchmark/main
 	$(BIN_DIR)/benchmark/main
 	@touch $@
 
-$(BIN_DIR)/benchmark/main: benchmark/main.c $(HDRS) $(BENCHMARK_HDRS)
+$(BIN_DIR)/benchmark/main: benchmark/main.c $(HDRS) $(BENCHMARK_HDRS) $(BIN_DIR)/lib/$(STBI_OBJ)
 	@mkdir -p $(@D)
-	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS)
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) $(BIN_DIR)/lib/$(STBI_OBJ)
 
 clean:
 	rm -rf $(BIN_DIR)

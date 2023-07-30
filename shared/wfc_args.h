@@ -34,15 +34,14 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
             "Height of the generated image.",
             &args->dstH
         ),
-        // @TODO rename to flipH (similar for others)
         unargs_bool(
-            "fliph",
+            "flip-h",
             "Enables horizontal flipping of patterns"
             " (think of y-axis as the mirror).",
             &args->flipH
         ),
         unargs_bool(
-            "flipv",
+            "flip-v",
             "Enables vertical flipping of patterns"
             " (think of x-axis as the mirror).",
             &args->flipV
@@ -58,13 +57,13 @@ int parseArgs(int argc, char * const *argv, struct Args *args) {
             &args->rot
         ),
         unargs_bool(
-            "edgeh",
+            "edge-h",
             "Fixes left and right edges"
             " so that patterns may not wrap around them.",
             &args->edgeH
         ),
         unargs_bool(
-            "edgev",
+            "edge-v",
             "Fixes upper and lower edges"
             " so that patterns may not wrap around them.",
             &args->edgeV

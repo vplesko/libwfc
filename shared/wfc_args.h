@@ -1,28 +1,52 @@
-#include "args.h"
+#define UNARGS_IMPLEMENTATION
+#include "unargs.h"
 
 struct Args {
-    const char *imagePath;
+    const char *inPath;
     int wfcN;
-    int wfcRot;
     int dstW, dstH;
+    bool wfcRot;
 };
 
 // @TODO add other wfc options as flags
 // @TODO rand seed as arg
 int parseArgs(int argc, char * const *argv, struct Args *args) {
-    args->wfcRot = 0;
-
-    struct args_Param flag[] = {
-        args_paramString(NULL, 1, &args->imagePath),
-        args_paramInt("n", 1, &args->wfcN),
-        args_paramBool("rot", 0, &args->wfcRot),
-        args_paramInt("w", 1, &args->dstW),
-        args_paramInt("h", 1, &args->dstH),
+    struct unargs_Param params[] = {
+        unargs_stringReq(
+            NULL,
+            "Input image path.",
+            &args->inPath
+        ),
+        unargs_intReq(
+            "n",
+            "N parameter for WFC - patterns will be NxN pixels.",
+            &args->wfcN
+        ),
+        unargs_intReq(
+            "w",
+            "Width of the generated image.",
+            &args->dstW
+        ),
+        unargs_intReq(
+            "h",
+            "Height of the generated image.",
+            &args->dstH
+        ),
+        unargs_bool(
+            "rot",
+            "Enables rotating of patterns.",
+            &args->wfcRot
+        ),
     };
-    if (args_parse(argc, argv, sizeof(flag) / sizeof(*flag), flag) < 0) {
+
+    if (unargs_parse(
+        argc, argv,
+        sizeof(params) / sizeof(*params), params) < 0) {
+        unargs_help(argv[0], sizeof(params) / sizeof(*params), params);
         return -1;
     }
 
+    // @TODO error messages for each
     if (args->wfcN <= 0 ||
         args->dstW <= 0 || args->dstH <= 0 ||
         args->wfcN > args->dstW || args->wfcN > args->dstH) {

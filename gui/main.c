@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     int wfcOptions = 0;
     if (args.wfcRot) wfcOptions |= wfc_optRotate;
 
-    surfaceSrc = IMG_Load(args.imagePath);
+    surfaceSrc = IMG_Load(args.inPath);
     if (surfaceSrc == NULL) {
         fprintf(stderr, "%s\n", IMG_GetError());
         ret = 1;

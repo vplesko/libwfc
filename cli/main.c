@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     if (args.wfcRot) wfcOptions |= wfc_optRotate;
 
     int srcW, srcH;
-    srcPixels = stbi_load(args.imagePath, &srcW, &srcH, NULL, bytesPerPixel);
+    srcPixels = stbi_load(args.inPath, &srcW, &srcH, NULL, bytesPerPixel);
     if (srcPixels == NULL) {
         fprintf(stderr, "%s\n", stbi_failure_reason());
         ret = 1;

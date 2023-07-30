@@ -1,11 +1,10 @@
 #include <assert.h>
 #include <float.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-// @TODO use bool
 
 // @TODO C++ support
 // @TODO allow users to supply their own assert
@@ -60,7 +59,7 @@ void wfc_free(wfc_State *state);
 
 int wfc_patternCount(const wfc_State *state);
 
-int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
+bool wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
 
 const unsigned char* wfc_pixelToBlit(const wfc_State *state,
     int patt, int x, int y, const unsigned char *src);
@@ -75,11 +74,11 @@ int wfc__max_i(int a, int b) {
     return a < b ? b : a;
 }
 
-int wfc__approxEq_f(float a, float b) {
+bool wfc__approxEq_f(float a, float b) {
     const float absDiff = 0.001f;
     const float relDiff = FLT_EPSILON;
 
-    if (fabsf(a - b) < absDiff) return 1;
+    if (fabsf(a - b) < absDiff) return true;
 
     if (fabsf(a) < fabsf(b)) return fabsf((a - b) / b) < relDiff;
     return fabsf((a - b) / a) < relDiff;
@@ -179,6 +178,7 @@ void wfc__indToCoords2d(int d1, int ind, int *c0, int *c1) {
     *c1 = c1_;
 }
 
+// bools are not used due to performance concerns
 WFC__A2D_DEF(uint8_t, u8);
 WFC__A2D_DEF(float, f);
 WFC__A3D_DEF(uint8_t, u8);
@@ -241,19 +241,19 @@ void wfc__coordsPattToSrc(
 
 void wfc__fillPattEdges(int n, int sD0, int sD1,
     struct wfc__Pattern *patt) {
-    int edgeC0Lo = patt->c0 == 0;
-    int edgeC0Hi = patt->c0 + n == sD0;
-    int edgeC1Lo = patt->c1 == 0;
-    int edgeC1Hi = patt->c1 + n == sD1;
+    bool edgeC0Lo = patt->c0 == 0;
+    bool edgeC0Hi = patt->c0 + n == sD0;
+    bool edgeC1Lo = patt->c1 == 0;
+    bool edgeC1Hi = patt->c1 + n == sD1;
 
     // map from src space to patt space
     {
         // rot270 is rot90 plus rot180 (both in bitmask and as transformation)
         if (patt->tf & wfc__tfRot180) {
-            int tmpC0Lo = edgeC0Lo;
-            int tmpC0Hi = edgeC0Hi;
-            int tmpC1Lo = edgeC1Lo;
-            int tmpC1Hi = edgeC1Hi;
+            bool tmpC0Lo = edgeC0Lo;
+            bool tmpC0Hi = edgeC0Hi;
+            bool tmpC1Lo = edgeC1Lo;
+            bool tmpC1Hi = edgeC1Hi;
 
             edgeC0Lo = tmpC0Hi;
             edgeC0Hi = tmpC0Lo;
@@ -261,10 +261,10 @@ void wfc__fillPattEdges(int n, int sD0, int sD1,
             edgeC1Hi = tmpC1Lo;
         }
         if (patt->tf & wfc__tfRot90) {
-            int tmpC0Lo = edgeC0Lo;
-            int tmpC0Hi = edgeC0Hi;
-            int tmpC1Lo = edgeC1Lo;
-            int tmpC1Hi = edgeC1Hi;
+            bool tmpC0Lo = edgeC0Lo;
+            bool tmpC0Hi = edgeC0Hi;
+            bool tmpC1Lo = edgeC1Lo;
+            bool tmpC1Hi = edgeC1Hi;
 
             edgeC0Lo = tmpC1Hi;
             edgeC0Hi = tmpC1Lo;
@@ -273,12 +273,12 @@ void wfc__fillPattEdges(int n, int sD0, int sD1,
         }
 
         if (patt->tf & wfc__tfFlipC1) {
-            int tmp = edgeC1Lo;
+            bool tmp = edgeC1Lo;
             edgeC1Lo = edgeC1Hi;
             edgeC1Hi = tmp;
         }
         if (patt->tf & wfc__tfFlipC0) {
-            int tmp = edgeC0Lo;
+            bool tmp = edgeC0Lo;
             edgeC0Lo = edgeC0Hi;
             edgeC0Hi = tmp;
         }
@@ -316,23 +316,23 @@ void wfc__indToPattComb(int d1, int ind, struct wfc__Pattern *patt) {
     patt->tf = ind % wfc__tfCnt;
 }
 
-int wfc__satisfiesOptions(int n, int options, int sD0, int sD1,
+bool wfc__satisfiesOptions(int n, int options, int sD0, int sD1,
     struct wfc__Pattern patt) {
-    if ((patt.tf & wfc__tfFlipC0) && !(options & wfc_optFlipC0)) return 0;
-    if ((patt.tf & wfc__tfFlipC1) && !(options & wfc_optFlipC1)) return 0;
+    if ((patt.tf & wfc__tfFlipC0) && !(options & wfc_optFlipC0)) return false;
+    if ((patt.tf & wfc__tfFlipC1) && !(options & wfc_optFlipC1)) return false;
 
     if ((patt.tf & (wfc__tfRot90 | wfc__tfRot180 | wfc__tfRot270)) &&
         !(options & wfc_optRotate)) {
-        return 0;
+        return false;
     }
 
-    if ((options & wfc_optEdgeFixC0) && patt.c0 + n > sD0) return 0;
-    if ((options & wfc_optEdgeFixC1) && patt.c1 + n > sD1) return 0;
+    if ((options & wfc_optEdgeFixC0) && patt.c0 + n > sD0) return false;
+    if ((options & wfc_optEdgeFixC1) && patt.c1 + n > sD1) return false;
 
-    return 1;
+    return true;
 }
 
-int wfc__patternsEq(
+bool wfc__patternsEq(
     int n, const struct wfc__A3d_cu8 src,
     struct wfc__Pattern pattA, struct wfc__Pattern pattB) {
     for (int i = 0; i < n; ++i) {
@@ -348,10 +348,11 @@ int wfc__patternsEq(
             const uint8_t *pxA = &WFC__A3D_GET(src, sAC0, sAC1, 0);
             const uint8_t *pxB = &WFC__A3D_GET(src, sBC0, sBC1, 0);
 
-            if (memcmp(pxA, pxB, (size_t)src.d23) != 0) return 0;
+            if (memcmp(pxA, pxB, (size_t)src.d23) != 0) return false;
         }
     }
-    return 1;
+
+    return true;
 }
 
 struct wfc__Pattern* wfc__gatherPatterns(
@@ -366,7 +367,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
             continue;
         }
 
-        int seenBefore = 0;
+        bool seenBefore = false;
         for (int i1 = 0; !seenBefore && i1 < i; ++i1) {
             struct wfc__Pattern patt1 = {0};
             wfc__indToPattComb(src.d13, i1, &patt1);
@@ -374,7 +375,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
                 continue;
             }
 
-            if (wfc__patternsEq(n, src, patt, patt1)) seenBefore = 1;
+            if (wfc__patternsEq(n, src, patt, patt1)) seenBefore = true;
         }
 
         if (!seenBefore) ++pattCnt;
@@ -392,7 +393,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
         wfc__fillPattEdges(n, src.d03, src.d13, &patt);
         patt.freq = 1;
 
-        int seenBefore = 0;
+        bool seenBefore = false;
         for (int i1 = 0; !seenBefore && i1 < pattInd; ++i1) {
             if (wfc__patternsEq(n, src, patt, patts[i1])) {
                 patts[i1].edgeC0Lo |= patt.edgeC0Lo;
@@ -402,7 +403,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
 
                 ++patts[i1].freq;
 
-                seenBefore = 1;
+                seenBefore = true;
             }
         }
 
@@ -414,7 +415,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
     return patts;
 }
 
-int wfc__overlapMatches(
+bool wfc__overlapMatches(
     int n, const struct wfc__A3d_cu8 src,
     int dC0, int dC1, struct wfc__Pattern pattA, struct wfc__Pattern pattB) {
     assert(abs(dC0) < n);
@@ -447,11 +448,11 @@ int wfc__overlapMatches(
             const uint8_t *pxA = &WFC__A3D_GET(src, sAC0, sAC1, 0);
             const uint8_t *pxB = &WFC__A3D_GET(src, sBC0, sBC1, 0);
 
-            if (memcmp(pxA, pxB, (size_t)src.d23) != 0) return 0;
+            if (memcmp(pxA, pxB, (size_t)src.d23) != 0) return false;
         }
     }
 
-    return 1;
+    return true;
 }
 
 struct wfc__A4d_u8 wfc__calcOverlaps(
@@ -468,7 +469,7 @@ struct wfc__A4d_u8 wfc__calcOverlaps(
         for (int dC1 = -(n - 1); dC1 <= n - 1; ++dC1) {
             for (int i = 0; i < pattCnt; ++i) {
                 for (int j = 0; j < pattCnt; ++j) {
-                    int overlap = wfc__overlapMatches(n, src,
+                    bool overlap = wfc__overlapMatches(n, src,
                         dC0, dC1, patts[i], patts[j]);
                     WFC__A4D_GET(overlaps, dC0 + n - 1, dC1 + n - 1, i, j) =
                         overlap ? 1 : 0;
@@ -604,7 +605,7 @@ void wfc__observeOne(
     WFC__A3D_GET(wave, chosenC0, chosenC1, chosenPatt) = 1;
 }
 
-int wfc__propagateOntoDelta(
+bool wfc__propagateOntoDelta(
     int n, int nC0, int nC1, int dC0, int dC1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
@@ -637,13 +638,13 @@ int wfc__propagateOntoDelta(
     return oldAvailPattCnt != newAvailPattCnt;
 }
 
-int wfc__propagateOntoNeighbours(
+bool wfc__propagateOntoNeighbours(
     int n, int options,
     int nC0, int nC1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave) {
-    int modified = 0;
+    bool modified = false;
 
     for (int dC0 = -(n - 1); dC0 <= n - 1; ++dC0) {
         for (int dC1 = -(n - 1); dC1 <= n - 1; ++dC1) {
@@ -657,7 +658,7 @@ int wfc__propagateOntoNeighbours(
             if (wfc__propagateOntoDelta(n, nC0, nC1, dC0, dC1,
                     overlaps, wave)) {
                 WFC__A2D_GET_WRAP(ripple, nC0 + dC0, nC1 + dC1) = 1;
-                modified = 1;
+                modified = true;
             }
         }
     }
@@ -670,9 +671,9 @@ void wfc__propagateFromRipple(
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave) {
-    int modified = 1;
+    bool modified = true;
     while (modified) {
-        modified = 0;
+        modified = false;
 
         for (int nC0 = 0; nC0 < wave.d03; ++nC0) {
             for (int nC1 = 0; nC1 < wave.d13; ++nC1) {
@@ -680,7 +681,7 @@ void wfc__propagateFromRipple(
 
                 if (wfc__propagateOntoNeighbours(n, options, nC0, nC1,
                         overlaps, ripple, wave)) {
-                    modified = 1;
+                    modified = true;
                 }
 
                 WFC__A2D_GET(ripple, nC0, nC1) = 0;
@@ -936,7 +937,7 @@ int wfc_patternCount(const wfc_State *state) {
     return state->wave.d23;
 }
 
-int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
+bool wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
     int wC0, wC1;
     wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
 

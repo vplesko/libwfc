@@ -15,8 +15,8 @@ const Uint32 ticksPerFrame = 1000 / 60;
 int main(int argc, char *argv[]) {
     int ret = 0;
 
-    int calledSdlInit = 0;
-    int calledImgInit = 0;
+    bool calledSdlInit = false;
+    bool calledImgInit = false;
     SDL_Window *window = NULL;
     SDL_Surface *surfaceSrc = NULL;
     SDL_Surface *surfaceDst = NULL;
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
         ret = 1;
         goto cleanup;
     }
-    calledSdlInit = 1;
+    calledSdlInit = true;
 
     int sdlImgInitFlags = IMG_INIT_JPG | IMG_INIT_PNG;
     if ((IMG_Init(sdlImgInitFlags) & sdlImgInitFlags) != sdlImgInitFlags) {
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
         ret = 1;
         goto cleanup;
     }
-    calledImgInit = 1;
+    calledImgInit = true;
 
     window = SDL_CreateWindow("libwfc - GUI",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -96,12 +96,12 @@ int main(int argc, char *argv[]) {
         ret = 1;
         goto cleanup;
     }
-    int wfcBlitComplete = 0;
+    bool wfcBlitComplete = false;
 
     const int scaleMin = 1, scaleMax = 8;
     int scale = 1;
 
-    int quit = 0;
+    bool quit = false;
     while (!quit) {
         Uint32 ticksPrev = SDL_GetTicks();
 
@@ -110,14 +110,14 @@ int main(int argc, char *argv[]) {
         SDL_Event e;
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_QUIT) {
-                quit = 1;
+                quit = true;
             } else if (e.type == SDL_WINDOWEVENT) {
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
                     surfaceWin = SDL_GetWindowSurface(window);
                 }
             } else if (e.type == SDL_KEYDOWN && e.key.repeat == 0) {
                 if (e.key.keysym.sym == SDLK_ESCAPE) {
-                    quit = 1;
+                    quit = true;
                 } else if (e.key.keysym.sym == SDLK_KP_PLUS) {
                     if (scale * 2 <= scaleMax) scale *= 2;
                 } else if (e.key.keysym.sym == SDLK_KP_MINUS) {
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
                 args.dstW, args.dstH, surfaceDst->pixels);
         } else if (!wfcBlitComplete) {
             wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-            wfcBlitComplete = 1;
+            wfcBlitComplete = true;
             fprintf(stdout, "WFC completed.\n");
         }
 

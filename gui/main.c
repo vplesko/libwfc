@@ -8,6 +8,7 @@
 #include <SDL.h>
 
 #include "stb_image.h"
+#include "stb_image_write.h"
 
 #include "util.h"
 #define UNARGS_IMPLEMENTATION
@@ -168,6 +169,38 @@ int main(int argc, char *argv[]) {
         Uint32 ticksCurr = SDL_GetTicks();
         if (ticksCurr - ticksPrev < ticksPerFrame) {
             SDL_Delay(ticksPerFrame - (ticksCurr - ticksPrev));
+        }
+    }
+
+    if (wfcStatus(&wfc) > 0) {
+        enum ImageFormat fmt = getImageFormat(args.pathOut);
+        if (fmt == IMG_BMP) {
+            if (stbi_write_bmp(args.pathOut,
+                    args.dstW, args.dstH, bytesPerPixel,
+                    surfaceDst->pixels) == 0) {
+                fprintf(stderr, "Error writing to file %s\n", args.pathOut);
+                ret = 1;
+                goto cleanup;
+            }
+        } else if (fmt == IMG_PNG) {
+            if (stbi_write_png(args.pathOut,
+                    args.dstW, args.dstH, bytesPerPixel,
+                    surfaceDst->pixels,
+                    args.dstW * bytesPerPixel) == 0) {
+                fprintf(stderr, "Error writing to file %s\n", args.pathOut);
+                ret = 1;
+                goto cleanup;
+            }
+        } else if (fmt == IMG_TGA) {
+            if (stbi_write_tga(args.pathOut,
+                    args.dstW, args.dstH, bytesPerPixel,
+                    surfaceDst->pixels) == 0) {
+                fprintf(stderr, "Error writing to file %s\n", args.pathOut);
+                ret = 1;
+                goto cleanup;
+            }
+        } else {
+            assert(false);
         }
     }
 

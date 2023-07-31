@@ -32,6 +32,10 @@ int wfcInit(
     return 0;
 }
 
+int wfcStatus(struct WfcWrapper *wfc) {
+    return wfc_step(wfc->states[wfc->len - 1]);
+}
+
 int wfcStep(struct WfcWrapper *wfc) {
     int status = wfc_step(wfc->states[wfc->len - 1]);
     if (status != 0) return status;

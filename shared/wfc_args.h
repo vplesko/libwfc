@@ -1,6 +1,6 @@
 struct Args {
-    const char *inPath;
-    const char *outPath;
+    const char *pathIn;
+    const char *pathOut;
     unsigned seed;
     int n;
     int dstW, dstH;
@@ -19,14 +19,14 @@ int parseArgs(int argc, char * const *argv, struct Args *args, bool outReq) {
         paramOut = unargs_stringReq(
             "o",
             "Output image file path.",
-            &args->outPath
+            &args->pathOut
         );
     } else {
         paramOut = unargs_string(
             "o",
             "Output image file path.",
             "",
-            &args->outPath
+            &args->pathOut
         );
     }
 
@@ -34,7 +34,7 @@ int parseArgs(int argc, char * const *argv, struct Args *args, bool outReq) {
         unargs_stringReq(
             NULL,
             "Input image file path.",
-            &args->inPath
+            &args->pathIn
         ),
         unargs_intReq(
             "n",

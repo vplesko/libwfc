@@ -55,10 +55,10 @@ int main(int argc, char *argv[]) {
     SDL_Surface *surfaceWin = SDL_GetWindowSurface(window);
 
     int srcW, srcH;
-    srcPixels = stbi_load(args.inPath, &srcW, &srcH, NULL, bytesPerPixel);
+    srcPixels = stbi_load(args.pathIn, &srcW, &srcH, NULL, bytesPerPixel);
     if (srcPixels == NULL) {
         fprintf(stderr, "Error opening file %s: %s\n",
-            args.inPath, stbi_failure_reason());
+            args.pathIn, stbi_failure_reason());
         ret = 1;
         goto cleanup;
     }

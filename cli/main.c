@@ -1,11 +1,14 @@
+#include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include "stb_image.h"
 
+#include "util.h"
 #define UNARGS_IMPLEMENTATION
 #include "unargs.h"
-
 #include "wfc.h"
 #include "wfc_args.h"
 #include "wfc_wrap.h"

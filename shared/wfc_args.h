@@ -136,6 +136,14 @@ int verifyArgs(struct Args args, int srcW, int srcH) {
         return -1;
     }
 
+    if (strlen(args.pathOut) > 0 &&
+        getImageFormat(args.pathOut) == IMG_INVALID) {
+        fprintf(stderr,
+            "Invalid output file name. Supported output extensions are:"
+            " BMP, PNG, TGA.");
+        return -1;
+    }
+
     return 0;
 }
 

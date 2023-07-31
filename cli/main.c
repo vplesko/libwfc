@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -5,6 +6,7 @@
 #include <time.h>
 
 #include "stb_image.h"
+#include "stb_image_write.h"
 
 #include "util.h"
 #define UNARGS_IMPLEMENTATION
@@ -74,12 +76,32 @@ int main(int argc, char *argv[]) {
 
     wfcBlit(wfc, srcPixels, dstPixels);
 
-    // dummy printout to make sure the compiler doesn't optimize anything away
-    uint32_t dummy = 0;
-    for (int i = 0; i < args.dstW * args.dstH * bytesPerPixel; ++i) {
-        dummy += dstPixels[i];
+    enum ImageFormat fmt = getImageFormat(args.pathOut);
+    if (fmt == IMG_BMP) {
+        if (stbi_write_bmp(args.pathOut,
+                args.dstW, args.dstH, bytesPerPixel, dstPixels) == 0) {
+            fprintf(stderr, "Error writing to file %s\n", args.pathOut);
+            ret = 1;
+            goto cleanup;
+        }
+    } else if (fmt == IMG_PNG) {
+        if (stbi_write_png(args.pathOut,
+                args.dstW, args.dstH, bytesPerPixel, dstPixels,
+                args.dstW * bytesPerPixel) == 0) {
+            fprintf(stderr, "Error writing to file %s\n", args.pathOut);
+            ret = 1;
+            goto cleanup;
+        }
+    } else if (fmt == IMG_TGA) {
+        if (stbi_write_tga(args.pathOut,
+                args.dstW, args.dstH, bytesPerPixel, dstPixels) == 0) {
+            fprintf(stderr, "Error writing to file %s\n", args.pathOut);
+            ret = 1;
+            goto cleanup;
+        }
+    } else {
+        assert(false);
     }
-    printf("%u\n", dummy);
 
 cleanup:
     wfcFree(wfc);

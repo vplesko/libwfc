@@ -100,12 +100,14 @@ int parseArgs(int argc, char * const *argv, struct Args *args, bool outReq) {
         ),
     };
 
-    if (unargs_parse(
-        argc, argv,
-        sizeof(params) / sizeof(*params), params) < 0) {
+    int status = unargs_parse(
+        argc, argv, sizeof(params) / sizeof(*params), params);
+    if (status == unargs_err_args) {
+        fprintf(stderr, "\n");
         unargs_help(argv[0], sizeof(params) / sizeof(*params), params);
         return -1;
     }
+    assert(status == unargs_ok);
 
     if (flip) {
         args->flipH = args->flipV = true;

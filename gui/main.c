@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (wfcStatus(&wfc) > 0) {
+    if (args.pathOut != NULL && wfcStatus(&wfc) > 0) {
         enum ImageFormat fmt = getImageFormat(args.pathOut);
         if (fmt == IMG_BMP) {
             if (stbi_write_bmp(args.pathOut,

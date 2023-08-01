@@ -25,7 +25,7 @@ int parseArgs(int argc, char * const *argv, struct Args *args, bool outReq) {
         paramOut = unargs_string(
             "o",
             "Output image file path.",
-            "",
+            NULL,
             &args->pathOut
         );
     }
@@ -136,8 +136,7 @@ int verifyArgs(struct Args args, int srcW, int srcH) {
         return -1;
     }
 
-    if (strlen(args.pathOut) > 0 &&
-        getImageFormat(args.pathOut) == IMG_INVALID) {
+    if (args.pathOut != NULL && getImageFormat(args.pathOut) == IMG_INVALID) {
         fprintf(stderr,
             "Invalid output file name. Supported output extensions are:"
             " BMP, PNG, TGA.");

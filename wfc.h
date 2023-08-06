@@ -658,7 +658,7 @@ void wfc__observeOne(
     int pattCnt, const struct wfc__Pattern *patts,
     const struct wfc__A2d_f entropies,
     struct wfc__A3d_u8 wave, int *obsC0, int *obsC1) {
-    float smallest;
+    float smallest = 0;
     int smallestCnt = 0;
     for (int i = 0; i < WFC__A2D_LEN(entropies); ++i) {
         // skip observed points

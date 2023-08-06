@@ -28,7 +28,7 @@ void benchmark(
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
     int first = 1;
-    double avg = 0.0, min, max;
+    double avg = 0.0, min = 0.0, max = 0.0;
 
     putchar('\t');
     for (int i = 0; i < REPEATS; ++i) {

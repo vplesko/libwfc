@@ -29,7 +29,6 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-// @TODO allow users to supply their own rand
 // @TODO allow users to supply a context that gets passed to malloc, rand, etc.
 // @TODO implement 3D WFC, with GUI support
 
@@ -44,6 +43,11 @@ SOFTWARE.
 
 #ifndef WFC_FREE
 #define WFC_FREE(p) free(p)
+#endif
+
+// should return a float in [0, 1)
+#ifndef WFC_RAND
+#define WFC_RAND() wfc__rand()
 #endif
 
 // public declarations
@@ -142,7 +146,7 @@ float wfc__rand(void) {
 
 // [0, n)
 int wfc__rand_i(int n) {
-    return (int)(wfc__rand() * (float)n);
+    return (int)(WFC_RAND() * (float)n);
 }
 
 // array utility

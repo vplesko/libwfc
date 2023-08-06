@@ -34,6 +34,8 @@ SOFTWARE.
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.
 // @TODO allow users to supply their own rand
+// @TODO allow users to supply a context that gets passed to malloc, rand, etc.
+// @TODO implement 3D WFC, with GUI support
 
 // public declarations
 

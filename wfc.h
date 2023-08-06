@@ -38,6 +38,11 @@ SOFTWARE.
 // public declarations
 
 enum {
+    wfc_completed = 1,
+    wfc_failed = -1,
+};
+
+enum {
     wfc_optFlipH = 1 << 1,
     wfc_optFlipV = 1 << 0,
 
@@ -748,11 +753,10 @@ int wfc__calcStatus(const struct wfc__A3d_u8 wave) {
 
     if (minPatts == 0) {
         // contradiction reached
-        return -1;
+        return wfc_failed;
     }
     if (maxPatts == 1) {
-        // WFC completed
-        return 1;
+        return wfc_completed;
     }
     // still in progress
     return 0;
@@ -781,8 +785,8 @@ int wfc_generate(
     while (!wfc_step(state));
 
     if (wfc_status(state) < 0) {
-        ret = -1;
-    } else if (wfc_status(state) > 0) {
+        ret = wfc_status(state);
+    } else if (wfc_status(state) == wfc_completed) {
         wfc_blit(state, src, dst);
     }
 

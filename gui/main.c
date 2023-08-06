@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
         // update
 
         int status = wfcStep(&wfc);
-        if (status < 0) {
+        if (status == wfc_failed) {
             if (wfcBacktrack(&wfc) != 0) {
                 fprintf(stderr, "WFC step failed.\n");
                 ret = 1;
@@ -145,10 +145,13 @@ int main(int argc, char *argv[]) {
         } else if (status == 0) {
             wfcBlitAveraged(wfc, surfaceSrc->pixels,
                 args.dstW, args.dstH, surfaceDst->pixels);
-        } else if (!wfcBlitComplete) {
-            wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-            wfcBlitComplete = true;
-            fprintf(stdout, "WFC completed.\n");
+        } else {
+            assert(status == wfc_completed);
+            if (!wfcBlitComplete) {
+                wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
+                wfcBlitComplete = true;
+                fprintf(stdout, "WFC completed.\n");
+            }
         }
 
         // render

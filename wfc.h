@@ -22,7 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <assert.h>
 #include <float.h>
 #include <math.h>
 #include <stdbool.h>
@@ -30,11 +29,15 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-// @TODO allow users to supply their own assert
-// @TODO allow users to supply their own malloc et al.
+// @TODO allow users to supply their own malloc, free et al.
 // @TODO allow users to supply their own rand
 // @TODO allow users to supply a context that gets passed to malloc, rand, etc.
 // @TODO implement 3D WFC, with GUI support
+
+#ifndef WFC_ASSERT
+#include <assert.h>
+#define WFC_ASSERT(x) assert(x)
+#endif
 
 // public declarations
 
@@ -449,7 +452,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
 
         if (!seenBefore) patts[pattInd++] = patt;
     }
-    assert(pattInd == pattCnt);
+    WFC_ASSERT(pattInd == pattCnt);
 
     *cnt = pattCnt;
     return patts;
@@ -458,8 +461,8 @@ struct wfc__Pattern* wfc__gatherPatterns(
 bool wfc__overlapMatches(
     int n, const struct wfc__A3d_cu8 src,
     int dC0, int dC1, struct wfc__Pattern pattA, struct wfc__Pattern pattB) {
-    assert(abs(dC0) < n);
-    assert(abs(dC1) < n);
+    WFC_ASSERT(abs(dC0) < n);
+    WFC_ASSERT(abs(dC1) < n);
 
     int overlapD0 = n - abs(dC0);
     int overlapD1 = n - abs(dC1);

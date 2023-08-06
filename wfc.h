@@ -520,15 +520,16 @@ struct wfc__A4d_u8 wfc__calcOverlaps(
     return overlaps;
 }
 
-// @TODO return whether modified wave to know whether to propagate
-void wfc__restrictKept(
+bool wfc__restrictKept(
     int n,
     const struct wfc__A3d_cu8 src,
     const struct wfc__Pattern *patts,
     const struct wfc__A3d_cu8 dst,
     const struct wfc__A2d_b keep,
     struct wfc__A3d_u8 wave) {
-    int pattCnt = wave.d23, bytesPerPixel = dst.d23;
+    const int pattCnt = wave.d23, bytesPerPixel = dst.d23;
+
+    bool modified = false;
 
     for (int wC0 = 0; wC0 < wave.d03; ++wC0) {
         for (int wC1 = 0; wC1 < wave.d13; ++wC1) {
@@ -542,6 +543,8 @@ void wfc__restrictKept(
                     const unsigned char *dPx = &WFC__A3D_GET(dst, dC0, dC1, 0);
 
                     for (int p = 0; p < pattCnt; ++p) {
+                        if (!WFC__A3D_GET(wave, wC0, wC1, p)) continue;
+
                         int sC0, sC1;
                         wfc__coordsPattToSrc(
                             n,
@@ -554,29 +557,35 @@ void wfc__restrictKept(
 
                         if (memcmp(dPx, sPx, (size_t)bytesPerPixel) != 0) {
                             WFC__A3D_GET(wave, wC0, wC1, p) = 0;
+                            modified = true;
                         }
                     }
                 }
             }
         }
     }
+
+    return modified;
 }
 
-// @TODO return whether modified wave to know whether to propagate
-void wfc__restrictEdges(
+bool wfc__restrictEdges(
     int options,
     const struct wfc__Pattern *patts,
     struct wfc__A3d_u8 wave) {
-    int d0 = wave.d03, d1 = wave.d13, pattCnt = wave.d23;
+    const int d0 = wave.d03, d1 = wave.d13, pattCnt = wave.d23;
+
+    bool modified = false;
 
     if (options & wfc_optEdgeFixC0) {
         for (int i = 0; i < d1; ++i) {
             for (int p = 0; p < pattCnt; ++p) {
                 if (WFC__A3D_GET(wave, 0, i, p) && !patts[p].edgeC0Lo) {
                     WFC__A3D_GET(wave, 0, i, p) = 0;
+                    modified = true;
                 }
                 if (WFC__A3D_GET(wave, d0 - 1, i, p) && !patts[p].edgeC0Hi) {
                     WFC__A3D_GET(wave, d0 - 1, i, p) = 0;
+                    modified = true;
                 }
             }
         }
@@ -586,13 +595,17 @@ void wfc__restrictEdges(
             for (int p = 0; p < pattCnt; ++p) {
                 if (WFC__A3D_GET(wave, i, 0, p) && !patts[p].edgeC1Lo) {
                     WFC__A3D_GET(wave, i, 0, p) = 0;
+                    modified = true;
                 }
                 if (WFC__A3D_GET(wave, i, d1 - 1, p) && !patts[p].edgeC1Hi) {
                     WFC__A3D_GET(wave, i, d1 - 1, p) = 0;
+                    modified = true;
                 }
             }
         }
     }
+
+    return modified;
 }
 
 void wfc__calcEntropies(
@@ -691,9 +704,9 @@ bool wfc__propagateOntoDelta(
     int n, int nC0, int nC1, int dC0, int dC1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
-    int c0 = wfc__indWrap(nC0 + dC0, wave.d03);
-    int c1 = wfc__indWrap(nC1 + dC1, wave.d13);
-    int pattCnt = wave.d23;
+    const int c0 = wfc__indWrap(nC0 + dC0, wave.d03);
+    const int c1 = wfc__indWrap(nC1 + dC1, wave.d13);
+    const int pattCnt = wave.d23;
 
     int oldAvailPattCnt = 0;
     for (int p = 0; p < pattCnt; ++p) {
@@ -936,15 +949,16 @@ wfc_State* wfc_initEx(
             {state->dstD0, state->dstD1, state->bytesPerPixel, dst};
         struct wfc__A2d_b keepA = {state->dstD0, state->dstD1, keep};
 
-        wfc__restrictKept(n, srcA, state->patts, dstA, keepA, state->wave);
-
-        propagate = true;
+        if (wfc__restrictKept(
+                n, srcA, state->patts, dstA, keepA, state->wave)) {
+            propagate = true;
+        }
     }
 
     if (options & (wfc_optEdgeFixC0 | wfc_optEdgeFixC1)) {
-        wfc__restrictEdges(options, state->patts, state->wave);
-
-        propagate = true;
+        if (wfc__restrictEdges(options, state->patts, state->wave)) {
+            propagate = true;
+        }
     }
 
     if (propagate) {

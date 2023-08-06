@@ -52,6 +52,8 @@ SOFTWARE.
 
 // public declarations
 
+// @TODO add extern "C" {}
+
 enum {
     wfc_completed = 1,
     wfc_failed = -1,

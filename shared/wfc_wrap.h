@@ -65,7 +65,8 @@ int wfcBacktrack(struct WfcWrapper *wfc) {
 void wfcBlit(
     const struct WfcWrapper wfc,
     const unsigned char *src, unsigned char *dst) {
-    wfc_blit(wfc.states[wfc.len - 1], src, dst);
+    int code = wfc_blit(wfc.states[wfc.len - 1], src, dst);
+    assert(code == 0);
 }
 
 void wfcBlitAveraged(
@@ -81,9 +82,12 @@ void wfcBlitAveraged(
             for (int b = 0; b < bytesPerPixel; ++b) {
                 int sum = 0, cnt = 0;
                 for (int p = 0; p < pattCnt; ++p) {
-                    if (wfc_patternAvailable(state, p, i, j)) {
+                    int avail = wfc_patternAvailable(state, p, i, j);
+                    assert(avail >= 0);
+                    if (avail) {
                         const unsigned char* px =
                             wfc_pixelToBlit(state, p, i, j, src);
+                        assert(px != NULL);
 
                         sum += (int)px[b];
                         ++cnt;

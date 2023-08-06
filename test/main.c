@@ -817,6 +817,7 @@ static int testClone(void) {
             n, 0, sizeof(*src),
             srcW, srcH, (unsigned char*)&src,
             dstW, dstH);
+        assert(state != NULL);
 
         clone = wfc_clone(state);
 
@@ -830,7 +831,12 @@ static int testClone(void) {
         goto cleanup;
     }
 
-    wfc_blit(clone, (unsigned char*)&src, (unsigned char*)&dst);
+    int code = wfc_blit(clone, (unsigned char*)&src, (unsigned char*)&dst);
+    if (code != 0) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
     for (int i = 0; i < dstW * dstH; ++i) {
         if (dst[i] != 5 && dst[i] != 6) {
             PRINT_TEST_FAIL();
@@ -841,6 +847,197 @@ static int testClone(void) {
 
 cleanup:
     wfc_free(clone);
+
+    return ret;
+}
+
+static int testCallerError(void) {
+    enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
+
+    int ret = 0;
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,5,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+
+    wfc_State *state = wfc_init(
+        n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH);
+
+    if (wfc_generate(
+        -1, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_generate(
+        n, 0, 0,
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_generate(
+        n, 0, sizeof(*src),
+        0, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_generate(
+        n, 0, sizeof(*src),
+        srcW, 0, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_generate(
+        n, 0, sizeof(*src),
+        srcW, srcH, NULL,
+        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_generate(
+        n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        0, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_generate(
+        n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, 0, (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_generate(
+        n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, NULL) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_generate(
+        srcW + 1, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (wfc_status(NULL) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (wfc_step(NULL) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (wfc_blit(
+            NULL,
+            (unsigned char*)&src,
+            (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_blit(state, NULL, (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_blit(state, (unsigned char*)&src, NULL) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (wfc_patternCount(NULL) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (wfc_patternAvailable(NULL, 0, 0, 0) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_patternAvailable(state, -1, 0, 0) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_patternAvailable(state, 0, -1, 0) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_patternAvailable(state, 0, dstW + 1, 0) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_patternAvailable(state, 0, 0, dstH + 1) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (wfc_pixelToBlit(NULL, 0, 0, 0,
+            (unsigned char*)&src) != NULL) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_pixelToBlit(state, -1, 0, 0,
+            (unsigned char*)&src) != NULL) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_pixelToBlit(state, 0, -1, 0,
+            (unsigned char*)&src) != NULL) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_pixelToBlit(state, 0, dstW + 1, 0,
+            (unsigned char*)&src) != NULL) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_pixelToBlit(state, 0, 0, dstH + 1,
+            (unsigned char*)&src) != NULL) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
 
     return ret;
 }
@@ -875,7 +1072,8 @@ int main(void) {
         testPatternCountHFlipRotate() != 0 ||
         testPatternCountVFlipRotate() != 0 ||
         testPatternCountHVFlipRotate() != 0 ||
-        testClone() != 0) {
+        testClone() != 0 ||
+        testCallerError() != 0) {
         printf("Seed was: %u\n", seed);
         return 1;
     }

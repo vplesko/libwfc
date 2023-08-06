@@ -40,6 +40,7 @@ SOFTWARE.
 enum {
     wfc_completed = 1,
     wfc_failed = -1,
+    wfc_callerError = -2,
 };
 
 enum {
@@ -74,7 +75,7 @@ int wfc_status(const wfc_State *state);
 
 int wfc_step(wfc_State *state);
 
-void wfc_blit(
+int wfc_blit(
     const wfc_State *state,
     const unsigned char *src, unsigned char *dst);
 
@@ -84,7 +85,7 @@ void wfc_free(wfc_State *state);
 
 int wfc_patternCount(const wfc_State *state);
 
-bool wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
+int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
 
 const unsigned char* wfc_pixelToBlit(const wfc_State *state,
     int patt, int x, int y, const unsigned char *src);
@@ -781,13 +782,15 @@ int wfc_generate(
 
     wfc_State *state = wfc_init(n, options, bytesPerPixel,
         srcW, srcH, src, dstW, dstH);
+    if (state == NULL) return wfc_callerError;
 
     while (!wfc_step(state));
 
     if (wfc_status(state) < 0) {
         ret = wfc_status(state);
     } else if (wfc_status(state) == wfc_completed) {
-        wfc_blit(state, src, dst);
+        int code = wfc_blit(state, src, dst);
+        if (code != 0) ret = code;
     }
 
     wfc_free(state);
@@ -799,17 +802,13 @@ wfc_State* wfc_init(
     int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH) {
-    assert(n > 0);
-    assert(bytesPerPixel > 0);
-    assert(srcW > 0);
-    assert(srcH > 0);
-    assert(src != NULL);
-    assert(dstW > 0);
-    assert(dstH > 0);
-    assert(n <= srcW);
-    assert(n <= srcH);
-    assert(n <= dstW);
-    assert(n <= dstH);
+    if (n <= 0 ||
+        bytesPerPixel <= 0 ||
+        srcW <= 0 || srcH <= 0 || src == NULL ||
+        dstW <= 0 || dstH <= 0 ||
+        n > srcW || n > srcH || n > dstW || n > dstH) {
+        return NULL;
+    }
 
     struct wfc__A3d_cu8 srcA = {srcH, srcW, bytesPerPixel, src};
 
@@ -856,13 +855,13 @@ wfc_State* wfc_init(
 }
 
 int wfc_status(const wfc_State *state) {
-    assert(state != NULL);
+    if (state == NULL) return wfc_callerError;
 
     return state->status;
 }
 
 int wfc_step(wfc_State *state) {
-    assert(state != NULL);
+    if (state == NULL) return wfc_callerError;
 
     if (state->status != 0) return state->status;
 
@@ -883,12 +882,10 @@ int wfc_step(wfc_State *state) {
     return state->status;
 }
 
-void wfc_blit(
+int wfc_blit(
     const wfc_State *state,
     const unsigned char *src, unsigned char *dst) {
-    assert(state != NULL);
-    assert(src != NULL);
-    assert(dst != NULL);
+    if (state == NULL || src == NULL || dst == NULL) return wfc_callerError;
 
     struct wfc__A3d_cu8 srcA =
         {state->srcD0, state->srcD1, state->bytesPerPixel, src};
@@ -921,6 +918,8 @@ void wfc_blit(
             memcpy(dstPx, srcPx, (size_t)state->bytesPerPixel);
         }
     }
+
+    return 0;
 }
 
 wfc_State* wfc_clone(const wfc_State *state) {
@@ -966,16 +965,18 @@ void wfc_free(wfc_State *state) {
 }
 
 int wfc_patternCount(const wfc_State *state) {
-    assert(state != NULL);
+    if (state == NULL) return wfc_callerError;
 
     return state->wave.d23;
 }
 
-bool wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
-    assert(state != NULL);
-    assert(patt >= 0 && patt < state->wave.d23);
-    assert(x >= 0 && x < state->dstD1);
-    assert(y >= 0 && y < state->dstD0);
+int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
+    if (state == NULL ||
+        patt < 0 || patt >= state->wave.d23 ||
+        x < 0 || x >= state->dstD1 ||
+        y < 0 || y >= state->dstD0) {
+        return wfc_callerError;
+    }
 
     int wC0, wC1;
     wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
@@ -985,11 +986,13 @@ bool wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
 
 const unsigned char* wfc_pixelToBlit(const wfc_State *state,
     int patt, int x, int y, const unsigned char *src) {
-    assert(state != NULL);
-    assert(patt >= 0 && patt < state->wave.d23);
-    assert(x >= 0 && x < state->dstD1);
-    assert(y >= 0 && y < state->dstD0);
-    assert(src != NULL);
+    if (state == NULL ||
+        patt < 0 || patt >= state->wave.d23 ||
+        x < 0 || x >= state->dstD1 ||
+        y < 0 || y >= state->dstD0 ||
+        src == NULL) {
+        return NULL;
+    }
 
     struct wfc__A3d_cu8 srcA =
         {state->srcD0, state->srcD1, state->bytesPerPixel, src};

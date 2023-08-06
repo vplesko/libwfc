@@ -62,26 +62,26 @@ test: $(BIN_DIR)/test/done.txt
 TEST_MSAN_PATH =
 TEST_VALGRIND_CMD =
 ifndef WIN
-	TEST_MSAN_PATH = $(BIN_DIR)/test/main_msan
-	TEST_VALGRIND_CMD = valgrind -q --leak-check=yes $(BIN_DIR)/test/main
+	TEST_MSAN_PATH = $(BIN_DIR)/test/test_msan
+	TEST_VALGRIND_CMD = valgrind -q --leak-check=yes $(BIN_DIR)/test/test
 endif
 
-$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/main $(BIN_DIR)/test/main_asan $(TEST_MSAN_PATH)
-	$(BIN_DIR)/test/main
-	$(BIN_DIR)/test/main_asan
+$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/test $(BIN_DIR)/test/test_asan $(TEST_MSAN_PATH)
+	$(BIN_DIR)/test/test
+	$(BIN_DIR)/test/test_asan
 	$(TEST_MSAN_PATH)
 	$(TEST_VALGRIND_CMD)
 	@touch $@
 
-$(BIN_DIR)/test/main: test/main.c $(HDRS) $(TEST_HDRS)
+$(BIN_DIR)/test/test: test/test.c $(HDRS) $(TEST_HDRS)
 	@mkdir -p $(@D)
 	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_DBG) -Wconversion $< -o $@ $(LINK_FLAGS)
 
-$(BIN_DIR)/test/main_asan: test/main.c $(HDRS) $(TEST_HDRS)
+$(BIN_DIR)/test/test_asan: test/test.c $(HDRS) $(TEST_HDRS)
 	@mkdir -p $(@D)
 	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_DBG) -Wconversion -fsanitize=address,undefined $< -o $@ $(LINK_FLAGS)
 
-$(BIN_DIR)/test/main_msan: test/main.c $(HDRS) $(TEST_HDRS)
+$(BIN_DIR)/test/test_msan: test/test.c $(HDRS) $(TEST_HDRS)
 	@mkdir -p $(@D)
 	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_DBG) -Wconversion -fsanitize=memory -fsanitize-memory-track-origins -fPIE -pie $< -o $@ $(LINK_FLAGS)
 

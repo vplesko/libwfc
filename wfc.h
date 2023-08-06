@@ -116,7 +116,6 @@ const unsigned char* wfc_pixelToBlit(const wfc_State *state,
 #include <stdlib.h>
 #include <string.h>
 
-// @TODO add tests when context is passed (may merge into multi-.c test)
 #ifndef WFC_ASSERT
 #include <assert.h>
 #define WFC_ASSERT(ctx, cond) assert(cond)

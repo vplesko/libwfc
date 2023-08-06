@@ -66,10 +66,22 @@ int wfc_generate(
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst);
 
+int wfc_generateEx(
+    int n, int options, int bytesPerPixel,
+    int srcW, int srcH, const unsigned char *src,
+    int dstW, int dstH, unsigned char *dst,
+    bool *keep);
+
 wfc_State* wfc_init(
     int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH);
+
+wfc_State* wfc_initEx(
+    int n, int options, int bytesPerPixel,
+    int srcW, int srcH, const unsigned char *src,
+    int dstW, int dstH, const unsigned char *dst,
+    bool *keep);
 
 int wfc_status(const wfc_State *state);
 
@@ -204,7 +216,8 @@ void wfc__indToCoords2d(int d1, int ind, int *c0, int *c1) {
     *c1 = c1_;
 }
 
-// bools are not used due to performance concerns
+// bools are not used in some places due to performance concerns
+WFC__A2D_DEF(bool, b);
 WFC__A2D_DEF(uint8_t, u8);
 WFC__A2D_DEF(float, f);
 WFC__A3D_DEF(uint8_t, u8);
@@ -507,6 +520,49 @@ struct wfc__A4d_u8 wfc__calcOverlaps(
     return overlaps;
 }
 
+// @TODO return whether modified wave to know whether to propagate
+void wfc__restrictKept(
+    int n,
+    const struct wfc__A3d_cu8 src,
+    const struct wfc__Pattern *patts,
+    const struct wfc__A3d_cu8 dst,
+    const struct wfc__A2d_b keep,
+    struct wfc__A3d_u8 wave) {
+    int pattCnt = wave.d23, bytesPerPixel = dst.d23;
+
+    for (int wC0 = 0; wC0 < wave.d03; ++wC0) {
+        for (int wC1 = 0; wC1 < wave.d13; ++wC1) {
+            for (int i = 0; i < n; ++i) {
+                for (int j = 0; j < n; ++j) {
+                    int dC0 = wfc__indWrap(wC0 + i, dst.d03);
+                    int dC1 = wfc__indWrap(wC1 + j, dst.d13);
+
+                    if (!WFC__A2D_GET(keep, dC0, dC1)) continue;
+
+                    const unsigned char *dPx = &WFC__A3D_GET(dst, dC0, dC1, 0);
+
+                    for (int p = 0; p < pattCnt; ++p) {
+                        int sC0, sC1;
+                        wfc__coordsPattToSrc(
+                            n,
+                            patts[p], i, j,
+                            src.d03, src.d13,
+                            &sC0, &sC1);
+
+                        const unsigned char *sPx =
+                            &WFC__A3D_GET(src, sC0, sC1, 0);
+
+                        if (memcmp(dPx, sPx, (size_t)bytesPerPixel) != 0) {
+                            WFC__A3D_GET(wave, wC0, wC1, p) = 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// @TODO return whether modified wave to know whether to propagate
 void wfc__restrictEdges(
     int options,
     const struct wfc__Pattern *patts,
@@ -778,10 +834,23 @@ int wfc_generate(
     int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
+    return wfc_generateEx(
+        n, options, bytesPerPixel,
+        srcW, srcH, src,
+        dstW, dstH, dst,
+        NULL
+    );
+}
+
+int wfc_generateEx(
+    int n, int options, int bytesPerPixel,
+    int srcW, int srcH, const unsigned char *src,
+    int dstW, int dstH, unsigned char *dst,
+    bool *keep) {
     int ret = 0;
 
-    wfc_State *state = wfc_init(n, options, bytesPerPixel,
-        srcW, srcH, src, dstW, dstH);
+    wfc_State *state = wfc_initEx(n, options, bytesPerPixel,
+        srcW, srcH, src, dstW, dstH, dst, keep);
     if (state == NULL) return wfc_callerError;
 
     while (!wfc_step(state));
@@ -802,11 +871,27 @@ wfc_State* wfc_init(
     int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH) {
+    return wfc_initEx(
+        n, options, bytesPerPixel,
+        srcW, srcH, src,
+        dstW, dstH, NULL,
+        NULL
+    );
+}
+
+wfc_State* wfc_initEx(
+    int n, int options, int bytesPerPixel,
+    int srcW, int srcH, const unsigned char *src,
+    int dstW, int dstH, const unsigned char *dst,
+    bool *keep) {
     if (n <= 0 ||
         bytesPerPixel <= 0 ||
         srcW <= 0 || srcH <= 0 || src == NULL ||
         dstW <= 0 || dstH <= 0 ||
         n > srcW || n > srcH || n > dstW || n > dstH) {
+        return NULL;
+    }
+    if (keep != NULL && dst == NULL) {
         return NULL;
     }
 
@@ -844,8 +929,25 @@ wfc_State* wfc_init(
     state->ripple.d12 = state->wave.d13;
     state->ripple.a = malloc(WFC__A2D_SIZE(state->ripple));
 
+    bool propagate = false;
+
+    if (keep) {
+        struct wfc__A3d_cu8 dstA =
+            {state->dstD0, state->dstD1, state->bytesPerPixel, dst};
+        struct wfc__A2d_b keepA = {state->dstD0, state->dstD1, keep};
+
+        wfc__restrictKept(n, srcA, state->patts, dstA, keepA, state->wave);
+
+        propagate = true;
+    }
+
     if (options & (wfc_optEdgeFixC0 | wfc_optEdgeFixC1)) {
         wfc__restrictEdges(options, state->patts, state->wave);
+
+        propagate = true;
+    }
+
+    if (propagate) {
         wfc__propagateFromAll(n, options,
             state->overlaps, state->ripple, state->wave);
         state->status = wfc__calcStatus(state->wave);

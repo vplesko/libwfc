@@ -1,6 +1,6 @@
-#include <stdint.h>
-
 #include "test_multi.h"
+
+#include <stdint.h>
 
 int main(void) {
     enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };

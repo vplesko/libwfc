@@ -1,6 +1,7 @@
 .DEFAULT_GOAL = ui
 
 CC = clang
+CXX = clang++
 
 BIN_DIR = bin
 
@@ -22,6 +23,7 @@ TEST_HDRS = $(wildcard test/*.h)
 BENCHMARK_HDRS = $(wildcard benchmark/*.h)
 
 BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -I./ -Ishared -Iexternal/lib -g -fno-omit-frame-pointer
+BUILD_FLAGS_CXX = -std=c++98 -Wall -Wextra -pedantic -Werror -I./ -Ishared -Iexternal/lib -g -fno-omit-frame-pointer
 ifdef VC
 	BUILD_FLAGS += -D_CRT_SECURE_NO_WARNINGS
 endif
@@ -66,11 +68,12 @@ ifndef WIN
 	TEST_VALGRIND_CMD = valgrind -q --leak-check=yes $(BIN_DIR)/test/test
 endif
 
-$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/test $(BIN_DIR)/test/test_asan $(TEST_MSAN_PATH)
+$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/test $(BIN_DIR)/test/test_asan $(TEST_MSAN_PATH) $(BIN_DIR)/test/test_cpp
 	$(BIN_DIR)/test/test
 	$(BIN_DIR)/test/test_asan
 	$(TEST_MSAN_PATH)
 	$(TEST_VALGRIND_CMD)
+	$(BIN_DIR)/test/test_cpp
 	@touch $@
 
 $(BIN_DIR)/test/test: test/test.c $(HDRS) $(TEST_HDRS)
@@ -84,6 +87,10 @@ $(BIN_DIR)/test/test_asan: test/test.c $(HDRS) $(TEST_HDRS)
 $(BIN_DIR)/test/test_msan: test/test.c $(HDRS) $(TEST_HDRS)
 	@mkdir -p $(@D)
 	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_DBG) -Wconversion -fsanitize=memory -fsanitize-memory-track-origins -fPIE -pie $< -o $@ $(LINK_FLAGS)
+
+$(BIN_DIR)/test/test_cpp: test/test.cpp $(HDRS) $(TEST_HDRS)
+	@mkdir -p $(@D)
+	$(CXX) $(BUILD_FLAGS_CXX) $(BUILD_FLAGS_DBG) -Wconversion $< -o $@ $(LINK_FLAGS)
 
 benchmark: $(BIN_DIR)/benchmark/done.txt
 

@@ -30,7 +30,6 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-// @TODO C++ support
 // @TODO allow users to supply their own assert
 // @TODO allow users to supply their own malloc et al.
 // @TODO allow users to supply their own rand
@@ -42,7 +41,7 @@ SOFTWARE.
 enum {
     wfc_completed = 1,
     wfc_failed = -1,
-    wfc_callerError = -2,
+    wfc_callerError = -2
 };
 
 enum {
@@ -58,7 +57,7 @@ enum {
     wfc_optEdgeFixV = 1 << 3,
 
     wfc_optEdgeFixC0 = wfc_optEdgeFixV,
-    wfc_optEdgeFixC1 = wfc_optEdgeFixH,
+    wfc_optEdgeFixC1 = wfc_optEdgeFixH
 };
 
 typedef struct wfc_State wfc_State;
@@ -236,7 +235,7 @@ enum {
     wfc__tfRot180 = 1 << 3,
     wfc__tfRot270 = wfc__tfRot90 | wfc__tfRot180,
 
-    wfc__tfCnt = 1 << 4,
+    wfc__tfCnt = 1 << 4
 };
 
 struct wfc__Pattern {
@@ -402,7 +401,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
 
     int pattCnt = 0;
     for (int i = 0; i < wfc__pattCombCnt(src.d03, src.d13); ++i) {
-        struct wfc__Pattern patt = {0};
+        struct wfc__Pattern patt = {0, 0, 0, 0, 0, 0, 0, 0};
         wfc__indToPattComb(src.d13, i, &patt);
         if (!wfc__satisfiesOptions(n, options, src.d03, src.d13, patt)) {
             continue;
@@ -410,7 +409,7 @@ struct wfc__Pattern* wfc__gatherPatterns(
 
         bool seenBefore = false;
         for (int i1 = 0; !seenBefore && i1 < i; ++i1) {
-            struct wfc__Pattern patt1 = {0};
+            struct wfc__Pattern patt1 = {0, 0, 0, 0, 0, 0, 0, 0};
             wfc__indToPattComb(src.d13, i1, &patt1);
             if (!wfc__satisfiesOptions(n, options, src.d03, src.d13, patt1)) {
                 continue;
@@ -422,10 +421,10 @@ struct wfc__Pattern* wfc__gatherPatterns(
         if (!seenBefore) ++pattCnt;
     }
 
-    patts = malloc((size_t)pattCnt * sizeof(*patts));
+    patts = (struct wfc__Pattern*)malloc((size_t)pattCnt * sizeof(*patts));
     int pattInd = 0;
     for (int i = 0; i < wfc__pattCombCnt(src.d03, src.d13); ++i) {
-        struct wfc__Pattern patt = {0};
+        struct wfc__Pattern patt = {0, 0, 0, 0, 0, 0, 0, 0};
         wfc__indToPattComb(src.d13, i, &patt);
         if (!wfc__satisfiesOptions(n, options, src.d03, src.d13, patt)) {
             continue;
@@ -504,7 +503,7 @@ struct wfc__A4d_u8 wfc__calcOverlaps(
     overlaps.d14 = 2 * n - 1;
     overlaps.d24 = pattCnt;
     overlaps.d34 = pattCnt;
-    overlaps.a = malloc(WFC__A4D_SIZE(overlaps));
+    overlaps.a = (uint8_t*)malloc(WFC__A4D_SIZE(overlaps));
 
     for (int dC0 = -(n - 1); dC0 <= n - 1; ++dC0) {
         for (int dC1 = -(n - 1); dC1 <= n - 1; ++dC1) {
@@ -912,7 +911,7 @@ wfc_State* wfc_initEx(
 
     struct wfc__A3d_cu8 srcA = {srcH, srcW, bytesPerPixel, src};
 
-    wfc_State *state = malloc(sizeof(*state));
+    wfc_State *state = (wfc_State*)malloc(sizeof(*state));
 
     state->status = 0;
     state->n = n;
@@ -933,16 +932,16 @@ wfc_State* wfc_initEx(
     state->wave.d13 = dstW;
     if (options & wfc_optEdgeFixC1) state->wave.d13 -= n - 1;
     state->wave.d23 = pattCnt;
-    state->wave.a = malloc(WFC__A3D_SIZE(state->wave));
+    state->wave.a = (uint8_t*)malloc(WFC__A3D_SIZE(state->wave));
     for (int i = 0; i < WFC__A3D_LEN(state->wave); ++i) state->wave.a[i] = 1;
 
     state->entropies.d02 = state->wave.d03;
     state->entropies.d12 = state->wave.d13;
-    state->entropies.a = malloc(WFC__A2D_SIZE(state->entropies));
+    state->entropies.a = (float*)malloc(WFC__A2D_SIZE(state->entropies));
 
     state->ripple.d02 = state->wave.d03;
     state->ripple.d12 = state->wave.d13;
-    state->ripple.a = malloc(WFC__A2D_SIZE(state->ripple));
+    state->ripple.a = (uint8_t*)malloc(WFC__A2D_SIZE(state->ripple));
 
     bool propagate = false;
 
@@ -1043,28 +1042,28 @@ int wfc_blit(
 wfc_State* wfc_clone(const wfc_State *state) {
     if (state == NULL) return NULL;
 
-    wfc_State *clone = malloc(sizeof(*clone));
+    wfc_State *clone = (wfc_State*)malloc(sizeof(*clone));
 
     *clone = *state;
 
     int pattCnt = state->wave.d23;
     size_t pattsSz = (size_t)pattCnt * sizeof(*state->patts);
-    clone->patts = malloc(pattsSz);
+    clone->patts = (struct wfc__Pattern*)malloc(pattsSz);
     memcpy(clone->patts, state->patts, pattsSz);
 
-    clone->overlaps.a = malloc(WFC__A4D_SIZE(state->overlaps));
+    clone->overlaps.a = (uint8_t*)malloc(WFC__A4D_SIZE(state->overlaps));
     memcpy(clone->overlaps.a, state->overlaps.a,
         WFC__A4D_SIZE(state->overlaps));
 
-    clone->wave.a = malloc(WFC__A3D_SIZE(state->wave));
+    clone->wave.a = (uint8_t*)malloc(WFC__A3D_SIZE(state->wave));
     memcpy(clone->wave.a, state->wave.a,
         WFC__A3D_SIZE(state->wave));
 
-    clone->entropies.a = malloc(WFC__A2D_SIZE(state->entropies));
+    clone->entropies.a = (float*)malloc(WFC__A2D_SIZE(state->entropies));
     memcpy(clone->entropies.a, state->entropies.a,
         WFC__A2D_SIZE(state->entropies));
 
-    clone->ripple.a = malloc(WFC__A2D_SIZE(state->ripple));
+    clone->ripple.a = (uint8_t*)malloc(WFC__A2D_SIZE(state->ripple));
     memcpy(clone->ripple.a, state->ripple.a,
         WFC__A2D_SIZE(state->ripple));
 

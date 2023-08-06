@@ -68,11 +68,12 @@ ifndef WIN
 	TEST_VALGRIND_CMD = valgrind -q --leak-check=yes $(BIN_DIR)/test/test
 endif
 
-$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/test $(BIN_DIR)/test/test_asan $(TEST_MSAN_PATH) $(BIN_DIR)/test/test_cpp
+$(BIN_DIR)/test/done.txt: $(BIN_DIR)/test/test $(BIN_DIR)/test/test_asan $(TEST_MSAN_PATH) $(BIN_DIR)/test/test_multi $(BIN_DIR)/test/test_cpp
 	$(BIN_DIR)/test/test
 	$(BIN_DIR)/test/test_asan
 	$(TEST_MSAN_PATH)
 	$(TEST_VALGRIND_CMD)
+	$(BIN_DIR)/test/test_multi
 	$(BIN_DIR)/test/test_cpp
 	@touch $@
 
@@ -87,6 +88,10 @@ $(BIN_DIR)/test/test_asan: test/test.c $(HDRS) $(TEST_HDRS)
 $(BIN_DIR)/test/test_msan: test/test.c $(HDRS) $(TEST_HDRS)
 	@mkdir -p $(@D)
 	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_DBG) -Wconversion -fsanitize=memory -fsanitize-memory-track-origins -fPIE -pie $< -o $@ $(LINK_FLAGS)
+
+$(BIN_DIR)/test/test_multi: test/test_multi1.c test/test_multi2.c $(HDRS) $(TEST_HDRS)
+	@mkdir -p $(@D)
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_DBG) -Wconversion test/test_multi1.c test/test_multi2.c -o $@ $(LINK_FLAGS)
 
 $(BIN_DIR)/test/test_cpp: test/test.cpp $(HDRS) $(TEST_HDRS)
 	@mkdir -p $(@D)

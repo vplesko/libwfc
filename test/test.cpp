@@ -1,6 +1,7 @@
 // not part of C++ testing, but make sure all works correctly with no asserts
 #define WFC_ASSERT(ctx, cond)
 
+#define WFC_IMPLEMENTATION
 #include "wfc.h"
 
 int main(void) {

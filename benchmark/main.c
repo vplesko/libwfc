@@ -5,6 +5,7 @@
 
 #include "stb_image.h"
 
+#define WFC_IMPLEMENTATION
 #include "wfc.h"
 
 #define REPEATS 5

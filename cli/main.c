@@ -8,9 +8,11 @@
 #include "stb_image.h"
 #include "stb_image_write.h"
 
-#include "util.h"
 #define UNARGS_IMPLEMENTATION
 #include "unargs.h"
+
+#include "util.h"
+#define WFC_IMPLEMENTATION
 #include "wfc.h"
 #include "wfc_args.h"
 #include "wfc_wrap.h"

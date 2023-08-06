@@ -22,37 +22,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <float.h>
-#include <math.h>
+#ifndef INCLUDE_WFC_H
+#define INCLUDE_WFC_H
+
 #include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 
 // @TODO implement 3D WFC, with GUI support
 
-// @TODO add tests when context is passed (may merge into multi-.c test)
-#ifndef WFC_ASSERT
-#include <assert.h>
-#define WFC_ASSERT(ctx, cond) assert(cond)
+#ifdef __cplusplus
+extern "C" {
 #endif
-
-#ifndef WFC_MALLOC
-#define WFC_MALLOC(ctx, sz) malloc(sz)
-#endif
-
-#ifndef WFC_FREE
-#define WFC_FREE(ctx, p) free(p)
-#endif
-
-// should return a float in [0, 1)
-#ifndef WFC_RAND
-#define WFC_RAND(ctx) wfc__rand()
-#endif
-
-// public declarations
-
-// @TODO add extern "C" {}
 
 enum {
     wfc_completed = 1,
@@ -120,6 +99,41 @@ int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
 
 const unsigned char* wfc_pixelToBlit(const wfc_State *state,
     int patt, int x, int y, const unsigned char *src);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // INCLUDE_WFC_H
+
+// IMPLEMENTATION
+
+#ifdef WFC_IMPLEMENTATION
+
+#include <float.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+// @TODO add tests when context is passed (may merge into multi-.c test)
+#ifndef WFC_ASSERT
+#include <assert.h>
+#define WFC_ASSERT(ctx, cond) assert(cond)
+#endif
+
+#ifndef WFC_MALLOC
+#define WFC_MALLOC(ctx, sz) malloc(sz)
+#endif
+
+#ifndef WFC_FREE
+#define WFC_FREE(ctx, p) free(p)
+#endif
+
+// should return a float in [0, 1)
+#ifndef WFC_RAND
+#define WFC_RAND(ctx) wfc__rand()
+#endif
 
 // basic utility
 
@@ -1168,3 +1182,5 @@ const unsigned char* wfc_pixelToBlit(const wfc_State *state,
 
     return &WFC__A3D_GET(srcA, sC0, sC1, 0);
 }
+
+#endif // WFC_IMPLEMENTATION

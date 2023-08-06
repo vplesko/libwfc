@@ -888,7 +888,7 @@ static int testKeep(void) {
         n, 0, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst,
-        (bool*)&keep) != 0) {
+        NULL, (bool*)&keep) != 0) {
         PRINT_TEST_FAIL();
         return -1;
     }

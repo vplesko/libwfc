@@ -1,3 +1,6 @@
+// not part of C++ testing, but make sure all works correctly with no asserts
+#define WFC_ASSERT(ctx, cond)
+
 #include "wfc.h"
 
 int main(void) {
@@ -16,6 +19,12 @@ int main(void) {
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         return 1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (dst[i] != 5 && dst[i] != 6) {
+            return 1;
+        }
     }
 
     return 0;

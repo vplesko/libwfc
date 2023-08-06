@@ -137,8 +137,36 @@ enum {
     unargs_err_params = -2
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+enum unargs__Type {
+    unargs__typeBool,
+    unargs__typeInt,
+    unargs__typeUnsigned,
+    unargs__typeFloat,
+    unargs__typeString
+};
+
 // Type that holds parameter properties.
-typedef struct unargs_Param unargs_Param;
+typedef struct unargs_Param {
+    const char *_name;
+    enum unargs__Type _type;
+    bool _req;
+    const char *_desc;
+    union {
+        bool b;
+        int i;
+        unsigned u;
+        float f;
+        const char *str;
+    } _def;
+
+    void *_dst;
+
+    bool _found;
+} unargs_Param;
 
 /**
  * Specify a bool parameter. Bool parameters are always non-required options
@@ -364,33 +392,9 @@ int unargs_help(
     const char *program,
     int len, const unargs_Param *params);
 
-// Below are implementation details.
-
-enum unargs__Type {
-    unargs__typeBool,
-    unargs__typeInt,
-    unargs__typeUnsigned,
-    unargs__typeFloat,
-    unargs__typeString
-};
-
-struct unargs_Param {
-    const char *_name;
-    enum unargs__Type _type;
-    bool _req;
-    const char *_desc;
-    union {
-        bool b;
-        int i;
-        unsigned u;
-        float f;
-        const char *str;
-    } _def;
-
-    void *_dst;
-
-    bool _found;
-};
+#ifdef __cplusplus
+}
+#endif
 
 #endif // INCLUDE_UNARGS_H
 
@@ -1076,7 +1080,9 @@ void unargs__printUsage(
             break;
         }
     }
-    if (hasNonReqPos) UNARGS_PRINT_OUT_STR(" [positionals]");
+    if (hasNonReqPos) {
+        UNARGS_PRINT_OUT_STR(" [positionals]");
+    }
 
     bool hasNonReqOpt = false;
     for (int i = 0; i < len; ++i) {
@@ -1087,7 +1093,9 @@ void unargs__printUsage(
             break;
         }
     }
-    if (hasNonReqOpt) UNARGS_PRINT_OUT_STR(" [options]");
+    if (hasNonReqOpt) {
+        UNARGS_PRINT_OUT_STR(" [options]");
+    }
 
     UNARGS_PRINT_OUT_LN();
 }

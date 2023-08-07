@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
         int status = wfcStep(&wfc);
         if (status == wfc_failed) {
             if (wfcBacktrack(&wfc) != 0) {
-                fprintf(stderr, "WFC step failed.\n");
+                fprintf(stdout, "WFC failed.\n");
                 ret = 1;
                 goto cleanup;
             } else {

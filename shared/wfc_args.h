@@ -103,7 +103,7 @@ int parseArgs(int argc, char * const *argv, struct Args *args, bool outReq) {
     int status = unargs_parse(
         argc, argv, sizeof(params) / sizeof(*params), params);
     if (status == unargs_err_args) {
-        fprintf(stderr, "\n");
+        fprintf(stdout, "\n");
         unargs_help(argv[0], sizeof(params) / sizeof(*params), params);
         return -1;
     }

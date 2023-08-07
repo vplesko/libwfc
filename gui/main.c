@@ -78,6 +78,8 @@ void guiStateSetCompleted(struct GuiState *guiState, SDL_Window *window) {
 }
 
 void guiStateTogglePause(struct GuiState *guiState, SDL_Window *window) {
+    if (guiState->completed) return;
+
     guiState->paused = !guiState->paused;
     updateWindowTitle(*guiState, window);
 }

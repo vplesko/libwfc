@@ -38,138 +38,91 @@ bool isCtrlHeld(void) {
     return state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
 }
 
-// @TODO encapsulate the three states
-struct GuiState {
-    int zoom;
-    int cursorSize;
-    bool completed;
-    bool paused;
-    bool pauseToggled;
+void incZoom(int *zoom) {
+    if ((*zoom) * 2 <= zoomMax) (*zoom) *= 2;
+}
+
+void decZoom(int *zoom) {
+    if ((*zoom) / 2 >= zoomMin) (*zoom) /= 2;
+}
+
+void incCursorSize(int *cursorSize) {
+    if ((*cursorSize) + 2 <= cursorSizeMax) {
+        (*cursorSize) += 2;
+    }
+}
+
+void decCursorSize(int *cursorSize) {
+    if ((*cursorSize) - 2 >= cursorSizeMin) {
+        (*cursorSize) -= 2;
+    }
+}
+
+enum GuiState {
+    guiStateRunning,
+    guiStatePaused,
+    guiStateCompleted,
 };
 
-void updateWindowTitle(struct GuiState guiState, SDL_Window *window) {
+void updateWindowTitle(SDL_Window *window, enum GuiState guiState, int zoom) {
     enum { cap = 200 };
     char buff[cap];
 
     const char *status = "";
-    if (guiState.completed) status = " (COMPLETED)";
-    else if (guiState.paused) status = " (PAUSED)";
+    if (guiState == guiStateCompleted) status = " (COMPLETED)";
+    else if (guiState == guiStatePaused) status = " (PAUSED)";
 
     int code = snprintf(buff, cap,
         "%s - %dx%s",
-        "WFC GUI", guiState.zoom, status);
+        "WFC GUI", zoom, status);
     assert(code >= 0 && code + 1 <= cap);
 
     SDL_SetWindowTitle(window, buff);
 }
 
-void guiStateInitiate(struct GuiState *guiState, SDL_Window *window) {
-    *guiState = (struct GuiState){0};
-    guiState->zoom = zoomMin;
-    guiState->cursorSize = cursorSizeMin;
-
-    updateWindowTitle(*guiState, window);
-}
-
-void guiStateOnNewFrame(struct GuiState*guiState) {
-    guiState->pauseToggled = false;
-}
-
-void guiStateIncScale(struct GuiState *guiState, SDL_Window *window) {
-    if (guiState->zoom * 2 <= zoomMax) {
-        guiState->zoom *= 2;
-        updateWindowTitle(*guiState, window);
-    }
-}
-
-void guiStateDecScale(struct GuiState *guiState, SDL_Window *window) {
-    if (guiState->zoom / 2 >= zoomMin) {
-        guiState->zoom /= 2;
-        updateWindowTitle(*guiState, window);
-    }
-}
-
-void guiStateIncCursorSize(struct GuiState *guiState) {
-    if (guiState->cursorSize + 2 <= cursorSizeMax) {
-        guiState->cursorSize += 2;
-    }
-}
-
-void guiStateDecCursorSize(struct GuiState *guiState) {
-    if (guiState->cursorSize - 2 >= cursorSizeMin) {
-        guiState->cursorSize -= 2;
-    }
-}
-
-void guiStateSetCompleted(struct GuiState *guiState, SDL_Window *window) {
-    guiState->completed = true;
-    guiState->paused = true;
-    updateWindowTitle(*guiState, window);
-}
-
-void guiStateTogglePause(struct GuiState *guiState, SDL_Window *window) {
-    if (guiState->completed) return;
-
-    guiState->paused = !guiState->paused;
-    guiState->pauseToggled = true;
-    updateWindowTitle(*guiState, window);
-}
-
 SDL_Rect* renderRectSrc(
-    struct GuiState guiState,
-    int srcW, int srcH,
-    int dstH,
-    SDL_Rect *rect) {
+    int zoom, int srcW, int srcH, int dstH, SDL_Rect *rect) {
     *rect = (SDL_Rect){
-        0, (guiState.zoom * dstH - guiState.zoom * srcH) / 2,
-        guiState.zoom * srcW, guiState.zoom * srcH};
+        0, (zoom * dstH - zoom * srcH) / 2, zoom * srcW, zoom * srcH};
     return rect;
 }
 
 SDL_Rect* renderRectDst(
-    struct GuiState guiState,
-    int srcW,
-    int dstW, int dstH,
-    SDL_Rect *rect) {
-    *rect = (SDL_Rect){
-        guiState.zoom * srcW + 2 * guiState.zoom, 0,
-        guiState.zoom * dstW, guiState.zoom * dstH};
+    int zoom, int srcW, int dstW, int dstH, SDL_Rect *rect) {
+    *rect = (SDL_Rect){zoom * srcW + 2 * zoom, 0, zoom * dstW, zoom * dstH};
     return rect;
 }
 
 SDL_Rect* renderRectCursor(
-    struct GuiState guiState,
-    int srcW,
-    int dstW, int dstH,
-    SDL_Rect *rect) {
+    int zoom, int cursorSize, int srcW, int dstW, int dstH, SDL_Rect *rect) {
     SDL_Rect rectDst;
-    renderRectDst(guiState, srcW, dstW, dstH, &rectDst);
+    renderRectDst(zoom, srcW, dstW, dstH, &rectDst);
 
     int mouseX, mouseY;
     SDL_GetMouseState(&mouseX, &mouseY);
 
-    int centerX = (mouseX - rectDst.x) / guiState.zoom;
-    int centerY = (mouseY - rectDst.y) / guiState.zoom;
+    int centerX = (mouseX - rectDst.x) / zoom;
+    int centerY = (mouseY - rectDst.y) / zoom;
     if (!between_i(centerX, 0, dstW - 1) ||
         !between_i(centerY, 0, dstH - 1)) {
         *rect = (SDL_Rect){0};
         return rect;
     }
 
-    int pixelL = centerX - guiState.cursorSize / 2;
-    int pixelT = centerY - guiState.cursorSize / 2;
-    int pixelR = pixelL + guiState.cursorSize;
-    int pixelB = pixelT + guiState.cursorSize;
+    int pixelL = centerX - cursorSize / 2;
+    int pixelT = centerY - cursorSize / 2;
+    int pixelR = pixelL + cursorSize;
+    int pixelB = pixelT + cursorSize;
 
     pixelL = max_i(0, pixelL);
     pixelT = max_i(0, pixelT);
     pixelR = min_i(dstW, pixelR);
     pixelB = min_i(dstH, pixelB);
 
-    rect->x = rectDst.x + pixelL * guiState.zoom;
-    rect->y = rectDst.y + pixelT * guiState.zoom;
-    rect->w = (pixelR - pixelL) * guiState.zoom;
-    rect->h = (pixelB - pixelT) * guiState.zoom;
+    rect->x = rectDst.x + pixelL * zoom;
+    rect->y = rectDst.y + pixelT * zoom;
+    rect->w = (pixelR - pixelL) * zoom;
+    rect->h = (pixelB - pixelT) * zoom;
 
     return rect;
 }
@@ -268,14 +221,16 @@ int main(int argc, char *argv[]) {
 
     fprintf(stdout, "%s\n", instructions);
 
-    struct GuiState guiState;
-    guiStateInitiate(&guiState, window);
+    enum GuiState guiState = guiStateRunning;
+    int zoom = zoomMin;
+    int cursorSize = cursorSizeMin;
+    updateWindowTitle(window, guiState, zoom);
 
     bool quit = false;
     while (!quit) {
         Uint32 ticksPrev = SDL_GetTicks();
 
-        guiStateOnNewFrame(&guiState);
+        bool pauseToggled = false;
 
         // input
 
@@ -292,48 +247,61 @@ int main(int argc, char *argv[]) {
                     quit = true;
                 } else if (e.key.keysym.sym == SDLK_KP_PLUS) {
                     if (isCtrlHeld()) {
-                        guiStateIncCursorSize(&guiState);
+                        incCursorSize(&cursorSize);
                     } else {
-                        guiStateIncScale(&guiState, window);
+                        incZoom(&zoom);
                     }
                 } else if (e.key.keysym.sym == SDLK_KP_MINUS) {
                     if (isCtrlHeld()) {
-                        guiStateDecCursorSize(&guiState);
+                        decCursorSize(&cursorSize);
                     } else {
-                        guiStateDecScale(&guiState, window);
+                        decZoom(&zoom);
                     }
                 } else if (e.key.keysym.sym == SDLK_SPACE) {
-                    guiStateTogglePause(&guiState, window);
+                    pauseToggled = true;
                 }
             }
         }
 
         // update
 
-        if (!guiState.paused) {
-            int status = wfcStep(&wfc);
-            if (status == wfc_failed) {
-                if (wfcBacktrack(&wfc) != 0) {
-                    fprintf(stdout, "WFC failed.\n");
-                    ret = 1;
-                    goto cleanup;
-                } else {
+        if (guiState == guiStateRunning) {
+            if (pauseToggled) {
+                guiState = guiStatePaused;
+            } else {
+                int status = wfcStep(&wfc);
+                if (status == wfc_failed) {
+                    if (wfcBacktrack(&wfc) != 0) {
+                        fprintf(stdout, "WFC failed.\n");
+                        ret = 1;
+                        goto cleanup;
+                    }
                     fprintf(stdout, "WFC is backtracking.\n");
                     wfcBlitAveraged(wfc, surfaceSrc->pixels,
                         args.dstW, args.dstH, surfaceDst->pixels);
-                }
-            } else if (status == 0) {
-                wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                    args.dstW, args.dstH, surfaceDst->pixels);
-            } else {
-                assert(status == wfc_completed);
-                if (!guiState.completed) {
+                } else if (status == 0) {
+                    wfcBlitAveraged(wfc, surfaceSrc->pixels,
+                        args.dstW, args.dstH, surfaceDst->pixels);
+                } else if (status == wfc_completed) {
                     wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-                    guiStateSetCompleted(&guiState, window);
                     fprintf(stdout, "WFC completed.\n");
+
+                    guiState = guiStateCompleted;
+                } else {
+                    assert(false);
                 }
             }
+        } else if (guiState == guiStatePaused) {
+            if (pauseToggled) {
+                guiState = guiStateRunning;
+            }
+        } else if (guiState == guiStateCompleted) {
+            // do nothing
+        } else {
+            assert(false);
         }
+
+        updateWindowTitle(window, guiState, zoom);
 
         // render
 
@@ -342,12 +310,13 @@ int main(int argc, char *argv[]) {
         SDL_FillRect(surfaceWin, NULL, SDL_MapRGB(surfaceWin->format, 0, 0, 0));
 
         SDL_BlitScaled(surfaceSrc, NULL, surfaceWin,
-            renderRectSrc(guiState, srcW, srcH, args.dstH, &rect));
+            renderRectSrc(zoom, srcW, srcH, args.dstH, &rect));
         SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
-            renderRectDst(guiState, srcW, args.dstW, args.dstH, &rect));
+            renderRectDst(zoom, srcW, args.dstW, args.dstH, &rect));
         // @TODO only draw when paused or completed
         drawRect(surfaceWin,
-            renderRectCursor(guiState, srcW, args.dstW, args.dstH, &rect),
+            renderRectCursor(
+                zoom, cursorSize, srcW, args.dstW, args.dstH, &rect),
             SDL_MapRGBA(surfaceWin->format, 0x7f, 0x7f, 0x7f, 0));
 
         SDL_UpdateWindowSurface(window);

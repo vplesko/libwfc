@@ -36,49 +36,71 @@ struct GuiState {
     bool paused;
 };
 
-void updateWindowTitle(struct GuiState state, SDL_Window *window) {
+void updateWindowTitle(struct GuiState guiState, SDL_Window *window) {
     enum { cap = 200 };
     static char buff[cap];
 
     const char *status = "";
-    if (state.completed) status = " (COMPLETED)";
-    else if (state.paused) status = " (PAUSED)";
+    if (guiState.completed) status = " (COMPLETED)";
+    else if (guiState.paused) status = " (PAUSED)";
 
     int code = snprintf(buff, cap,
         "%s - %dx%s",
-        "WFC GUI", state.scale, status);
+        "WFC GUI", guiState.scale, status);
     assert(code >= 0 && code + 1 <= cap);
 
     SDL_SetWindowTitle(window, buff);
 }
 
-void guiStateInitiate(struct GuiState *state, SDL_Window *window) {
-    state->scale = 1;
-    updateWindowTitle(*state, window);
+void guiStateInitiate(struct GuiState *guiState, SDL_Window *window) {
+    guiState->scale = 1;
+    updateWindowTitle(*guiState, window);
 }
 
-void guiStateIncScale(struct GuiState *state, SDL_Window *window) {
-    if (state->scale * 2 <= scaleMax) {
-        state->scale *= 2;
-        updateWindowTitle(*state, window);
+void guiStateIncScale(struct GuiState *guiState, SDL_Window *window) {
+    if (guiState->scale * 2 <= scaleMax) {
+        guiState->scale *= 2;
+        updateWindowTitle(*guiState, window);
     }
 }
 
-void guiStateDecScale(struct GuiState *state, SDL_Window *window) {
-    if (state->scale / 2 >= scaleMin) {
-        state->scale /= 2;
-        updateWindowTitle(*state, window);
+void guiStateDecScale(struct GuiState *guiState, SDL_Window *window) {
+    if (guiState->scale / 2 >= scaleMin) {
+        guiState->scale /= 2;
+        updateWindowTitle(*guiState, window);
     }
 }
 
-void guiStateToggleCompleted(struct GuiState *state, SDL_Window *window) {
-    state->completed = !state->completed;
-    updateWindowTitle(*state, window);
+void guiStateToggleCompleted(struct GuiState *guiState, SDL_Window *window) {
+    guiState->completed = !guiState->completed;
+    updateWindowTitle(*guiState, window);
 }
 
-void guiStateTogglePause(struct GuiState *state, SDL_Window *window) {
-    state->paused = !state->paused;
-    updateWindowTitle(*state, window);
+void guiStateTogglePause(struct GuiState *guiState, SDL_Window *window) {
+    guiState->paused = !guiState->paused;
+    updateWindowTitle(*guiState, window);
+}
+
+SDL_Rect* renderRectSrc(
+    struct GuiState guiState,
+    int srcW, int srcH,
+    int dstH,
+    SDL_Rect *rect) {
+    *rect = (SDL_Rect){
+        0, (guiState.scale * dstH - guiState.scale * srcH) / 2,
+        guiState.scale * srcW, guiState.scale * srcH};
+    return rect;
+}
+
+SDL_Rect* renderRectDst(
+    struct GuiState guiState,
+    int srcW,
+    int dstW, int dstH,
+    SDL_Rect *rect) {
+    *rect = (SDL_Rect){
+        guiState.scale * srcW + 4, 0,
+        guiState.scale * dstW, guiState.scale * dstH};
+    return rect;
 }
 
 int main(int argc, char *argv[]) {
@@ -222,16 +244,14 @@ int main(int argc, char *argv[]) {
 
         // render
 
+        SDL_Rect rect;
+
         SDL_FillRect(surfaceWin, NULL, SDL_MapRGB(surfaceWin->format, 0, 0, 0));
 
         SDL_BlitScaled(surfaceSrc, NULL, surfaceWin,
-            &(SDL_Rect){
-                0, (guiState.scale * args.dstH - guiState.scale * srcH) / 2,
-                guiState.scale * srcW, guiState.scale * srcH});
+            renderRectSrc(guiState, srcW, srcH, args.dstH, &rect));
         SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
-            &(SDL_Rect){
-                guiState.scale * srcW + 4, 0,
-                guiState.scale * args.dstW, guiState.scale * args.dstH});
+            renderRectDst(guiState, srcW, args.dstW, args.dstH, &rect));
 
         SDL_UpdateWindowSurface(window);
 

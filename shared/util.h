@@ -1,3 +1,8 @@
+// Inclusive on both ends.
+bool between_i(int x, int lo, int hi) {
+    return x >= lo && x <= hi;
+}
+
 bool strEqIgnoreCase(const char *s1, const char *s2) {
     while (*s1 != 0 && s2 != 0) {
         if (tolower(*s1) != tolower(*s2)) return false;

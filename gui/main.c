@@ -126,7 +126,12 @@ SDL_Rect* renderRectCursor(
     int coordX = rectDst.x + pixelX * guiState.scale;
     int coordY = rectDst.y + pixelY * guiState.scale;
 
-    *rect = (SDL_Rect){coordX, coordY, guiState.scale, guiState.scale};
+    if (!between_i(pixelX, 0, dstW - 1) ||
+        !between_i(pixelY, 0, dstH - 1)) {
+        *rect = (SDL_Rect){0};
+    } else {
+        *rect = (SDL_Rect){coordX, coordY, guiState.scale, guiState.scale};
+    }
 
     return rect;
 }

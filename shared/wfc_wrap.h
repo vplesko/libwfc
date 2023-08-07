@@ -73,6 +73,8 @@ void wfcBlitAveraged(
     const struct WfcWrapper wfc,
     const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
+    assert(wfc.len > 0);
+
     int bytesPerPixel = wfc.bytesPerPixel;
     const wfc_State *state = wfc.states[wfc.len - 1];
     int pattCnt = wfc_patternCount(state);
@@ -94,9 +96,50 @@ void wfcBlitAveraged(
                     }
                 }
 
+                if (cnt == 0) continue;
+
                 unsigned char avg = (unsigned char)(sum / cnt);
                 dst[j * dstW * bytesPerPixel + i * bytesPerPixel + b] = avg;
             }
+        }
+    }
+}
+
+void wfcBlitObserved(
+    const struct WfcWrapper wfc,
+    const unsigned char *src,
+    int dstW, int dstH, unsigned char *dst) {
+    assert(wfc.len > 0);
+
+    int bytesPerPixel = wfc.bytesPerPixel;
+    const wfc_State *state = wfc.states[wfc.len - 1];
+    int pattCnt = wfc_patternCount(state);
+
+    for (int j = 0; j < dstH; ++j) {
+        for (int i = 0; i < dstW; ++i) {
+            bool foundSingle = false;
+            int patt;
+            for (int p = 0; p < pattCnt; ++p) {
+                int avail = wfc_patternAvailable(state, p, i, j);
+                assert(avail >= 0);
+                if (avail) {
+                    if (foundSingle) {
+                        foundSingle = false;
+                        break;
+                    }
+
+                    foundSingle = true;
+                    patt = p;
+                }
+            }
+
+            if (!foundSingle) continue;
+
+            const unsigned char* px = wfc_pixelToBlit(state, patt, i, j, src);
+            assert(px != NULL);
+
+            memcpy(&dst[j * dstW * bytesPerPixel + i * bytesPerPixel], px,
+                bytesPerPixel);
         }
     }
 }

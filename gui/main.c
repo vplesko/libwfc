@@ -267,6 +267,11 @@ int main(int argc, char *argv[]) {
 
         if (guiState == guiStateRunning) {
             if (pauseToggled) {
+                SDL_FillRect(surfaceDst, NULL,
+                    SDL_MapRGBA(surfaceDst->format, 0, 0, 0, 0));
+                wfcBlitObserved(wfc, surfaceSrc->pixels,
+                    args.dstW, args.dstH, surfaceDst->pixels);
+
                 guiState = guiStatePaused;
             } else {
                 int status = wfcStep(&wfc);
@@ -293,6 +298,9 @@ int main(int argc, char *argv[]) {
             }
         } else if (guiState == guiStatePaused) {
             if (pauseToggled) {
+                wfcBlitAveraged(wfc, surfaceSrc->pixels,
+                    args.dstW, args.dstH, surfaceDst->pixels);
+
                 guiState = guiStateRunning;
             }
         } else if (guiState == guiStateCompleted) {
@@ -317,7 +325,7 @@ int main(int argc, char *argv[]) {
         drawRect(surfaceWin,
             renderRectCursor(
                 zoom, cursorSize, srcW, args.dstW, args.dstH, &rect),
-            SDL_MapRGBA(surfaceWin->format, 0x7f, 0x7f, 0x7f, 0));
+            SDL_MapRGB(surfaceWin->format, 0x7f, 0x7f, 0x7f));
 
         SDL_UpdateWindowSurface(window);
 

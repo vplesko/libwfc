@@ -109,6 +109,40 @@ SDL_Rect* renderRectDst(
     return rect;
 }
 
+SDL_Rect* renderRectCursor(
+    struct GuiState guiState,
+    int srcW,
+    int dstW, int dstH,
+    SDL_Rect *rect) {
+    SDL_Rect rectDst;
+    renderRectDst(guiState, srcW, dstW, dstH, &rectDst);
+
+    int mouseX, mouseY;
+    SDL_GetMouseState(&mouseX, &mouseY);
+
+    int pixelX = (mouseX - rectDst.x) / guiState.scale;
+    int pixelY = (mouseY - rectDst.y) / guiState.scale;
+
+    int coordX = rectDst.x + pixelX * guiState.scale;
+    int coordY = rectDst.y + pixelY * guiState.scale;
+
+    *rect = (SDL_Rect){coordX, coordY, guiState.scale, guiState.scale};
+
+    return rect;
+}
+
+void drawRect(SDL_Surface *surface, const SDL_Rect *rect, Uint32 color) {
+    if (rect->w == 0 || rect->h == 0) return;
+
+    SDL_Rect rects[] = {
+        {rect->x, rect->y, rect->w, 1},
+        {rect->x, rect->y, 1, rect->h},
+        {rect->x, rect->y + rect->h - 1, rect->w, 1},
+        {rect->x + rect->w - 1, rect->y, 1, rect->h},
+    };
+    SDL_FillRects(surface, rects, 4, color);
+}
+
 int main(int argc, char *argv[]) {
     int ret = 0;
 
@@ -258,6 +292,9 @@ int main(int argc, char *argv[]) {
             renderRectSrc(guiState, srcW, srcH, args.dstH, &rect));
         SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
             renderRectDst(guiState, srcW, args.dstW, args.dstH, &rect));
+        drawRect(surfaceWin,
+            renderRectCursor(guiState, srcW, args.dstW, args.dstH, &rect),
+            SDL_MapRGBA(surfaceWin->format, 0x7f, 0x7f, 0x7f, 0));
 
         SDL_UpdateWindowSurface(window);
 

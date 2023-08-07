@@ -125,7 +125,7 @@ SDL_Rect* renderRectDst(
     int dstW, int dstH,
     SDL_Rect *rect) {
     *rect = (SDL_Rect){
-        guiState.scale * srcW + 4, 0,
+        guiState.scale * srcW + 2 * guiState.scale, 0,
         guiState.scale * dstW, guiState.scale * dstH};
     return rect;
 }

@@ -1,3 +1,11 @@
+int min_i(int a, int b) {
+    return a < b ? a : b;
+}
+
+int max_i(int a, int b) {
+    return a < b ? b : a;
+}
+
 // Inclusive on both ends.
 bool between_i(int x, int lo, int hi) {
     return x >= lo && x <= hi;

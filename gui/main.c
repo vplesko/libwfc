@@ -141,18 +141,28 @@ SDL_Rect* renderRectCursor(
     int mouseX, mouseY;
     SDL_GetMouseState(&mouseX, &mouseY);
 
-    int pixelX = (mouseX - rectDst.x) / guiState.zoom;
-    int pixelY = (mouseY - rectDst.y) / guiState.zoom;
-
-    int coordX = rectDst.x + pixelX * guiState.zoom;
-    int coordY = rectDst.y + pixelY * guiState.zoom;
-
-    if (!between_i(pixelX, 0, dstW - 1) ||
-        !between_i(pixelY, 0, dstH - 1)) {
+    int centerX = (mouseX - rectDst.x) / guiState.zoom;
+    int centerY = (mouseY - rectDst.y) / guiState.zoom;
+    if (!between_i(centerX, 0, dstW - 1) ||
+        !between_i(centerY, 0, dstH - 1)) {
         *rect = (SDL_Rect){0};
-    } else {
-        *rect = (SDL_Rect){coordX, coordY, guiState.zoom, guiState.zoom};
+        return rect;
     }
+
+    int pixelL = centerX - guiState.cursorSize / 2;
+    int pixelT = centerY - guiState.cursorSize / 2;
+    int pixelR = pixelL + guiState.cursorSize;
+    int pixelB = pixelT + guiState.cursorSize;
+
+    pixelL = max_i(0, pixelL);
+    pixelT = max_i(0, pixelT);
+    pixelR = min_i(dstW, pixelR);
+    pixelB = min_i(dstH, pixelB);
+
+    rect->x = rectDst.x + pixelL * guiState.zoom;
+    rect->y = rectDst.y + pixelT * guiState.zoom;
+    rect->w = (pixelR - pixelL) * guiState.zoom;
+    rect->h = (pixelB - pixelT) * guiState.zoom;
 
     return rect;
 }

@@ -321,13 +321,17 @@ int main(int argc, char *argv[]) {
             renderRectSrc(zoom, srcW, srcH, args.dstH, &rect));
         SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
             renderRectDst(zoom, srcW, args.dstW, args.dstH, &rect));
-        // @TODO only draw when paused or completed
-        drawRect(surfaceWin,
-            renderRectCursor(
-                zoom, cursorSize, srcW, args.dstW, args.dstH, &rect),
-            SDL_MapRGB(surfaceWin->format, 0x7f, 0x7f, 0x7f));
+
+        if (guiState == guiStatePaused || guiState == guiStateCompleted) {
+            drawRect(surfaceWin,
+                renderRectCursor(
+                    zoom, cursorSize, srcW, args.dstW, args.dstH, &rect),
+                SDL_MapRGB(surfaceWin->format, 0x7f, 0x7f, 0x7f));
+        }
 
         SDL_UpdateWindowSurface(window);
+
+        // cap FPS
 
         Uint32 ticksCurr = SDL_GetTicks();
         if (ticksCurr - ticksPrev < ticksPerFrame) {

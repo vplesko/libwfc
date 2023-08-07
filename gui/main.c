@@ -26,23 +26,25 @@ const int cursorSizeMin = 1, cursorSizeMax = 5;
 
 const char *instructions =
     "Controls:\n"
-    "\t+      - Zoom in\n"
-    "\t-      - Zoom out\n"
-    "\tCtrl + - Increase cursor size\n"
-    "\tCtrl - - Decrease cursor size\n"
-    "\tSpace  - Pause/unpause\n"
-    "\tEscape - Quit";
+    "\t+       - Zoom in\n"
+    "\t-       - Zoom out\n"
+    "\tCtrl +  - Increase cursor size\n"
+    "\tCtrl -  - Decrease cursor size\n"
+    "\tSpace   - Pause/unpause\n"
+    "\tEscape  - Quit";
 
 bool isCtrlHeld(void) {
     const Uint8 *state = SDL_GetKeyboardState(NULL);
     return state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
 }
 
+// @TODO encapsulate the three states
 struct GuiState {
     int zoom;
     int cursorSize;
     bool completed;
     bool paused;
+    bool pauseToggled;
 };
 
 void updateWindowTitle(struct GuiState guiState, SDL_Window *window) {
@@ -67,6 +69,10 @@ void guiStateInitiate(struct GuiState *guiState, SDL_Window *window) {
     guiState->cursorSize = cursorSizeMin;
 
     updateWindowTitle(*guiState, window);
+}
+
+void guiStateOnNewFrame(struct GuiState*guiState) {
+    guiState->pauseToggled = false;
 }
 
 void guiStateIncScale(struct GuiState *guiState, SDL_Window *window) {
@@ -105,6 +111,7 @@ void guiStateTogglePause(struct GuiState *guiState, SDL_Window *window) {
     if (guiState->completed) return;
 
     guiState->paused = !guiState->paused;
+    guiState->pauseToggled = true;
     updateWindowTitle(*guiState, window);
 }
 
@@ -268,6 +275,8 @@ int main(int argc, char *argv[]) {
     while (!quit) {
         Uint32 ticksPrev = SDL_GetTicks();
 
+        guiStateOnNewFrame(&guiState);
+
         // input
 
         SDL_Event e;
@@ -336,6 +345,7 @@ int main(int argc, char *argv[]) {
             renderRectSrc(guiState, srcW, srcH, args.dstH, &rect));
         SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
             renderRectDst(guiState, srcW, args.dstW, args.dstH, &rect));
+        // @TODO only draw when paused or completed
         drawRect(surfaceWin,
             renderRectCursor(guiState, srcW, args.dstW, args.dstH, &rect),
             SDL_MapRGBA(surfaceWin->format, 0x7f, 0x7f, 0x7f, 0));

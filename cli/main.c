@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 
     wfcBlit(wfc, srcPixels, dstPixels);
 
-    if (wfcWriteOut(&args, bytesPerPixel, dstPixels) != 0) {
+    if (writeOut(&args, bytesPerPixel, dstPixels) != 0) {
         ret = 1;
         goto cleanup;
     }

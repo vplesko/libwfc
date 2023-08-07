@@ -19,6 +19,12 @@
 #include "wfc_args.h"
 #include "wfc_wrap.h"
 
+enum GuiState {
+    guiStateRunning,
+    guiStatePaused,
+    guiStateCompleted,
+};
+
 const int screenW = 800, screenH = 600;
 const Uint32 ticksPerFrame = 1000 / 60;
 const int zoomMin = 1, zoomMax = 8;
@@ -58,13 +64,7 @@ void decCursorSize(int *cursorSize) {
     }
 }
 
-enum GuiState {
-    guiStateRunning,
-    guiStatePaused,
-    guiStateCompleted,
-};
-
-void updateWindowTitle(SDL_Window *window, enum GuiState guiState, int zoom) {
+void updateWindowTitle(enum GuiState guiState, int zoom, SDL_Window *window) {
     enum { cap = 200 };
     char buff[cap];
 
@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
     enum GuiState guiState = guiStateRunning;
     int zoom = zoomMin;
     int cursorSize = cursorSizeMin;
-    updateWindowTitle(window, guiState, zoom);
+    updateWindowTitle(guiState, zoom, window);
 
     bool quit = false;
     while (!quit) {
@@ -309,7 +309,7 @@ int main(int argc, char *argv[]) {
             assert(false);
         }
 
-        updateWindowTitle(window, guiState, zoom);
+        updateWindowTitle(guiState, zoom, window);
 
         // render
 
@@ -341,7 +341,7 @@ int main(int argc, char *argv[]) {
 
     if (args.pathOut != NULL) {
         if (wfcStatus(&wfc) == wfc_completed) {
-            if (wfcWriteOut(&args, bytesPerPixel, surfaceDst->pixels) != 0) {
+            if (writeOut(&args, bytesPerPixel, surfaceDst->pixels) != 0) {
                 ret = 1;
                 goto cleanup;
             }

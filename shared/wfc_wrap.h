@@ -144,7 +144,12 @@ void wfcBlitObserved(
     }
 }
 
-int wfcWriteOut(const struct Args *args, int bytesPerPixel, void *pixels) {
+void wfcFree(struct WfcWrapper wfc) {
+    for (int i = 0; i < wfc.len; ++i) wfc_free(wfc.states[i]);
+    if (wfc.states != NULL) free(wfc.states);
+}
+
+int writeOut(const struct Args *args, int bytesPerPixel, void *pixels) {
     assert(args != NULL);
     assert(args->pathOut != NULL);
     assert(pixels != NULL);
@@ -180,9 +185,4 @@ int wfcWriteOut(const struct Args *args, int bytesPerPixel, void *pixels) {
     }
 
     return 0;
-}
-
-void wfcFree(struct WfcWrapper wfc) {
-    for (int i = 0; i < wfc.len; ++i) wfc_free(wfc.states[i]);
-    if (wfc.states != NULL) free(wfc.states);
 }

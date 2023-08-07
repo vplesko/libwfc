@@ -19,7 +19,7 @@
 #include "wfc_args.h"
 #include "wfc_wrap.h"
 
-const int screenW = 640, screenH = 480;
+const int screenW = 800, screenH = 600;
 const Uint32 ticksPerFrame = 1000 / 60;
 const int zoomMin = 1, zoomMax = 8;
 const int cursorSizeMin = 1, cursorSizeMax = 5;

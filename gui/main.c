@@ -54,6 +54,9 @@ void updateWindowTitle(struct GuiState guiState, SDL_Window *window) {
 
 void guiStateInitiate(struct GuiState *guiState, SDL_Window *window) {
     guiState->scale = 1;
+    guiState->completed = false;
+    guiState->paused = false;
+
     updateWindowTitle(*guiState, window);
 }
 

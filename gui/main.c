@@ -101,10 +101,12 @@ int main(int argc, char *argv[]) {
         ret = 1;
         goto cleanup;
     }
-    bool wfcBlitComplete = false;
 
     const int scaleMin = 1, scaleMax = 8;
     int scale = 1;
+
+    bool wfcBlitComplete = false;
+    bool paused = false;
 
     bool quit = false;
     while (!quit) {
@@ -127,32 +129,36 @@ int main(int argc, char *argv[]) {
                     if (scale * 2 <= scaleMax) scale *= 2;
                 } else if (e.key.keysym.sym == SDLK_KP_MINUS) {
                     if (scale / 2 >= scaleMin) scale /= 2;
+                } else if (e.key.keysym.sym == SDLK_SPACE) {
+                    paused = !paused;
                 }
             }
         }
 
         // update
 
-        int status = wfcStep(&wfc);
-        if (status == wfc_failed) {
-            if (wfcBacktrack(&wfc) != 0) {
-                fprintf(stderr, "WFC step failed.\n");
-                ret = 1;
-                goto cleanup;
-            } else {
-                fprintf(stdout, "WFC is backtracking.\n");
+        if (!paused) {
+            int status = wfcStep(&wfc);
+            if (status == wfc_failed) {
+                if (wfcBacktrack(&wfc) != 0) {
+                    fprintf(stderr, "WFC step failed.\n");
+                    ret = 1;
+                    goto cleanup;
+                } else {
+                    fprintf(stdout, "WFC is backtracking.\n");
+                    wfcBlitAveraged(wfc, surfaceSrc->pixels,
+                        args.dstW, args.dstH, surfaceDst->pixels);
+                }
+            } else if (status == 0) {
                 wfcBlitAveraged(wfc, surfaceSrc->pixels,
                     args.dstW, args.dstH, surfaceDst->pixels);
-            }
-        } else if (status == 0) {
-            wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                args.dstW, args.dstH, surfaceDst->pixels);
-        } else {
-            assert(status == wfc_completed);
-            if (!wfcBlitComplete) {
-                wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-                wfcBlitComplete = true;
-                fprintf(stdout, "WFC completed.\n");
+            } else {
+                assert(status == wfc_completed);
+                if (!wfcBlitComplete) {
+                    wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
+                    wfcBlitComplete = true;
+                    fprintf(stdout, "WFC completed.\n");
+                }
             }
         }
 

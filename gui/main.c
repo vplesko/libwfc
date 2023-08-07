@@ -25,7 +25,7 @@ const int scaleMin = 1, scaleMax = 8;
 
 struct GuiState {
     int scale;
-    bool wfcBlitComplete;
+    bool completed;
     bool paused;
 };
 
@@ -34,6 +34,46 @@ struct GuiState makeGuiState(void) {
     state.scale = 1;
 
     return state;
+}
+
+void updateWindowTitle(struct GuiState state, SDL_Window *window) {
+    enum { cap = 200 };
+    static char buff[cap];
+
+    const char *status = "";
+    if (state.completed) status = " (COMPLETED)";
+    else if (state.paused) status = " (PAUSED)";
+
+    int code = snprintf(buff, cap,
+        "%s - %dx%s",
+        "WFC GUI", state.scale, status);
+    assert(code >= 0 && code + 1 <= cap);
+
+    SDL_SetWindowTitle(window, buff);
+}
+
+void incScale(struct GuiState *state, SDL_Window *window) {
+    if (state->scale * 2 <= scaleMax) {
+        state->scale *= 2;
+        updateWindowTitle(*state, window);
+    }
+}
+
+void decScale(struct GuiState *state, SDL_Window *window) {
+    if (state->scale / 2 >= scaleMin) {
+        state->scale /= 2;
+        updateWindowTitle(*state, window);
+    }
+}
+
+void toggleCompleted(struct GuiState *state, SDL_Window *window) {
+    state->completed = !state->completed;
+    updateWindowTitle(*state, window);
+}
+
+void togglePause(struct GuiState *state, SDL_Window *window) {
+    state->paused = !state->paused;
+    updateWindowTitle(*state, window);
 }
 
 int main(int argc, char *argv[]) {
@@ -62,7 +102,7 @@ int main(int argc, char *argv[]) {
     }
     calledSdlInit = true;
 
-    window = SDL_CreateWindow("libwfc - GUI",
+    window = SDL_CreateWindow("",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         screenW, screenH,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
@@ -117,6 +157,7 @@ int main(int argc, char *argv[]) {
     }
 
     struct GuiState guiState = makeGuiState();
+    updateWindowTitle(guiState, window);
 
     bool quit = false;
     while (!quit) {
@@ -136,11 +177,11 @@ int main(int argc, char *argv[]) {
                 if (e.key.keysym.sym == SDLK_ESCAPE) {
                     quit = true;
                 } else if (e.key.keysym.sym == SDLK_KP_PLUS) {
-                    if (guiState.scale * 2 <= scaleMax) guiState.scale *= 2;
+                    incScale(&guiState, window);
                 } else if (e.key.keysym.sym == SDLK_KP_MINUS) {
-                    if (guiState.scale / 2 >= scaleMin) guiState.scale /= 2;
+                    decScale(&guiState, window);
                 } else if (e.key.keysym.sym == SDLK_SPACE) {
-                    guiState.paused = !guiState.paused;
+                    togglePause(&guiState, window);
                 }
             }
         }
@@ -164,9 +205,9 @@ int main(int argc, char *argv[]) {
                     args.dstW, args.dstH, surfaceDst->pixels);
             } else {
                 assert(status == wfc_completed);
-                if (!guiState.wfcBlitComplete) {
+                if (!guiState.completed) {
                     wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-                    guiState.wfcBlitComplete = true;
+                    toggleCompleted(&guiState, window);
                     fprintf(stdout, "WFC completed.\n");
                 }
             }

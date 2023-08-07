@@ -22,16 +22,25 @@
 const int screenW = 640, screenH = 480;
 const Uint32 ticksPerFrame = 1000 / 60;
 const int scaleMin = 1, scaleMax = 8;
+const int cursorSizeMin = 1, cursorSizeMax = 5;
 
 const char *instructions =
     "Controls:\n"
     "\t+      - Zoom in\n"
     "\t-      - Zoom out\n"
+    "\tCtrl + - Increase cursor size\n"
+    "\tCtrl - - Decrease cursor size\n"
     "\tSpace  - Pause/unpause\n"
     "\tEscape - Quit";
 
+bool isCtrlHeld(void) {
+    const Uint8 *state = SDL_GetKeyboardState(NULL);
+    return state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
+}
+
 struct GuiState {
     int scale;
+    int cursorSize;
     bool completed;
     bool paused;
 };
@@ -53,9 +62,9 @@ void updateWindowTitle(struct GuiState guiState, SDL_Window *window) {
 }
 
 void guiStateInitiate(struct GuiState *guiState, SDL_Window *window) {
-    guiState->scale = 1;
-    guiState->completed = false;
-    guiState->paused = false;
+    *guiState = (struct GuiState){0};
+    guiState->scale = scaleMin;
+    guiState->cursorSize = cursorSizeMin;
 
     updateWindowTitle(*guiState, window);
 }
@@ -71,6 +80,18 @@ void guiStateDecScale(struct GuiState *guiState, SDL_Window *window) {
     if (guiState->scale / 2 >= scaleMin) {
         guiState->scale /= 2;
         updateWindowTitle(*guiState, window);
+    }
+}
+
+void guiStateIncCursorSize(struct GuiState *guiState) {
+    if (guiState->cursorSize + 2 <= cursorSizeMax) {
+        guiState->cursorSize += 2;
+    }
+}
+
+void guiStateDecCursorSize(struct GuiState *guiState) {
+    if (guiState->cursorSize - 2 >= cursorSizeMin) {
+        guiState->cursorSize -= 2;
     }
 }
 
@@ -251,9 +272,17 @@ int main(int argc, char *argv[]) {
                 if (e.key.keysym.sym == SDLK_ESCAPE) {
                     quit = true;
                 } else if (e.key.keysym.sym == SDLK_KP_PLUS) {
-                    guiStateIncScale(&guiState, window);
+                    if (isCtrlHeld()) {
+                        guiStateIncCursorSize(&guiState);
+                    } else {
+                        guiStateIncScale(&guiState, window);
+                    }
                 } else if (e.key.keysym.sym == SDLK_KP_MINUS) {
-                    guiStateDecScale(&guiState, window);
+                    if (isCtrlHeld()) {
+                        guiStateDecCursorSize(&guiState);
+                    } else {
+                        guiStateDecScale(&guiState, window);
+                    }
                 } else if (e.key.keysym.sym == SDLK_SPACE) {
                     guiStateTogglePause(&guiState, window);
                 }

@@ -23,6 +23,13 @@ const int screenW = 640, screenH = 480;
 const Uint32 ticksPerFrame = 1000 / 60;
 const int scaleMin = 1, scaleMax = 8;
 
+const char *instructions =
+    "Controls:\n"
+    "\t+      - Zoom in\n"
+    "\t-      - Zoom out\n"
+    "\tSpace  - Pause/unpause\n"
+    "\tEscape - Quit";
+
 struct GuiState {
     int scale;
     bool completed;
@@ -155,6 +162,8 @@ int main(int argc, char *argv[]) {
         ret = 1;
         goto cleanup;
     }
+
+    fprintf(stdout, "%s\n", instructions);
 
     struct GuiState guiState = makeGuiState();
     updateWindowTitle(guiState, window);

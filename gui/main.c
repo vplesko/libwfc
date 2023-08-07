@@ -21,7 +21,7 @@
 
 const int screenW = 640, screenH = 480;
 const Uint32 ticksPerFrame = 1000 / 60;
-const int scaleMin = 1, scaleMax = 8;
+const int zoomMin = 1, zoomMax = 8;
 const int cursorSizeMin = 1, cursorSizeMax = 5;
 
 const char *instructions =
@@ -39,7 +39,7 @@ bool isCtrlHeld(void) {
 }
 
 struct GuiState {
-    int scale;
+    int zoom;
     int cursorSize;
     bool completed;
     bool paused;
@@ -55,7 +55,7 @@ void updateWindowTitle(struct GuiState guiState, SDL_Window *window) {
 
     int code = snprintf(buff, cap,
         "%s - %dx%s",
-        "WFC GUI", guiState.scale, status);
+        "WFC GUI", guiState.zoom, status);
     assert(code >= 0 && code + 1 <= cap);
 
     SDL_SetWindowTitle(window, buff);
@@ -63,22 +63,22 @@ void updateWindowTitle(struct GuiState guiState, SDL_Window *window) {
 
 void guiStateInitiate(struct GuiState *guiState, SDL_Window *window) {
     *guiState = (struct GuiState){0};
-    guiState->scale = scaleMin;
+    guiState->zoom = zoomMin;
     guiState->cursorSize = cursorSizeMin;
 
     updateWindowTitle(*guiState, window);
 }
 
 void guiStateIncScale(struct GuiState *guiState, SDL_Window *window) {
-    if (guiState->scale * 2 <= scaleMax) {
-        guiState->scale *= 2;
+    if (guiState->zoom * 2 <= zoomMax) {
+        guiState->zoom *= 2;
         updateWindowTitle(*guiState, window);
     }
 }
 
 void guiStateDecScale(struct GuiState *guiState, SDL_Window *window) {
-    if (guiState->scale / 2 >= scaleMin) {
-        guiState->scale /= 2;
+    if (guiState->zoom / 2 >= zoomMin) {
+        guiState->zoom /= 2;
         updateWindowTitle(*guiState, window);
     }
 }
@@ -114,8 +114,8 @@ SDL_Rect* renderRectSrc(
     int dstH,
     SDL_Rect *rect) {
     *rect = (SDL_Rect){
-        0, (guiState.scale * dstH - guiState.scale * srcH) / 2,
-        guiState.scale * srcW, guiState.scale * srcH};
+        0, (guiState.zoom * dstH - guiState.zoom * srcH) / 2,
+        guiState.zoom * srcW, guiState.zoom * srcH};
     return rect;
 }
 
@@ -125,8 +125,8 @@ SDL_Rect* renderRectDst(
     int dstW, int dstH,
     SDL_Rect *rect) {
     *rect = (SDL_Rect){
-        guiState.scale * srcW + 2 * guiState.scale, 0,
-        guiState.scale * dstW, guiState.scale * dstH};
+        guiState.zoom * srcW + 2 * guiState.zoom, 0,
+        guiState.zoom * dstW, guiState.zoom * dstH};
     return rect;
 }
 
@@ -141,17 +141,17 @@ SDL_Rect* renderRectCursor(
     int mouseX, mouseY;
     SDL_GetMouseState(&mouseX, &mouseY);
 
-    int pixelX = (mouseX - rectDst.x) / guiState.scale;
-    int pixelY = (mouseY - rectDst.y) / guiState.scale;
+    int pixelX = (mouseX - rectDst.x) / guiState.zoom;
+    int pixelY = (mouseY - rectDst.y) / guiState.zoom;
 
-    int coordX = rectDst.x + pixelX * guiState.scale;
-    int coordY = rectDst.y + pixelY * guiState.scale;
+    int coordX = rectDst.x + pixelX * guiState.zoom;
+    int coordY = rectDst.y + pixelY * guiState.zoom;
 
     if (!between_i(pixelX, 0, dstW - 1) ||
         !between_i(pixelY, 0, dstH - 1)) {
         *rect = (SDL_Rect){0};
     } else {
-        *rect = (SDL_Rect){coordX, coordY, guiState.scale, guiState.scale};
+        *rect = (SDL_Rect){coordX, coordY, guiState.zoom, guiState.zoom};
     }
 
     return rect;

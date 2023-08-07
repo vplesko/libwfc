@@ -36,13 +36,6 @@ struct GuiState {
     bool paused;
 };
 
-struct GuiState makeGuiState(void) {
-    struct GuiState state = {0};
-    state.scale = 1;
-
-    return state;
-}
-
 void updateWindowTitle(struct GuiState state, SDL_Window *window) {
     enum { cap = 200 };
     static char buff[cap];
@@ -59,26 +52,31 @@ void updateWindowTitle(struct GuiState state, SDL_Window *window) {
     SDL_SetWindowTitle(window, buff);
 }
 
-void incScale(struct GuiState *state, SDL_Window *window) {
+void guiStateInitiate(struct GuiState *state, SDL_Window *window) {
+    state->scale = 1;
+    updateWindowTitle(*state, window);
+}
+
+void guiStateIncScale(struct GuiState *state, SDL_Window *window) {
     if (state->scale * 2 <= scaleMax) {
         state->scale *= 2;
         updateWindowTitle(*state, window);
     }
 }
 
-void decScale(struct GuiState *state, SDL_Window *window) {
+void guiStateDecScale(struct GuiState *state, SDL_Window *window) {
     if (state->scale / 2 >= scaleMin) {
         state->scale /= 2;
         updateWindowTitle(*state, window);
     }
 }
 
-void toggleCompleted(struct GuiState *state, SDL_Window *window) {
+void guiStateToggleCompleted(struct GuiState *state, SDL_Window *window) {
     state->completed = !state->completed;
     updateWindowTitle(*state, window);
 }
 
-void togglePause(struct GuiState *state, SDL_Window *window) {
+void guiStateTogglePause(struct GuiState *state, SDL_Window *window) {
     state->paused = !state->paused;
     updateWindowTitle(*state, window);
 }
@@ -165,8 +163,8 @@ int main(int argc, char *argv[]) {
 
     fprintf(stdout, "%s\n", instructions);
 
-    struct GuiState guiState = makeGuiState();
-    updateWindowTitle(guiState, window);
+    struct GuiState guiState;
+    guiStateInitiate(&guiState, window);
 
     bool quit = false;
     while (!quit) {
@@ -186,11 +184,11 @@ int main(int argc, char *argv[]) {
                 if (e.key.keysym.sym == SDLK_ESCAPE) {
                     quit = true;
                 } else if (e.key.keysym.sym == SDLK_KP_PLUS) {
-                    incScale(&guiState, window);
+                    guiStateIncScale(&guiState, window);
                 } else if (e.key.keysym.sym == SDLK_KP_MINUS) {
-                    decScale(&guiState, window);
+                    guiStateDecScale(&guiState, window);
                 } else if (e.key.keysym.sym == SDLK_SPACE) {
-                    togglePause(&guiState, window);
+                    guiStateTogglePause(&guiState, window);
                 }
             }
         }
@@ -216,7 +214,7 @@ int main(int argc, char *argv[]) {
                 assert(status == wfc_completed);
                 if (!guiState.completed) {
                     wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-                    toggleCompleted(&guiState, window);
+                    guiStateToggleCompleted(&guiState, window);
                     fprintf(stdout, "WFC completed.\n");
                 }
             }

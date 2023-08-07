@@ -21,6 +21,20 @@
 
 const int screenW = 640, screenH = 480;
 const Uint32 ticksPerFrame = 1000 / 60;
+const int scaleMin = 1, scaleMax = 8;
+
+struct GuiState {
+    int scale;
+    bool wfcBlitComplete;
+    bool paused;
+};
+
+struct GuiState makeGuiState(void) {
+    struct GuiState state = {0};
+    state.scale = 1;
+
+    return state;
+}
 
 int main(int argc, char *argv[]) {
     int ret = 0;
@@ -102,11 +116,7 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    const int scaleMin = 1, scaleMax = 8;
-    int scale = 1;
-
-    bool wfcBlitComplete = false;
-    bool paused = false;
+    struct GuiState guiState = makeGuiState();
 
     bool quit = false;
     while (!quit) {
@@ -126,18 +136,18 @@ int main(int argc, char *argv[]) {
                 if (e.key.keysym.sym == SDLK_ESCAPE) {
                     quit = true;
                 } else if (e.key.keysym.sym == SDLK_KP_PLUS) {
-                    if (scale * 2 <= scaleMax) scale *= 2;
+                    if (guiState.scale * 2 <= scaleMax) guiState.scale *= 2;
                 } else if (e.key.keysym.sym == SDLK_KP_MINUS) {
-                    if (scale / 2 >= scaleMin) scale /= 2;
+                    if (guiState.scale / 2 >= scaleMin) guiState.scale /= 2;
                 } else if (e.key.keysym.sym == SDLK_SPACE) {
-                    paused = !paused;
+                    guiState.paused = !guiState.paused;
                 }
             }
         }
 
         // update
 
-        if (!paused) {
+        if (!guiState.paused) {
             int status = wfcStep(&wfc);
             if (status == wfc_failed) {
                 if (wfcBacktrack(&wfc) != 0) {
@@ -154,9 +164,9 @@ int main(int argc, char *argv[]) {
                     args.dstW, args.dstH, surfaceDst->pixels);
             } else {
                 assert(status == wfc_completed);
-                if (!wfcBlitComplete) {
+                if (!guiState.wfcBlitComplete) {
                     wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-                    wfcBlitComplete = true;
+                    guiState.wfcBlitComplete = true;
                     fprintf(stdout, "WFC completed.\n");
                 }
             }
@@ -168,12 +178,12 @@ int main(int argc, char *argv[]) {
 
         SDL_BlitScaled(surfaceSrc, NULL, surfaceWin,
             &(SDL_Rect){
-                0, (scale * args.dstH - scale * srcH) / 2,
-                scale * srcW, scale * srcH});
+                0, (guiState.scale * args.dstH - guiState.scale * srcH) / 2,
+                guiState.scale * srcW, guiState.scale * srcH});
         SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
             &(SDL_Rect){
-                scale * srcW + 4, 0,
-                scale * args.dstW, scale * args.dstH});
+                guiState.scale * srcW + 4, 0,
+                guiState.scale * args.dstW, guiState.scale * args.dstH});
 
         SDL_UpdateWindowSurface(window);
 

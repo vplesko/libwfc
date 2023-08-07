@@ -80,31 +80,9 @@ int main(int argc, char *argv[]) {
 
     wfcBlit(wfc, srcPixels, dstPixels);
 
-    enum ImageFormat fmt = getImageFormat(args.pathOut);
-    if (fmt == IMG_BMP) {
-        if (stbi_write_bmp(args.pathOut,
-                args.dstW, args.dstH, bytesPerPixel, dstPixels) == 0) {
-            fprintf(stderr, "Error writing to file %s\n", args.pathOut);
-            ret = 1;
-            goto cleanup;
-        }
-    } else if (fmt == IMG_PNG) {
-        if (stbi_write_png(args.pathOut,
-                args.dstW, args.dstH, bytesPerPixel, dstPixels,
-                args.dstW * bytesPerPixel) == 0) {
-            fprintf(stderr, "Error writing to file %s\n", args.pathOut);
-            ret = 1;
-            goto cleanup;
-        }
-    } else if (fmt == IMG_TGA) {
-        if (stbi_write_tga(args.pathOut,
-                args.dstW, args.dstH, bytesPerPixel, dstPixels) == 0) {
-            fprintf(stderr, "Error writing to file %s\n", args.pathOut);
-            ret = 1;
-            goto cleanup;
-        }
-    } else {
-        assert(false);
+    if (wfcWriteOut(&args, bytesPerPixel, dstPixels) != 0) {
+        ret = 1;
+        goto cleanup;
     }
 
 cleanup:

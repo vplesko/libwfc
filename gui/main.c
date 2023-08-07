@@ -179,34 +179,9 @@ int main(int argc, char *argv[]) {
 
     if (args.pathOut != NULL) {
         if (wfcStatus(&wfc) == wfc_completed) {
-            enum ImageFormat fmt = getImageFormat(args.pathOut);
-            if (fmt == IMG_BMP) {
-                if (stbi_write_bmp(args.pathOut,
-                        args.dstW, args.dstH, bytesPerPixel,
-                        surfaceDst->pixels) == 0) {
-                    fprintf(stderr, "Error writing to %s.\n", args.pathOut);
-                    ret = 1;
-                    goto cleanup;
-                }
-            } else if (fmt == IMG_PNG) {
-                if (stbi_write_png(args.pathOut,
-                        args.dstW, args.dstH, bytesPerPixel,
-                        surfaceDst->pixels,
-                        args.dstW * bytesPerPixel) == 0) {
-                    fprintf(stderr, "Error writing to %s.\n", args.pathOut);
-                    ret = 1;
-                    goto cleanup;
-                }
-            } else if (fmt == IMG_TGA) {
-                if (stbi_write_tga(args.pathOut,
-                        args.dstW, args.dstH, bytesPerPixel,
-                        surfaceDst->pixels) == 0) {
-                    fprintf(stderr, "Error writing to %s.\n", args.pathOut);
-                    ret = 1;
-                    goto cleanup;
-                }
-            } else {
-                assert(false);
+            if (wfcWriteOut(&args, bytesPerPixel, surfaceDst->pixels) != 0) {
+                ret = 1;
+                goto cleanup;
             }
         } else {
             fprintf(stdout, "WFC has not completed, output not saved.\n");

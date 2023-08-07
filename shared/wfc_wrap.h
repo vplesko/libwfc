@@ -101,6 +101,44 @@ void wfcBlitAveraged(
     }
 }
 
+int wfcWriteOut(const struct Args *args, int bytesPerPixel, void *pixels) {
+    assert(args != NULL);
+    assert(args->pathOut != NULL);
+    assert(pixels != NULL);
+
+    bool writeFailed = false;
+
+    enum ImageFormat fmt = getImageFormat(args->pathOut);
+    if (fmt == IMG_BMP) {
+        if (stbi_write_bmp(args->pathOut,
+                args->dstW, args->dstH, bytesPerPixel, pixels) == 0) {
+            writeFailed = true;
+        }
+    } else if (fmt == IMG_PNG) {
+        if (stbi_write_png(args->pathOut,
+                args->dstW, args->dstH, bytesPerPixel,
+                pixels,
+                args->dstW * bytesPerPixel) == 0) {
+            writeFailed = true;
+        }
+    } else if (fmt == IMG_TGA) {
+        if (stbi_write_tga(args->pathOut,
+                args->dstW, args->dstH, bytesPerPixel,
+                pixels) == 0) {
+            writeFailed = true;
+        }
+    } else {
+        assert(false);
+    }
+
+    if (writeFailed) {
+        fprintf(stderr, "Error writing to %s.\n", args->pathOut);
+        return -1;
+    }
+
+    return 0;
+}
+
 void wfcFree(struct WfcWrapper wfc) {
     for (int i = 0; i < wfc.len; ++i) wfc_free(wfc.states[i]);
     if (wfc.states != NULL) free(wfc.states);

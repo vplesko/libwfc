@@ -38,7 +38,7 @@ struct GuiState {
 
 void updateWindowTitle(struct GuiState guiState, SDL_Window *window) {
     enum { cap = 200 };
-    static char buff[cap];
+    char buff[cap];
 
     const char *status = "";
     if (guiState.completed) status = " (COMPLETED)";
@@ -71,8 +71,9 @@ void guiStateDecScale(struct GuiState *guiState, SDL_Window *window) {
     }
 }
 
-void guiStateToggleCompleted(struct GuiState *guiState, SDL_Window *window) {
-    guiState->completed = !guiState->completed;
+void guiStateSetCompleted(struct GuiState *guiState, SDL_Window *window) {
+    guiState->completed = true;
+    guiState->paused = true;
     updateWindowTitle(*guiState, window);
 }
 
@@ -236,7 +237,7 @@ int main(int argc, char *argv[]) {
                 assert(status == wfc_completed);
                 if (!guiState.completed) {
                     wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-                    guiStateToggleCompleted(&guiState, window);
+                    guiStateSetCompleted(&guiState, window);
                     fprintf(stdout, "WFC completed.\n");
                 }
             }

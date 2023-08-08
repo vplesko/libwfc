@@ -365,11 +365,24 @@ int main(int argc, char *argv[]) {
             }
         } else if (guiState == guiStatePaused) {
             if (pauseToggled) {
+                if (keepChanged) {
+                    wfcFree(wfc);
+                    if (wfcInit(
+                            n, wfcOptions, bytesPerPixel,
+                            srcW, srcH, surfaceSrc->pixels,
+                            dstW, dstH, surfaceDst->pixels,
+                            keep,
+                            &wfc) != 0) {
+                        fprintf(stderr, "WFC re-init failed.\n");
+                        ret = 1;
+                        goto cleanup;
+                    }
+
+                    keepChanged = false;
+                }
+
                 wfcBlitAveraged(wfc, surfaceSrc->pixels,
                     dstW, dstH, surfaceDst->pixels);
-
-                // @TODO if keepChanged ...
-                (void)keepChanged;
 
                 guiState = guiStateRunning;
             }

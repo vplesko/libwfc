@@ -318,15 +318,10 @@ int main(int argc, char *argv[]) {
 
         if (guiState == guiStatePaused || guiState == guiStateCompleted) {
             if (undoRequested) {
-                if (guiState == guiStatePaused) {
+                if (guiState == guiStatePaused && keepChanged) {
                     clearSurface(surfaceDst, NULL);
                     wfcBlitObserved(wfc, surfaceSrc->pixels,
                         dstW, dstH, surfaceDst->pixels);
-
-                    keepChanged = false;
-                    wfcSetWhichObserved(wfc, dstW, dstH, keep);
-                } else if (guiState == guiStateCompleted) {
-                    wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
 
                     keepChanged = false;
                     wfcSetWhichObserved(wfc, dstW, dstH, keep);

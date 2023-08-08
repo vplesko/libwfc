@@ -44,6 +44,10 @@ bool isCtrlHeld(void) {
     return state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
 }
 
+void clearSurface(SDL_Surface *surface) {
+    SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 0, 0, 0));
+}
+
 void incZoom(int *zoom) {
     if ((*zoom) * 2 <= zoomMax) (*zoom) *= 2;
 }
@@ -93,7 +97,7 @@ SDL_Rect* renderRectDst(
     return rect;
 }
 
-SDL_Rect* renderRectCursor(
+SDL_Rect* pixelRectCursor(
     int zoom, int cursorSize, int srcW, int dstW, int dstH, SDL_Rect *rect) {
     SDL_Rect rectDst;
     renderRectDst(zoom, srcW, dstW, dstH, &rectDst);
@@ -119,10 +123,25 @@ SDL_Rect* renderRectCursor(
     pixelR = min_i(dstW, pixelR);
     pixelB = min_i(dstH, pixelB);
 
-    rect->x = rectDst.x + pixelL * zoom;
-    rect->y = rectDst.y + pixelT * zoom;
-    rect->w = (pixelR - pixelL) * zoom;
-    rect->h = (pixelB - pixelT) * zoom;
+    rect->x = pixelL;
+    rect->y = pixelT;
+    rect->w = pixelR - pixelL;
+    rect->h = pixelB - pixelT;
+
+    return rect;
+}
+
+SDL_Rect* renderRectCursor(
+    int zoom, int cursorSize, int srcW, int dstW, int dstH, SDL_Rect *rect) {
+    pixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, rect);
+
+    SDL_Rect rectDst;
+    renderRectDst(zoom, srcW, dstW, dstH, &rectDst);
+
+    rect->x = rectDst.x + rect->x * zoom;
+    rect->y = rectDst.y + rect->y * zoom;
+    rect->w = rect->w * zoom;
+    rect->h = rect->h * zoom;
 
     return rect;
 }
@@ -267,8 +286,7 @@ int main(int argc, char *argv[]) {
 
         if (guiState == guiStateRunning) {
             if (pauseToggled) {
-                SDL_FillRect(surfaceDst, NULL,
-                    SDL_MapRGBA(surfaceDst->format, 0, 0, 0, 0));
+                clearSurface(surfaceDst);
                 wfcBlitObserved(wfc, surfaceSrc->pixels,
                     args.dstW, args.dstH, surfaceDst->pixels);
 
@@ -315,7 +333,7 @@ int main(int argc, char *argv[]) {
 
         SDL_Rect rect;
 
-        SDL_FillRect(surfaceWin, NULL, SDL_MapRGB(surfaceWin->format, 0, 0, 0));
+        clearSurface(surfaceWin);
 
         SDL_BlitScaled(surfaceSrc, NULL, surfaceWin,
             renderRectSrc(zoom, srcW, srcH, args.dstH, &rect));

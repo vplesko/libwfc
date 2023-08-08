@@ -994,7 +994,7 @@ wfc_State* wfc_initEx(
 
     bool propagate = false;
 
-    if (keep) {
+    if (keep != NULL) {
         struct wfc__A3d_cu8 dstA =
             {state->dstD0, state->dstD1, state->bytesPerPixel, dst};
         struct wfc__A2d_b keepA = {state->dstD0, state->dstD1, keep};

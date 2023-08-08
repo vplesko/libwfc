@@ -9,14 +9,15 @@ struct WfcWrapper {
 int wfcInit(
     int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
-    int dstW, int dstH,
+    int dstW, int dstH, const unsigned char *dst,
+    bool *keep,
     struct WfcWrapper *wfc) {
     wfc->len = 0;
     wfc->cap = 50;
     wfc->states = malloc((size_t)wfc->cap * sizeof(*wfc->states));
 
-    struct wfc_State *state = wfc_init(n, options, bytesPerPixel,
-        srcW, srcH, src, dstW, dstH);
+    struct wfc_State *state = wfc_initEx(n, options, bytesPerPixel,
+        srcW, srcH, src, dstW, dstH, dst, NULL, keep);
     if (state == NULL) {
         free(wfc->states);
         wfc->states = NULL;

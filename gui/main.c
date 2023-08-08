@@ -255,7 +255,8 @@ int main(int argc, char *argv[]) {
     if (wfcInit(
             n, wfcOptions, bytesPerPixel,
             srcW, srcH, surfaceSrc->pixels,
-            dstW, dstH,
+            dstW, dstH, NULL,
+            NULL,
             &wfc) != 0) {
         fprintf(stderr, "WFC init failed.\n");
         ret = 1;

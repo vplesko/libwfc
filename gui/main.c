@@ -28,24 +28,33 @@ enum GuiState {
 const int screenW = 800, screenH = 600;
 const Uint32 ticksPerFrame = 1000 / 60;
 const int zoomMin = 1, zoomMax = 8;
-const int cursorSizeMin = 1, cursorSizeMax = 5;
+const int cursorSizeMin = 1, cursorSizeMax = 9;
 
 const char *instructions =
     "Controls:\n"
-    "\t+       - Zoom in\n"
-    "\t-       - Zoom out\n"
-    "\tCtrl +  - Increase cursor size\n"
-    "\tCtrl -  - Decrease cursor size\n"
-    "\tSpace   - Pause/unpause\n"
-    "\tEscape  - Quit";
+    "\t+            - Zoom in\n"
+    "\t-            - Zoom out\n"
+    "\tSpace        - Pause/unpause\n"
+    "\tCtrl +       - Increase cursor size\n"
+    "\tCtrl -       - Decrease cursor size\n"
+    "\tRight mouse  - Erase (when paused or completed)\n"
+    "\tEscape       - Quit";
 
 bool isCtrlHeld(void) {
     const Uint8 *state = SDL_GetKeyboardState(NULL);
     return state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
 }
 
-void clearSurface(SDL_Surface *surface) {
-    SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 0, 0, 0));
+bool isRightMouseButtonHeld(void) {
+    return SDL_GetMouseState(NULL, NULL) & SDL_BUTTON_RMASK;
+}
+
+bool isRectZeroSize(SDL_Rect rect) {
+    return rect.w == 0 || rect.h == 0;
+}
+
+void clearSurface(SDL_Surface *surface, SDL_Rect *rect) {
+    SDL_FillRect(surface, rect, SDL_MapRGB(surface->format, 0, 0, 0));
 }
 
 void incZoom(int *zoom) {
@@ -97,6 +106,7 @@ SDL_Rect* renderRectDst(
     return rect;
 }
 
+// @TODO allow single-row/col cursors
 SDL_Rect* pixelRectCursor(
     int zoom, int cursorSize, int srcW, int dstW, int dstH, SDL_Rect *rect) {
     SDL_Rect rectDst;
@@ -147,7 +157,7 @@ SDL_Rect* renderRectCursor(
 }
 
 void drawRect(SDL_Surface *surface, const SDL_Rect *rect, Uint32 color) {
-    if (rect->w == 0 || rect->h == 0) return;
+    if (isRectZeroSize(*rect)) return;
 
     SDL_Rect rects[] = {
         {rect->x, rect->y, rect->w, 1},
@@ -284,9 +294,19 @@ int main(int argc, char *argv[]) {
 
         // update
 
+        if (guiState == guiStatePaused || guiState == guiStateCompleted) {
+            if (isRightMouseButtonHeld()) {
+                SDL_Rect rect;
+                pixelRectCursor(zoom, cursorSize, srcW, args.dstW, args.dstH,
+                    &rect);
+
+                if (!isRectZeroSize(rect)) clearSurface(surfaceDst, &rect);
+            }
+        }
+
         if (guiState == guiStateRunning) {
             if (pauseToggled) {
-                clearSurface(surfaceDst);
+                clearSurface(surfaceDst, NULL);
                 wfcBlitObserved(wfc, surfaceSrc->pixels,
                     args.dstW, args.dstH, surfaceDst->pixels);
 
@@ -333,7 +353,7 @@ int main(int argc, char *argv[]) {
 
         SDL_Rect rect;
 
-        clearSurface(surfaceWin);
+        clearSurface(surfaceWin, NULL);
 
         SDL_BlitScaled(surfaceSrc, NULL, surfaceWin,
             renderRectSrc(zoom, srcW, srcH, args.dstH, &rect));
@@ -359,6 +379,7 @@ int main(int argc, char *argv[]) {
 
     if (args.pathOut != NULL) {
         if (wfcStatus(&wfc) == wfc_completed) {
+            wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
             if (writeOut(&args, bytesPerPixel, surfaceDst->pixels) != 0) {
                 ret = 1;
                 goto cleanup;

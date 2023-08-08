@@ -65,6 +65,8 @@ int wfcBacktrack(struct WfcWrapper *wfc) {
 void wfcBlit(
     const struct WfcWrapper wfc,
     const unsigned char *src, unsigned char *dst) {
+    assert(wfc.len > 0);
+
     int code = wfc_blit(wfc.states[wfc.len - 1], src, dst);
     assert(code == 0);
 }

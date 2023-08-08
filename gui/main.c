@@ -106,7 +106,6 @@ SDL_Rect* renderRectDst(
     return rect;
 }
 
-// @TODO allow single-row/col cursors
 SDL_Rect* pixelRectCursor(
     int zoom, int cursorSize, int srcW, int dstW, int dstH, SDL_Rect *rect) {
     SDL_Rect rectDst;
@@ -117,11 +116,6 @@ SDL_Rect* pixelRectCursor(
 
     int centerX = (mouseX - rectDst.x) / zoom;
     int centerY = (mouseY - rectDst.y) / zoom;
-    if (!between_i(centerX, 0, dstW - 1) ||
-        !between_i(centerY, 0, dstH - 1)) {
-        *rect = (SDL_Rect){0};
-        return rect;
-    }
 
     int pixelL = centerX - cursorSize / 2;
     int pixelT = centerY - cursorSize / 2;
@@ -135,8 +129,8 @@ SDL_Rect* pixelRectCursor(
 
     rect->x = pixelL;
     rect->y = pixelT;
-    rect->w = pixelR - pixelL;
-    rect->h = pixelB - pixelT;
+    rect->w = max_i(0, pixelR - pixelL);
+    rect->h = max_i(0, pixelB - pixelT);
 
     return rect;
 }

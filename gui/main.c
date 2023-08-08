@@ -40,6 +40,24 @@ const char *instructions =
     "\tRight mouse  - Erase (when paused or completed)\n"
     "\tEscape       - Quit";
 
+bool clearBools(int w, int h, bool *m, SDL_Rect rect) {
+    bool modified = false;
+
+    for (int j = 0; j < rect.h; ++j) {
+        for (int i = 0; i < rect.w; ++i) {
+            int x = rect.x + i, y = rect.y + j;
+            if (!between_i(x, 0, w - 1) || !between_i(y, 0, h - 1)) continue;
+
+            if (m[y * w + x]) {
+                m[y * w + x] = false;
+                modified = true;
+            }
+        }
+    }
+
+    return modified;
+}
+
 bool isCtrlHeld(void) {
     const Uint8 *state = SDL_GetKeyboardState(NULL);
     return state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
@@ -174,12 +192,14 @@ int main(int argc, char *argv[]) {
     SDL_Surface *surfaceSrc = NULL;
     SDL_Surface *surfaceDst = NULL;
     struct WfcWrapper wfc = {0};
+    bool *keep = NULL;
 
     struct Args args;
     if (parseArgs(argc, argv, &args, false) != 0) {
         ret = 1;
         goto cleanup;
     }
+    int n = args.n, dstW = args.dstW, dstH = args.dstH;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "%s\n", SDL_GetError());
@@ -225,7 +245,7 @@ int main(int argc, char *argv[]) {
     }
 
     surfaceDst = SDL_CreateRGBSurfaceWithFormat(0,
-        args.dstW, args.dstH, bytesPerPixel * 8, surfaceSrc->format->format);
+        dstW, dstH, bytesPerPixel * 8, surfaceSrc->format->format);
     assert(surfaceDst->format->palette == NULL);
     assert(!SDL_MUSTLOCK(surfaceDst));
 
@@ -233,18 +253,21 @@ int main(int argc, char *argv[]) {
     int wfcOptions = argsToWfcOptions(args);
 
     if (wfcInit(
-            args.n, wfcOptions, bytesPerPixel,
+            n, wfcOptions, bytesPerPixel,
             srcW, srcH, surfaceSrc->pixels,
-            args.dstW, args.dstH,
+            dstW, dstH,
             &wfc) != 0) {
         fprintf(stderr, "WFC init failed.\n");
         ret = 1;
         goto cleanup;
     }
 
+    keep = malloc(dstW * dstH * sizeof(*keep));
+
     fprintf(stdout, "%s\n", instructions);
 
     enum GuiState guiState = guiStateRunning;
+    bool keepChanged = false;
     int zoom = zoomMin;
     int cursorSize = cursorSizeMin;
     updateWindowTitle(guiState, zoom, window);
@@ -289,12 +312,17 @@ int main(int argc, char *argv[]) {
         // update
 
         if (guiState == guiStatePaused || guiState == guiStateCompleted) {
-            if (isRightMouseButtonHeld()) {
-                SDL_Rect rect;
-                pixelRectCursor(zoom, cursorSize, srcW, args.dstW, args.dstH,
-                    &rect);
+            SDL_Rect rect;
+            pixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &rect);
 
-                if (!isRectZeroSize(rect)) clearSurface(surfaceDst, &rect);
+            if (!isRectZeroSize(rect) && isRightMouseButtonHeld()) {
+                if (clearBools(dstW, dstH, keep, rect)) {
+                    keepChanged = true;
+
+                    clearSurface(surfaceDst, &rect);
+
+                    guiState = guiStatePaused;
+                }
             }
         }
 
@@ -302,7 +330,10 @@ int main(int argc, char *argv[]) {
             if (pauseToggled) {
                 clearSurface(surfaceDst, NULL);
                 wfcBlitObserved(wfc, surfaceSrc->pixels,
-                    args.dstW, args.dstH, surfaceDst->pixels);
+                    dstW, dstH, surfaceDst->pixels);
+
+                keepChanged = false;
+                wfcSetWhichObserved(wfc, dstW, dstH, keep);
 
                 guiState = guiStatePaused;
             } else {
@@ -315,13 +346,16 @@ int main(int argc, char *argv[]) {
                     }
                     fprintf(stdout, "WFC is backtracking.\n");
                     wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                        args.dstW, args.dstH, surfaceDst->pixels);
+                        dstW, dstH, surfaceDst->pixels);
                 } else if (status == 0) {
                     wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                        args.dstW, args.dstH, surfaceDst->pixels);
+                        dstW, dstH, surfaceDst->pixels);
                 } else if (status == wfc_completed) {
                     wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
                     fprintf(stdout, "WFC completed.\n");
+
+                    keepChanged = false;
+                    wfcSetWhichObserved(wfc, dstW, dstH, keep);
 
                     guiState = guiStateCompleted;
                 } else {
@@ -331,7 +365,10 @@ int main(int argc, char *argv[]) {
         } else if (guiState == guiStatePaused) {
             if (pauseToggled) {
                 wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                    args.dstW, args.dstH, surfaceDst->pixels);
+                    dstW, dstH, surfaceDst->pixels);
+
+                // @TODO if keepChanged ...
+                (void)keepChanged;
 
                 guiState = guiStateRunning;
             }
@@ -350,14 +387,14 @@ int main(int argc, char *argv[]) {
         clearSurface(surfaceWin, NULL);
 
         SDL_BlitScaled(surfaceSrc, NULL, surfaceWin,
-            renderRectSrc(zoom, srcW, srcH, args.dstH, &rect));
+            renderRectSrc(zoom, srcW, srcH, dstH, &rect));
         SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
-            renderRectDst(zoom, srcW, args.dstW, args.dstH, &rect));
+            renderRectDst(zoom, srcW, dstW, dstH, &rect));
 
         if (guiState == guiStatePaused || guiState == guiStateCompleted) {
             drawRect(surfaceWin,
                 renderRectCursor(
-                    zoom, cursorSize, srcW, args.dstW, args.dstH, &rect),
+                    zoom, cursorSize, srcW, dstW, dstH, &rect),
                 SDL_MapRGB(surfaceWin->format, 0x7f, 0x7f, 0x7f));
         }
 
@@ -384,6 +421,7 @@ int main(int argc, char *argv[]) {
     }
 
 cleanup:
+    if (keep != NULL) free(keep);
     wfcFree(wfc);
     if (surfaceDst != NULL) SDL_FreeSurface(surfaceDst);
     if (surfaceSrc != NULL) SDL_FreeSurface(surfaceSrc);

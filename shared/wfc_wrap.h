@@ -107,6 +107,30 @@ void wfcBlitAveraged(
     }
 }
 
+bool wfcIsObserved(const struct WfcWrapper wfc, int x, int y, int *patt) {
+    assert(wfc.len > 0);
+
+    const wfc_State *state = wfc.states[wfc.len - 1];
+    int pattCnt = wfc_patternCount(state);
+
+    bool foundSingle = false;
+    for (int p = 0; p < pattCnt; ++p) {
+        int avail = wfc_patternAvailable(state, p, x, y);
+        assert(avail >= 0);
+        if (avail) {
+            if (foundSingle) {
+                foundSingle = false;
+                break;
+            }
+
+            foundSingle = true;
+            if (patt != NULL) *patt = p;
+        }
+    }
+
+    return foundSingle;
+}
+
 void wfcBlitObserved(
     const struct WfcWrapper wfc,
     const unsigned char *src,
@@ -115,33 +139,26 @@ void wfcBlitObserved(
 
     int bytesPerPixel = wfc.bytesPerPixel;
     const wfc_State *state = wfc.states[wfc.len - 1];
-    int pattCnt = wfc_patternCount(state);
 
     for (int j = 0; j < dstH; ++j) {
         for (int i = 0; i < dstW; ++i) {
-            bool foundSingle = false;
             int patt;
-            for (int p = 0; p < pattCnt; ++p) {
-                int avail = wfc_patternAvailable(state, p, i, j);
-                assert(avail >= 0);
-                if (avail) {
-                    if (foundSingle) {
-                        foundSingle = false;
-                        break;
-                    }
-
-                    foundSingle = true;
-                    patt = p;
-                }
-            }
-
-            if (!foundSingle) continue;
+            if (!wfcIsObserved(wfc, i, j, &patt)) continue;
 
             const unsigned char* px = wfc_pixelToBlit(state, patt, i, j, src);
             assert(px != NULL);
 
             memcpy(&dst[j * dstW * bytesPerPixel + i * bytesPerPixel], px,
                 bytesPerPixel);
+        }
+    }
+}
+
+void wfcSetWhichObserved(
+    const struct WfcWrapper wfc, int dstW, int dstH, bool *dst) {
+    for (int j = 0; j < dstH; ++j) {
+        for (int i = 0; i < dstW; ++i) {
+            dst[j * dstW + i] = wfcIsObserved(wfc, i, j, NULL);
         }
     }
 }

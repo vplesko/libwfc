@@ -38,7 +38,8 @@ const char *instructions =
     "\tCtrl +       - Increase cursor size\n"
     "\tCtrl -       - Decrease cursor size\n"
     "\tRight mouse  - Erase (when paused or completed)\n"
-    "\tEscape       - Quit";
+    "\tU            - Undo erasure\n"
+    "\tEscape       - Quit\n";
 
 bool clearBools(int w, int h, bool *m, SDL_Rect rect) {
     bool modified = false;
@@ -278,6 +279,7 @@ int main(int argc, char *argv[]) {
         Uint32 ticksPrev = SDL_GetTicks();
 
         bool pauseToggled = false;
+        bool undoRequested = false;
 
         // input
 
@@ -306,6 +308,8 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (e.key.keysym.sym == SDLK_SPACE) {
                     pauseToggled = true;
+                } else if (e.key.keysym.sym == SDLK_u) {
+                    undoRequested = true;
                 }
             }
         }
@@ -313,16 +317,32 @@ int main(int argc, char *argv[]) {
         // update
 
         if (guiState == guiStatePaused || guiState == guiStateCompleted) {
-            SDL_Rect rect;
-            pixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &rect);
+            if (undoRequested) {
+                if (guiState == guiStatePaused) {
+                    clearSurface(surfaceDst, NULL);
+                    wfcBlitObserved(wfc, surfaceSrc->pixels,
+                        dstW, dstH, surfaceDst->pixels);
 
-            if (!isRectZeroSize(rect) && isRightMouseButtonHeld()) {
-                if (clearBools(dstW, dstH, keep, rect)) {
-                    keepChanged = true;
+                    keepChanged = false;
+                    wfcSetWhichObserved(wfc, dstW, dstH, keep);
+                } else if (guiState == guiStateCompleted) {
+                    wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
 
-                    clearSurface(surfaceDst, &rect);
+                    keepChanged = false;
+                    wfcSetWhichObserved(wfc, dstW, dstH, keep);
+                }
+            } else {
+                SDL_Rect rect;
+                pixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &rect);
 
-                    guiState = guiStatePaused;
+                if (!isRectZeroSize(rect) && isRightMouseButtonHeld()) {
+                    if (clearBools(dstW, dstH, keep, rect)) {
+                        keepChanged = true;
+
+                        clearSurface(surfaceDst, &rect);
+
+                        guiState = guiStatePaused;
+                    }
                 }
             }
         }

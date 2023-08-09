@@ -128,6 +128,10 @@ You can also define UNARGS_ASSERT(x) if you don't want unargs to use C's assert.
 
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
     // Call was successful.
     unargs_ok = 0,
@@ -136,10 +140,6 @@ enum {
     // There was an error in parameters.
     unargs_err_params = -2
 };
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 enum unargs__Type {
     unargs__typeBool,

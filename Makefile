@@ -16,7 +16,7 @@ else
 endif
 
 LIB_HDRS = $(wildcard external/lib/*.h)
-HDRS = $(wildcard *.h shared/*.h) $(LIB_HDRS)
+HDRS = $(wildcard *.h shared/lib/*.h) $(LIB_HDRS)
 CLI_HDRS = $(wildcard cli/*.h)
 GUI_HDRS = $(wildcard gui/*.h)
 TEST_HDRS = $(wildcard test/*.h)

@@ -22,7 +22,8 @@ float customRand(void *ctx) {
     return (float)rand() / ((float)RAND_MAX + 1.0f);
 }
 
-// not multi translation unit testing, but piggybacking on it
+// In addition to multi translation unit testing, this test also tests that
+// overriding these macros works correctly.
 #define WFC_ASSERT(ctx, cond) \
     do { \
         if (ctx != NULL) ++((struct Context*)ctx)->x; \

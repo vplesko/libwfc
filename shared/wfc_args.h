@@ -88,7 +88,7 @@ int parseArgs(int argc, char * const *argv, struct Args *args, bool outReq) {
         ),
         unargs_bool(
             "edge-v",
-            "Fixes upper and lower edges"
+            "Fixes top and bottom edges"
             " so that patterns may not wrap around them.",
             &args->edgeV
         ),

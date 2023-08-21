@@ -8,7 +8,7 @@
 
 #include "testing.h"
 
-// tests functions are static to make it a compile error if any are not called
+// Test functions are static to make it a compile error if any are not called.
 static int testBasicN1(void) {
     enum { n = 1, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
@@ -410,6 +410,7 @@ static int testPattern(void) {
     return 0;
 }
 
+// @TODO This test is flaky, fix that.
 static int testHVEdgeFixPattern(void) {
     enum { n = 2, srcW = 4, srcH = 4, dstW = 32, dstH = 32 };
 

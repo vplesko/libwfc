@@ -1,4 +1,5 @@
-// not part of C++ testing, but make sure all works correctly with no asserts
+// In addition to testing that the library compiles in C++, this test all tests
+// that all works correctly when WFC_ASSERT is replaced with nothing.
 #define WFC_ASSERT(ctx, cond)
 
 #define WFC_IMPLEMENTATION

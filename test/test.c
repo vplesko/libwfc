@@ -921,6 +921,15 @@ static int testCallerError(void) {
         n, 0, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH);
+    assert(state != NULL);
+
+    wfc_State *stateCompleted = wfc_init(
+        n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH);
+    assert(stateCompleted != NULL);
+    while (!wfc_step(stateCompleted));
+    assert(wfc_status(stateCompleted) == wfc_completed);
 
     if (wfc_generate(
         -1, 0, sizeof(*src),
@@ -1015,12 +1024,26 @@ static int testCallerError(void) {
         ret = -1;
         goto cleanup;
     }
-    if (wfc_blit(state, NULL, (unsigned char*)&dst) != wfc_callerError) {
+    if (wfc_blit(
+            state,
+            (unsigned char*)&src,
+            (unsigned char*)&dst) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_blit(state, (unsigned char*)&src, NULL) != wfc_callerError) {
+    if (wfc_blit(
+            stateCompleted,
+            NULL,
+            (unsigned char*)&dst) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+    if (wfc_blit(
+            stateCompleted,
+            (unsigned char*)&src,
+            NULL) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
@@ -1090,6 +1113,7 @@ static int testCallerError(void) {
     }
 
 cleanup:
+    wfc_free(stateCompleted);
     wfc_free(state);
 
     return ret;

@@ -1052,7 +1052,10 @@ int wfc_step(wfc_State *state) {
 int wfc_blit(
     const wfc_State *state,
     const unsigned char *src, unsigned char *dst) {
-    if (state == NULL || src == NULL || dst == NULL) return wfc_callerError;
+    if (state == NULL || state->status != wfc_completed ||
+        src == NULL || dst == NULL) {
+        return wfc_callerError;
+    }
 
     struct wfc__A3d_cu8 srcA =
         {state->srcD0, state->srcD1, state->bytesPerPixel, src};

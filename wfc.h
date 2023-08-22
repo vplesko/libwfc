@@ -75,7 +75,7 @@ your own backtracking behaviour.
 
 WFC works by first gathering unique NxN patterns from the input image. You can
 get the number of patterns gathered with wfc_patternCount(). Use
-wfc_patternAvailable() to check if a pattern is still present at a particular
+wfc_patternPresent() to check if a pattern is still present at a particular
 point. Use wfc_pixelToBlit() to get a pointer to pixel bytes corresponding to a
 particular pattern.
 
@@ -442,7 +442,7 @@ int wfc_patternCount(const wfc_State *state);
  * \li wfc_callerError (a negative value) if there was an error in the
  * arguments.
 */
-int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
+int wfc_patternPresent(const wfc_State *state, int patt, int x, int y);
 
 /**
  * Returns a pointer to the bytes of the pixel value that would be blitted to a
@@ -546,12 +546,13 @@ int wfc__rand_i(void *ctx, int n) {
     return (int)(WFC_RAND(ctx) * (float)n);
 }
 
-// multi-dimensional array utility
-
+// Wraps ind into range [0, sz).
 int wfc__indWrap(int ind, int sz) {
     if (ind >= 0) return ind % sz;
     return sz + ind % sz;
 }
+
+// multi-dimensional array utility
 
 #define WFC__A2D_DEF(type, abbrv) \
     struct wfc__A2d_##abbrv { \
@@ -624,8 +625,8 @@ void wfc__indToCoords2d(int d1, int ind, int *c0, int *c1) {
     ind -= c0_ * d1;
     int c1_ = ind;
 
-    *c0 = c0_;
-    *c1 = c1_;
+    if (c0 != NULL) *c0 = c0_;
+    if (c1 != NULL) *c1 = c1_;
 }
 
 // Bools are not used in some places due to performance concerns.
@@ -638,6 +639,7 @@ WFC__A4D_DEF(uint8_t, u8);
 
 // WFC code
 
+// H and V are used in public API, prefer to use C0/1/... in private code.
 enum {
     wfc__optFlipC0 = wfc_optFlipV,
     wfc__optFlipC1 = wfc_optFlipH,
@@ -645,23 +647,29 @@ enum {
     wfc__optEdgeFixC1 = wfc_optEdgeFixH
 };
 
-// @TODO Some option combinations are equivalent, so work in gathering patterns
-// gets duplicated. Optimize by removing that work duplication.
+// Transformations for patterns are encoded in a bitmask.
+// @TODO Some combinations are equivalent, so work in gathering patterns gets
+// duplicated. Optimize by removing that work duplication.
 enum {
     wfc__tfFlipC0 = 1 << 0,
     wfc__tfFlipC1 = 1 << 1,
     wfc__tfRot90 = 1 << 2,
     wfc__tfRot180 = 1 << 3,
+    // Rotating by 270 is a combination of rotation by 90 and 180.
     wfc__tfRot270 = wfc__tfRot90 | wfc__tfRot180,
 
     wfc__tfCnt = 1 << 4
 };
 
 struct wfc__Pattern {
+    // Coordinates of the top-left pixel in the source image.
     int c0, c1;
+    // Bitmask for transformation done to produce this pattern.
     int tf;
 
-    int edgeC0Lo, edgeC0Hi, edgeC1Lo, edgeC1Hi;
+    // Whether this pattern may be placed along a particular edge in output.
+    bool edgeC0Lo, edgeC0Hi, edgeC1Lo, edgeC1Hi;
+    // How often this pattern appeared in different places in the source image.
     int freq;
 };
 
@@ -672,12 +680,13 @@ void wfc__coordsPattToSrc(
     int tfC0 = pC0;
     int tfC1 = pC1;
 
-    // map from patt space to src space
+    // map from pattern space to source space
     {
         if (patt.tf & wfc__tfFlipC0) tfC0 = n - 1 - tfC0;
         if (patt.tf & wfc__tfFlipC1) tfC1 = n - 1 - tfC1;
 
-        // rot270 is rot90 plus rot180 (both in bitmask and as transformation)
+        // Rot-270 is rot-90 plus rot-180
+        // (both in bitmask and as transformation).
         if (patt.tf & wfc__tfRot90) {
             int tmpC0 = tfC0;
             int tmpC1 = tfC1;
@@ -698,16 +707,20 @@ void wfc__coordsPattToSrc(
     if (sC1 != NULL) *sC1 = sC1_;
 }
 
-void wfc__fillPattEdges(int n, int sD0, int sD1,
+// Fill in edge info in a pattern.
+void wfc__fillPattEdges(
+    int n, int sD0, int sD1,
     struct wfc__Pattern *patt) {
     bool edgeC0Lo = patt->c0 == 0;
     bool edgeC0Hi = patt->c0 + n == sD0;
     bool edgeC1Lo = patt->c1 == 0;
     bool edgeC1Hi = patt->c1 + n == sD1;
 
-    // map from src space to patt space
+    // map from source space to pattern space
+    // Note that this is the inverse of what is done in wfc__coordsPattToSrc().
     {
-        // rot270 is rot90 plus rot180 (both in bitmask and as transformation)
+        // Rot-270 is rot-90 plus rot-180
+        // (both in bitmask and as transformation).
         if (patt->tf & wfc__tfRot180) {
             bool tmpC0Lo = edgeC0Lo;
             bool tmpC0Hi = edgeC0Hi;
@@ -749,6 +762,10 @@ void wfc__fillPattEdges(int n, int sD0, int sD1,
     patt->edgeC1Hi = edgeC1Hi;
 }
 
+// Maps from destination coordinates to wave coordinates.
+// When edges are fixed, wave may be shorter and/or narrower than destination,
+// so multiple destination points will map to the same wave point,
+// but with different offsets.
 void wfc__coordsDstToWave(
     int dC0, int dC1,
     const struct wfc__A3d_u8 wave,
@@ -766,16 +783,25 @@ void wfc__coordsDstToWave(
     if (offC1 != NULL) *offC1 = offC1_;
 }
 
+// Returns the number of the highest possible number of unique patterns.
 int wfc__pattCombCnt(int d0, int d1) {
     return d0 * d1 * wfc__tfCnt;
 }
 
+// Fills in a pattern based on the pattern index.
+// Pattern index encodes its position in the destination
+// along with the transformations to be used to create it.
+// This function maps from index to actual pattern data.
+// Only sets pattern coordinates and transformations.
 void wfc__indToPattComb(int d1, int ind, struct wfc__Pattern *patt) {
     wfc__indToCoords2d(d1, ind / wfc__tfCnt, &patt->c0, &patt->c1);
     patt->tf = ind % wfc__tfCnt;
 }
 
-bool wfc__satisfiesOptions(int n, int options, int sD0, int sD1,
+// Returns whether the pattern used only allowed transformations
+// and was picked from an allowed position in the source.
+bool wfc__satisfiesOptions(
+    int n, int options, int sD0, int sD1,
     struct wfc__Pattern patt) {
     if ((patt.tf & wfc__tfFlipC0) && !(options & wfc__optFlipC0)) return false;
     if ((patt.tf & wfc__tfFlipC1) && !(options & wfc__optFlipC1)) return false;
@@ -785,12 +811,14 @@ bool wfc__satisfiesOptions(int n, int options, int sD0, int sD1,
         return false;
     }
 
+    // When an edge is fixed, patterns are not allowed to wrap around it.
     if ((options & wfc__optEdgeFixC0) && patt.c0 + n > sD0) return false;
     if ((options & wfc__optEdgeFixC1) && patt.c1 + n > sD1) return false;
 
     return true;
 }
 
+// Returns whether two patterns contain the same underlying subimage.
 bool wfc__patternsEq(
     int n, const struct wfc__A3d_cu8 src,
     struct wfc__Pattern pattA, struct wfc__Pattern pattB) {
@@ -823,6 +851,9 @@ struct wfc__Pattern* wfc__gatherPatterns(
 
     struct wfc__Pattern *patts = NULL;
 
+    // First, determine the number of unique patterns.
+    // This is done by iterating through all patterns
+    // and then through all patterns before that one, comparing the two.
     int pattCnt = 0;
     for (int i = 0; i < wfc__pattCombCnt(src.d03, src.d13); ++i) {
         struct wfc__Pattern patt = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -845,6 +876,11 @@ struct wfc__Pattern* wfc__gatherPatterns(
         if (!seenBefore) ++pattCnt;
     }
 
+    // Now that we know the number of unique patterns,
+    // we can allocate an array for them and start collecting them.
+    // Collection still works by iterating through all patterns
+    // and then through all patterns before that one, comparing the two.
+    // If no previous pattern is equal, collect the new pattern.
     patts = (struct wfc__Pattern*)WFC_MALLOC(
         ctx, (size_t)pattCnt * sizeof(*patts));
     int pattInd = 0;
@@ -855,12 +891,17 @@ struct wfc__Pattern* wfc__gatherPatterns(
             continue;
         }
 
+        // We now need to fill in all pattern fields.
         wfc__fillPattEdges(n, src.d03, src.d13, &patt);
         patt.freq = 1;
 
         bool seenBefore = false;
         for (int i1 = 0; !seenBefore && i1 < pattInd; ++i1) {
             if (wfc__patternsEq(n, src, patt, patts[i1])) {
+                // If the patterns are equal, we know this is NOT a new pattern.
+                // However, it may have been placed along a different edge,
+                // which means the old pattern may also be placed along it.
+                // So, update the edge info of the old pattern.
                 patts[i1].edgeC0Lo |= patt.edgeC0Lo;
                 patts[i1].edgeC0Hi |= patt.edgeC0Hi;
                 patts[i1].edgeC1Lo |= patt.edgeC1Lo;
@@ -880,23 +921,27 @@ struct wfc__Pattern* wfc__gatherPatterns(
     return patts;
 }
 
+// Returns whether the subimage overlap between patterns A and B match up,
+// where pattern B is at the given offset from pattern A.
 bool wfc__overlapMatches(
     void *ctx,
     int n, const struct wfc__A3d_cu8 src,
-    int dC0, int dC1,
+    int offC0, int offC1,
     struct wfc__Pattern pattA, struct wfc__Pattern pattB) {
     (void)ctx;
 
-    WFC_ASSERT(ctx, abs(dC0) < n);
-    WFC_ASSERT(ctx, abs(dC1) < n);
+    WFC_ASSERT(ctx, abs(offC0) < n);
+    WFC_ASSERT(ctx, abs(offC1) < n);
 
-    int overlapD0 = n - abs(dC0);
-    int overlapD1 = n - abs(dC1);
+    // Sizes of the overlap area.
+    int overlapD0 = n - abs(offC0);
+    int overlapD1 = n - abs(offC1);
 
-    int overlapPAC0 = dC0 > 0 ? dC0 : 0;
-    int overlapPAC1 = dC1 > 0 ? dC1 : 0;
-    int overlapPBC0 = dC0 > 0 ? 0 : abs(dC0);
-    int overlapPBC1 = dC1 > 0 ? 0 : abs(dC1);
+    // Coordinates of the overlap area in pattern A and pattern B spaces.
+    int overlapPAC0 = offC0 > 0 ? offC0 : 0;
+    int overlapPAC1 = offC1 > 0 ? offC1 : 0;
+    int overlapPBC0 = offC0 > 0 ? 0 : abs(offC0);
+    int overlapPBC1 = offC1 > 0 ? 0 : abs(offC1);
 
     for (int i = 0; i < overlapD0; ++i) {
         for (int j = 0; j < overlapD1; ++j) {
@@ -935,13 +980,13 @@ struct wfc__A4d_u8 wfc__calcOverlaps(
     overlaps.d34 = pattCnt;
     overlaps.a = (uint8_t*)WFC_MALLOC(ctx, WFC__A4D_SIZE(overlaps));
 
-    for (int dC0 = -(n - 1); dC0 <= n - 1; ++dC0) {
-        for (int dC1 = -(n - 1); dC1 <= n - 1; ++dC1) {
+    for (int offC0 = -(n - 1); offC0 <= n - 1; ++offC0) {
+        for (int offC1 = -(n - 1); offC1 <= n - 1; ++offC1) {
             for (int i = 0; i < pattCnt; ++i) {
                 for (int j = 0; j < pattCnt; ++j) {
                     bool overlap = wfc__overlapMatches(ctx, n, src,
-                        dC0, dC1, patts[i], patts[j]);
-                    WFC__A4D_GET(overlaps, dC0 + n - 1, dC1 + n - 1, i, j) =
+                        offC0, offC1, patts[i], patts[j]);
+                    WFC__A4D_GET(overlaps, offC0 + n - 1, offC1 + n - 1, i, j) =
                         overlap ? 1 : 0;
                 }
             }
@@ -1046,17 +1091,17 @@ void wfc__calcEntropies(
     for (int c0 = 0; c0 < wave.d03; ++c0) {
         for (int c1 = 0; c1 < wave.d13; ++c1) {
             int totalFreq = 0;
-            int availPatts = 0;
+            int presentPatts = 0;
             for (int p = 0; p < wave.d23; ++p) {
                 if (WFC__A3D_GET(wave, c0, c1, p)) {
                     totalFreq += patts[p].freq;
-                    ++availPatts;
+                    ++presentPatts;
                 }
             }
 
             float entropy = 0.0f;
-            // check is here to ensure entropy of observed points becomes 0
-            if (availPatts > 1) {
+            // If is here to ensure entropy of observed points is exactly 0.
+            if (presentPatts > 1) {
                 for (int p = 0; p < wave.d23; ++p) {
                     if (WFC__A3D_GET(wave, c0, c1, p)) {
                         float prob = (float)patts[p].freq / (float)totalFreq;
@@ -1076,9 +1121,10 @@ void wfc__observeOne(
     const struct wfc__A2d_f entropies,
     struct wfc__A3d_u8 wave, int *obsC0, int *obsC1) {
     float smallest = 0;
+    // The number of different wave points tied for the smallest entropy.
     int smallestCnt = 0;
     for (int i = 0; i < WFC__A2D_LEN(entropies); ++i) {
-        // skip observed points
+        // Skip observed points.
         if (entropies.a[i] == 0.0f) continue;
 
         if (smallestCnt > 0 && wfc__approxEq_f(entropies.a[i], smallest)) {
@@ -1092,7 +1138,9 @@ void wfc__observeOne(
     int chosenC0, chosenC1;
     {
         int chosenPnt = 0;
+        // Pick which point tied for the lowest entropy to observe.
         int chosenSmallestPnt = wfc__rand_i(ctx, smallestCnt);
+        // Iterate through points until we get to the one we decided to observe.
         for (int i = 0; i < WFC__A2D_LEN(entropies); ++i) {
             if (wfc__approxEq_f(entropies.a[i], smallest)) {
                 chosenPnt = i;
@@ -1103,6 +1151,8 @@ void wfc__observeOne(
         wfc__indToCoords2d(entropies.d12, chosenPnt, &chosenC0, &chosenC1);
     }
 
+    // Now pick a pattern to collapse the chosen point into.
+    // Picks based on pattern frequencies as weights.
     int chosenPatt = 0;
     {
         int totalFreq = 0;
@@ -1132,59 +1182,73 @@ void wfc__observeOne(
     WFC__A3D_GET(wave, chosenC0, chosenC1, chosenPatt) = 1;
 }
 
-bool wfc__propagateOntoDelta(
-    int n, int nC0, int nC1, int dC0, int dC1,
+// Propagate constraints from a recently modified point
+// onto neighbouring one at a particular offset.
+// Returns whether the neighbouring point was modified.
+bool wfc__propagateOntoOffset(
+    int n, int c0, int c1, int offC0, int offC1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
-    const int c0 = wfc__indWrap(nC0 + dC0, wave.d03);
-    const int c1 = wfc__indWrap(nC1 + dC1, wave.d13);
+    const int nC0 = wfc__indWrap(c0 + offC0, wave.d03);
+    const int nC1 = wfc__indWrap(c1 + offC1, wave.d13);
     const int pattCnt = wave.d23;
 
-    int oldAvailPattCnt = 0;
+    // We will compare the old and new pattern count at the neighbouring point
+    // to know whether we modified it.
+    int oldPresentPattCnt = 0;
     for (int p = 0; p < pattCnt; ++p) {
-        if (WFC__A3D_GET(wave, c0, c1, p)) ++oldAvailPattCnt;
+        if (WFC__A3D_GET(wave, nC0, nC1, p)) ++oldPresentPattCnt;
     }
 
+    // For each pattern at the neighbouring point
+    // figure out whether it can be kept,
+    // which is the case if there is a pattern at starting point
+    // whose overlap matches.
     for (int p = 0; p < pattCnt; ++p) {
-        if (!WFC__A3D_GET(wave, c0, c1, p)) continue;
+        if (!WFC__A3D_GET(wave, nC0, nC1, p)) continue;
 
+        // This is a very nested and hot loop in the code,
+        // so a few optimizations were made.
+        // Do NOT use logical operators or breaks inside it
+        // without verifying the change with benchmarks.
         uint8_t total = 0;
         for (int pN = 0; pN < pattCnt; ++pN) {
-            total |= WFC__A3D_GET(wave, nC0, nC1, pN) &
-                WFC__A4D_GET(overlaps, -dC0 + n - 1, -dC1 + n - 1, p, pN);
+            total |= WFC__A3D_GET(wave, c0, c1, pN) &
+                WFC__A4D_GET(overlaps, -offC0 + n - 1, -offC1 + n - 1, p, pN);
         }
 
-        WFC__A3D_GET(wave, c0, c1, p) = total;
+        WFC__A3D_GET(wave, nC0, nC1, p) = total;
     }
 
-    int newAvailPattCnt = 0;
+    int newPresentPattCnt = 0;
     for (int p = 0; p < pattCnt; ++p) {
-        if (WFC__A3D_GET(wave, c0, c1, p)) ++newAvailPattCnt;
+        if (WFC__A3D_GET(wave, nC0, nC1, p)) ++newPresentPattCnt;
     }
 
-    return oldAvailPattCnt != newAvailPattCnt;
+    return oldPresentPattCnt != newPresentPattCnt;
 }
 
 bool wfc__propagateOntoNeighbours(
     int n, int options,
-    int nC0, int nC1,
+    int c0, int c1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave) {
     bool modified = false;
 
-    for (int dC0 = -(n - 1); dC0 <= n - 1; ++dC0) {
-        for (int dC1 = -(n - 1); dC1 <= n - 1; ++dC1) {
+    for (int offC0 = -(n - 1); offC0 <= n - 1; ++offC0) {
+        for (int offC1 = -(n - 1); offC1 <= n - 1; ++offC1) {
+            // Constraints are not propagated along fixed edges.
             if (((options & wfc__optEdgeFixC0) &&
-                    (nC0 + dC0 < 0 || nC0 + dC0 >= wave.d03)) ||
+                    (c0 + offC0 < 0 || c0 + offC0 >= wave.d03)) ||
                 ((options & wfc__optEdgeFixC1) &&
-                    (nC1 + dC1 < 0 || nC1 + dC1 >= wave.d13))) {
+                    (c1 + offC1 < 0 || c1 + offC1 >= wave.d13))) {
                 continue;
             }
 
-            if (wfc__propagateOntoDelta(n, nC0, nC1, dC0, dC1,
+            if (wfc__propagateOntoOffset(n, c0, c1, offC0, offC1,
                     overlaps, wave)) {
-                WFC__A2D_GET_WRAP(ripple, nC0 + dC0, nC1 + dC1) = 1;
+                WFC__A2D_GET_WRAP(ripple, c0 + offC0, c1 + offC1) = 1;
                 modified = true;
             }
         }
@@ -1193,6 +1257,10 @@ bool wfc__propagateOntoNeighbours(
     return modified;
 }
 
+// Constraints only need to be propagated from recently modified points.
+// As additional wave points are constrained,
+// ripple will get set at their coordinate
+// and cause the propagation to keep going.
 void wfc__propagateFromRipple(
     int n, int options,
     const struct wfc__A4d_u8 overlaps,
@@ -1266,13 +1334,24 @@ int wfc__calcStatus(const struct wfc__A3d_u8 wave) {
 
 struct wfc_State {
     int status;
+    // User context.
     void *ctx;
     int n, options, bytesPerPixel;
     int srcD0, srcD1, dstD0, dstD1;
+    // Patterns collected from source.
     struct wfc__Pattern *patts;
+    // Whether, at a particual offset (first two coordinates),
+    // two patterns (second two coordinates)
+    // have matching subimage pixel values.
     struct wfc__A4d_u8 overlaps;
+    // Whether, for each point (first two coordinates),
+    // a particular pattern (last coordinate)
+    // is still present.
     struct wfc__A3d_u8 wave;
+    // Allocated once and reused when new entropy values are calculated.
     struct wfc__A2d_f entropies;
+    // Array of bools that tells which wave points were recently modified.
+    // Allocated once and reused in all propagation calls.
     struct wfc__A2d_u8 ripple;
 };
 
@@ -1326,6 +1405,7 @@ wfc_State* wfc_init(
     );
 }
 
+// All allocations happen during initialization.
 wfc_State* wfc_initEx(
     int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
@@ -1534,7 +1614,7 @@ int wfc_patternCount(const wfc_State *state) {
     return state->wave.d23;
 }
 
-int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
+int wfc_patternPresent(const wfc_State *state, int patt, int x, int y) {
     if (state == NULL ||
         patt < 0 || patt >= state->wave.d23 ||
         x < 0 || x >= state->dstD1 ||
@@ -1542,6 +1622,11 @@ int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y) {
         return wfc_callerError;
     }
 
+    // x and y are only needed when some edges are fixed
+    // and wave is smaller than destination.
+    // wfc__coordsDstToWave handles all of that.
+    // In that case, a different wave point
+    // may contain which patterns are present for multiple destination points.
     int wC0, wC1;
     wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
 
@@ -1562,6 +1647,9 @@ const unsigned char* wfc_pixelToBlit(
     struct wfc__A3d_cu8 srcA =
         {state->srcD0, state->srcD1, state->bytesPerPixel, src};
 
+    // Similar case as in wfc_patternPresent(),
+    // except here we care about the offsets
+    // which are also the pattern-space coordinates of the pixel.
     int pC0, pC1;
     wfc__coordsDstToWave(y, x, state->wave, NULL, NULL, &pC0, &pC1);
 

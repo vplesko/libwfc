@@ -1056,27 +1056,27 @@ static int testCallerError(void) {
         goto cleanup;
     }
 
-    if (wfc_patternAvailable(NULL, 0, 0, 0) != wfc_callerError) {
+    if (wfc_patternPresent(NULL, 0, 0, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_patternAvailable(state, -1, 0, 0) != wfc_callerError) {
+    if (wfc_patternPresent(state, -1, 0, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_patternAvailable(state, 0, -1, 0) != wfc_callerError) {
+    if (wfc_patternPresent(state, 0, -1, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_patternAvailable(state, 0, dstW + 1, 0) != wfc_callerError) {
+    if (wfc_patternPresent(state, 0, dstW + 1, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_patternAvailable(state, 0, 0, dstH + 1) != wfc_callerError) {
+    if (wfc_patternPresent(state, 0, 0, dstH + 1) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;

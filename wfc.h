@@ -22,6 +22,76 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/*
+This is a single-header library for the Wave Function Collapse algorithm (WFC).
+WFC accepts a sample image, analyzes it, and generates a larger image that
+resembles the input. It is a procedural image generation algorithm.
+
+The easiest way to make use of this code is to use the provided CLI and GUI. If
+you want to use the library itself, include it like this:
+
+    #define WFC_IMPLEMENTATION
+    #include "wfc.h"
+
+You can then include it in other translation units by omitting the define
+directive.
+
+Run WFC with:
+
+    wfc_generate(
+        // pattern width and height, 3 is a good starting value
+        n,
+        // options to control WFC, 0 if you don't want to enable any
+        wfc_optFlipH | wfc_optFlipV | wfc_optRotate,
+        // byte size of a single pixel value
+        4,
+        // dimensions and bytes of the input image
+        srcW, srcH, (unsigned char*)src,
+        // dimensions and bytes of the output image
+        dstW, dstH, (unsigned char*)dst);
+
+This library does NOT handle file input/output and does NOT do backtracking on
+its own. CLI and GUI do provide that, you may look at their code to see one
+possible implementation.
+
+You can also run WFC step-by-step with:
+
+    struct wfc_State *state = wfc_init(
+        n, wfc_optFlipH | wfc_optFlipV | wfc_optRotate, 4,
+        srcW, srcH, (unsigned char*)src,
+        dstW, dstH);
+    assert(state != NULL);
+
+    while (!wfc_step(state));
+    assert(wfc_status(state) > 0);
+
+    int code = wfc_blit(state, (unsigned char*)src, (unsigned char*)dst);
+    assert(code == 0);
+
+    wfc_free(state);
+
+wfc_clone() can be used to deep-copy a state object. You can use it to implement
+your own backtracking behaviour.
+
+WFC works by first gathering unique NxN patterns from the input image. You can
+get the number of patterns gathered with wfc_patternCount(). Use
+wfc_patternAvailable() to check if a pattern is still present at a particular
+point. Use wfc_pixelToBlit() to get a pointer to pixel bytes corresponding to a
+particular pattern.
+
+If you do not want to use standard C functions, you can define these macros
+before including this header:
+
+    #define WFC_ASSERT(ctx, cond) ...
+    #define WFC_MALLOC(ctx, sz) ...
+    #define WFC_FREE(ctx, p) ...
+    // should yield a float value between 0 (inclusive) and 1 (exclusive)
+    #define WFC_RAND(ctx) ...
+
+All macros accept a user context pointer. If you do not want it to be null, you
+need to call wfc_generateEx() or wfc_initEx().
+*/
+
 #ifndef INCLUDE_WFC_H
 #define INCLUDE_WFC_H
 
@@ -110,7 +180,7 @@ int wfc_generate(
 
 /**
  * Runs WFC on the provided source image and blits to the destination. Same as
- * wfc_generate except that it provides more capabilities.
+ * wfc_generate() except that it provides more capabilities.
  *
  * \param n Pattern size will be \c n by \c n pixels. Must be positive and not
  * greater than any dimension of source and destination images.
@@ -137,8 +207,8 @@ int wfc_generate(
  * image. WFC output will be blitted here. If \c keep is non-null then this must
  * not be null.
  *
- * \param ctx User context that will be passed to WFC_ASSERT, WFC_MALLOC,
- * WFC_FREE, and WFC_RAND.
+ * \param ctx User context that will be passed to WFC_ASSERT(), WFC_MALLOC(),
+ * WFC_FREE(), and WFC_RAND().
  *
  * \param keep If non-null, signifies that some values in \c dst are
  * pre-determined and that WFC should not modify them. WFC will attempt to
@@ -163,10 +233,10 @@ int wfc_generateEx(
 
 /**
  * Allocates and initializes a state object for WFC. This is a first step
- * towards running WFC, you will likely be using wfc_step after.
+ * towards running WFC, you will likely be using wfc_step() after.
  *
- * Consider using wfc_generate instead if you don't need any custom handling of
- * individual steps.
+ * Consider using wfc_generate() instead if you don't need any custom handling
+ * of individual steps.
  *
  * \param n Pattern size will be \c n by \c n pixels. Must be positive and not
  * greater than any dimension of source and destination images.
@@ -190,7 +260,7 @@ int wfc_generateEx(
  * \param dstH Height in pixels of the destination image. Must be positive.
  *
  * \return Returns an allocated state object to be passed to further WFC
- * functions. This object should be deallocated using wfc_free.
+ * functions. This object should be deallocated using wfc_free().
  *
  * In case of error, returns null.
  */
@@ -201,11 +271,11 @@ wfc_State* wfc_init(
 
 /**
  * Allocates and initializes a state object for WFC. This is a first step
- * towards running WFC, you will likely be using wfc_step after. Same as
- * wfc_init except that it provides more capabilities.
+ * towards running WFC, you will likely be using wfc_step() after. Same as
+ * wfc_init() except that it provides more capabilities.
  *
- * Consider using wfc_generate instead if you don't need any custom handling of
- * individual steps.
+ * Consider using wfc_generate() instead if you don't need any custom handling
+ * of individual steps.
  *
  * \param n Pattern size will be \c n by \c n pixels. Must be positive and not
  * greater than any dimension of source and destination images.
@@ -233,8 +303,8 @@ wfc_State* wfc_init(
  * images to be kept (see the \c keep parameter). If \c keep is non-null then
  * this must not be null.
  *
- * \param ctx User context that will be passed to WFC_ASSERT, WFC_MALLOC,
- * WFC_FREE, and WFC_RAND.
+ * \param ctx User context that will be passed to WFC_ASSERT(), WFC_MALLOC(),
+ * WFC_FREE(), and WFC_RAND().
  *
  * \param keep If non-null, signifies that some values in \c dst are
  * pre-determined and that WFC should not modify them. WFC will attempt to
@@ -243,7 +313,7 @@ wfc_State* wfc_init(
  * that pixel value unchanged.
  *
  * \return Returns an allocated state object to be passed to further WFC
- * functions. This object should be deallocated using wfc_free.
+ * functions. This object should be deallocated using wfc_free().
  *
  * In case of error, returns null.
  */
@@ -263,7 +333,7 @@ wfc_State* wfc_initEx(
  * \return Returns the current status code, which is one of:
  *
  * \li 0 (zero) in case that WFC has not completed yet (you can keep calling
- * wfc_step);
+ * wfc_step());
  * \li wfc_completed (positive) in case that WFC has completed successfully;
  * \li wfc_failed (negative) in case that WFC has reached a contradiction and
  * failed to complete;
@@ -274,15 +344,15 @@ int wfc_status(const wfc_State *state);
 /**
  * Performs one iteration of the WFC algorithm, observing one wave point and
  * propagating constraints. After WFC completes, you will likely be calling
- * wfc_blit next.
+ * wfc_blit() next.
  *
  * \param state State object pointer on which to perform the iteration. Must not
  * be null.
  *
- * \return Returns the status code after calling wfc_step, which is one of:
+ * \return Returns the status code after calling wfc_step(), which is one of:
  *
  * \li 0 (zero) in case that WFC has not completed yet (you can keep calling
- * wfc_step);
+ * wfc_step());
  * \li wfc_completed (positive) in case that WFC has completed successfully;
  * \li wfc_failed (negative) in case that WFC has reached a contradiction and
  * failed to complete;
@@ -292,17 +362,17 @@ int wfc_step(wfc_State *state);
 
 /**
  * Blits (aka. renders) the generated image to \c dst by copying in the pixel
- * values. Should be called after WFC completes successfully (after wfc_step has
- * returned wfc_completed).
+ * values. Should be called after WFC completes successfully (after wfc_step()
+ * has returned wfc_completed).
  *
  * \param state State object pointer. Must not be null. Must be in the completed
  * state.
  *
  * \param src Pointer to pixels comprising the source image. Must not be null.
- * Must be of the same dimensions as the image that was passed to wfc_init.
+ * Must be of the same dimensions as the image that was passed to wfc_init().
  *
  * \param dst Pointer to pixels comprising the destination image. Must not be
- * null. Must be of the dimensions that were specified in wfc_init.
+ * null. Must be of the dimensions that were specified in wfc_init().
  *
  * \return Returns zero on success or wfc_callerError if there was an error in
  * the arguments.
@@ -313,8 +383,8 @@ int wfc_blit(
 
 /**
  * Allocates a new state object as a deep-copy of the provided one. The new
- * object is completely independent of the old one - you can call wfc_step on it
- * and both objects need to be deallocated with wfc_free.
+ * object is completely independent of the old one - you can call wfc_step() on
+ * it and both objects need to be deallocated with wfc_free().
  *
  * \param state Pointer to the state object to be cloned.
  *
@@ -351,7 +421,7 @@ int wfc_patternCount(const wfc_State *state);
  *
  * When calling this, you need to provide a valid pattern index. Valid pattern
  * indexes are in the range from zero (inclusive) to pattern count (exclusive).
- * You can get the pattern count by calling wfc_patternCount.
+ * You can get the pattern count by calling wfc_patternCount().
  *
  * \param state State object pointer containing the wave to be queried. Must not
  * be null.
@@ -385,7 +455,7 @@ int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
  *
  * When calling this, you need to provide a valid pattern index. Valid pattern
  * indexes are in the range from zero (inclusive) to pattern count (exclusive).
- * You can get the pattern count by calling wfc_patternCount.
+ * You can get the pattern count by calling wfc_patternCount().
  *
  * \param state State object pointer containing the wave to be queried. Must not
  * be null.
@@ -400,7 +470,7 @@ int wfc_patternAvailable(const wfc_State *state, int patt, int x, int y);
  * for the image being generated.
  *
  * \param src Pointer to pixels comprising the source image. Must not be null.
- * Must be of the same dimensions as the image that was passed to wfc_init.
+ * Must be of the same dimensions as the image that was passed to wfc_init().
  *
  * \return Returns a pointer to the bytes for the corresponding pixel value.
  * Returns null if there was an error in the arguments.

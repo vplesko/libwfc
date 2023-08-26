@@ -8,7 +8,7 @@
 #define WFC_IMPLEMENTATION
 #include "wfc.h"
 
-#define REPEATS 5
+const int repeats = 5;
 
 double measure(
     int n, int transf, int bytesPerPixel,
@@ -28,24 +28,24 @@ void benchmark(
     int n, int transf, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
-    int first = 1;
+    bool first = true;
     double avg = 0.0, min = 0.0, max = 0.0;
 
     putchar('\t');
-    for (int i = 0; i < REPEATS; ++i) {
+    for (int i = 0; i < repeats; ++i) {
         double elapsed = measure(n, transf, bytesPerPixel,
             srcW, srcH, src, dstW, dstH, dst);
 
         avg += elapsed;
         if (first || elapsed < min) min = elapsed;
         if (first || elapsed > max) max = elapsed;
-        first = 0;
+        first = false;
 
         if (i % 5 != 4) putchar('.');
         else putchar('o');
         fflush(stdout);
     }
-    avg /= REPEATS;
+    avg /= repeats;
 
     putchar('\n');
     printf("\tavg=%.4f min=%.4f max=%.4f\n", avg, min, max);
@@ -64,7 +64,7 @@ void benchmarkImage(const char *path, int n, int dstW, int dstH) {
     dst = malloc(dstW * dstH * bytesPerPixel);
 
     printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
-        path, REPEATS, n, dstW, dstH);
+        path, repeats, n, dstW, dstH);
 
     benchmark(n, 0, bytesPerPixel, srcW, srcH, src, dstW, dstH, dst);
 
@@ -94,7 +94,7 @@ void benchmarkText(const char *path, int n, int dstW, int dstH) {
     dst = malloc(dstW * dstH * sizeof(*dst));
 
     printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
-        path, REPEATS, n, dstW, dstH);
+        path, repeats, n, dstW, dstH);
 
     benchmark(n, 0, sizeof(*src),
         srcW, srcH, (unsigned char*)src, dstW, dstH, (unsigned char*)dst);

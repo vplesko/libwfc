@@ -112,23 +112,23 @@ void updateWindowTitle(enum GuiState guiState, int zoom, SDL_Window *window) {
     SDL_SetWindowTitle(window, buff);
 }
 
-SDL_Rect* renderRectSrc(
+SDL_Rect* getRenderRectSrc(
     int zoom, int srcW, int srcH, int dstH, SDL_Rect *rect) {
     *rect = (SDL_Rect){
         0, (zoom * dstH - zoom * srcH) / 2, zoom * srcW, zoom * srcH};
     return rect;
 }
 
-SDL_Rect* renderRectDst(
+SDL_Rect* getRenderRectDst(
     int zoom, int srcW, int dstW, int dstH, SDL_Rect *rect) {
     *rect = (SDL_Rect){zoom * srcW + 2 * zoom, 0, zoom * dstW, zoom * dstH};
     return rect;
 }
 
-SDL_Rect* pixelRectCursor(
+SDL_Rect* getPixelRectCursor(
     int zoom, int cursorSize, int srcW, int dstW, int dstH, SDL_Rect *rect) {
     SDL_Rect rectDst;
-    renderRectDst(zoom, srcW, dstW, dstH, &rectDst);
+    getRenderRectDst(zoom, srcW, dstW, dstH, &rectDst);
 
     int mouseX, mouseY;
     SDL_GetMouseState(&mouseX, &mouseY);
@@ -154,12 +154,12 @@ SDL_Rect* pixelRectCursor(
     return rect;
 }
 
-SDL_Rect* renderRectCursor(
+SDL_Rect* getRenderRectCursor(
     int zoom, int cursorSize, int srcW, int dstW, int dstH, SDL_Rect *rect) {
-    pixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, rect);
+    getPixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, rect);
 
     SDL_Rect rectDst;
-    renderRectDst(zoom, srcW, dstW, dstH, &rectDst);
+    getRenderRectDst(zoom, srcW, dstW, dstH, &rectDst);
 
     rect->x = rectDst.x + rect->x * zoom;
     rect->y = rectDst.y + rect->y * zoom;
@@ -328,7 +328,7 @@ int main(int argc, char *argv[]) {
                 }
             } else {
                 SDL_Rect rect;
-                pixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &rect);
+                getPixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &rect);
 
                 if (!isRectZeroSize(rect) && isRightMouseButtonHeld()) {
                     if (clearBools(dstW, dstH, keep, rect)) {
@@ -416,13 +416,13 @@ int main(int argc, char *argv[]) {
         clearSurface(surfaceWin, NULL);
 
         SDL_BlitScaled(surfaceSrc, NULL, surfaceWin,
-            renderRectSrc(zoom, srcW, srcH, dstH, &rect));
+            getRenderRectSrc(zoom, srcW, srcH, dstH, &rect));
         SDL_BlitScaled(surfaceDst, NULL, surfaceWin,
-            renderRectDst(zoom, srcW, dstW, dstH, &rect));
+            getRenderRectDst(zoom, srcW, dstW, dstH, &rect));
 
         if (guiState == guiStatePaused || guiState == guiStateCompleted) {
             drawRect(surfaceWin,
-                renderRectCursor(
+                getRenderRectCursor(
                     zoom, cursorSize, srcW, dstW, dstH, &rect),
                 SDL_MapRGB(surfaceWin->format, 0x7f, 0x7f, 0x7f));
         }

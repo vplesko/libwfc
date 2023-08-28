@@ -30,6 +30,7 @@ const Uint32 ticksPerFrame = 1000 / 60;
 const int zoomMin = 1, zoomMax = 8;
 const int cursorSizeMin = 1, cursorSizeMax = 9;
 
+// @TODO Allow resetting of the entire process.
 const char *instructions =
     "Controls:\n"
     "\t+            - Zoom in\n"

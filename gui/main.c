@@ -336,18 +336,8 @@ int main(int argc, char *argv[]) {
 
         // update
 
-        // Pulled out for the sake of code deduplication.
         if (guiState == guiStatePaused || guiState == guiStateCompleted) {
-            if (undoRequested) {
-                if (guiState == guiStatePaused && keepChanged) {
-                    clearSurface(surfaceDst, NULL);
-                    wfcBlitObserved(wfc, surfaceSrc->pixels,
-                        dstW, dstH, surfaceDst->pixels);
-
-                    keepChanged = false;
-                    wfcSetWhichObserved(wfc, dstW, dstH, keep);
-                }
-            } else if (resetRequested) {
+            if (resetRequested) {
                 if (clearBoolsAll(dstW, dstH, keep)) {
                     keepChanged = true;
 
@@ -425,7 +415,16 @@ int main(int argc, char *argv[]) {
                 }
             }
         } else if (guiState == guiStatePaused) {
-            if (pauseToggled) {
+            if (undoRequested) {
+                if (keepChanged) {
+                    clearSurface(surfaceDst, NULL);
+                    wfcBlitObserved(wfc, surfaceSrc->pixels,
+                        dstW, dstH, surfaceDst->pixels);
+
+                    keepChanged = false;
+                    wfcSetWhichObserved(wfc, dstW, dstH, keep);
+                }
+            } else if (pauseToggled) {
                 if (keepChanged) {
                     wfcFree(wfc);
                     if (wfcInit(

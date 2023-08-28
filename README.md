@@ -57,9 +57,9 @@ bin/gui external/samples/Angular.png -n 3 -w 64 -h 64 -o bin/gen.png
 
 Simply run `bin/cli` or `bin/gui` to see the list of possible arguments.
 
-GUI lets you watch WFC as it runs and you can pause/unpause it. You can also delete parts of the generated image and force WFC to generate them anew.
+GUI lets you watch WFC as it runs and you can pause/unpause it. You can also erase parts of the generated image and force WFC to generate them anew.
 
-@TODO add a gif
+![Example of erasing parts of image and generating again.](misc/erase.gif)
 
 ## Credits
 

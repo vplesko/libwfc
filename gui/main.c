@@ -381,22 +381,24 @@ int main(int argc, char *argv[]) {
                 wfcSetWhichObserved(wfc, dstW, dstH, keep);
 
                 guiState = guiStatePaused;
-            } else if (resetRequested) {
-                wfcFree(wfc);
-                if (wfcInit(
-                        n, wfcOptions, bytesPerPixel,
-                        srcW, srcH, surfaceSrc->pixels,
-                        dstW, dstH, surfaceDst->pixels,
-                        NULL,
-                        &wfc) != 0) {
-                    fprintf(stderr, "WFC re-init failed.\n");
-                    ret = 1;
-                    goto cleanup;
+            } else {
+                if (resetRequested) {
+                    wfcFree(wfc);
+                    if (wfcInit(
+                            n, wfcOptions, bytesPerPixel,
+                            srcW, srcH, surfaceSrc->pixels,
+                            dstW, dstH, surfaceDst->pixels,
+                            NULL,
+                            &wfc) != 0) {
+                        fprintf(stderr, "WFC re-init failed.\n");
+                        ret = 1;
+                        goto cleanup;
+                    }
+
+                    wfcBlitAveraged(wfc, surfaceSrc->pixels,
+                        dstW, dstH, surfaceDst->pixels);
                 }
 
-                wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                    dstW, dstH, surfaceDst->pixels);
-            } else {
                 int status = wfcStep(&wfc);
                 if (status == wfc_failed) {
                     if (wfcBacktrack(&wfc) != 0) {

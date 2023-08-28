@@ -40,9 +40,25 @@ const char *instructions =
     "\tCtrl -       - Decrease cursor size\n"
     "\tRight mouse  - Erase (when paused or completed)\n"
     "\tU            - Undo erasure\n"
+    "\tR            - Reset\n"
     "\tEscape       - Quit\n";
 
-bool clearBools(int w, int h, bool *m, SDL_Rect rect) {
+bool clearBoolsAll(int w, int h, bool *m) {
+    bool modified = false;
+
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            if (m[y * w + x]) {
+                m[y * w + x] = false;
+                modified = true;
+            }
+        }
+    }
+
+    return modified;
+}
+
+bool clearBoolsRect(int w, int h, bool *m, SDL_Rect rect) {
     bool modified = false;
 
     for (int j = 0; j < rect.h; ++j) {
@@ -281,6 +297,7 @@ int main(int argc, char *argv[]) {
 
         bool pauseToggled = false;
         bool undoRequested = false;
+        bool resetRequested = false;
 
         // input
 
@@ -311,12 +328,15 @@ int main(int argc, char *argv[]) {
                     pauseToggled = true;
                 } else if (e.key.keysym.sym == SDLK_u) {
                     undoRequested = true;
+                } else if (e.key.keysym.sym == SDLK_r) {
+                    resetRequested = true;
                 }
             }
         }
 
         // update
 
+        // Pulled out for the sake of code deduplication.
         if (guiState == guiStatePaused || guiState == guiStateCompleted) {
             if (undoRequested) {
                 if (guiState == guiStatePaused && keepChanged) {
@@ -327,12 +347,20 @@ int main(int argc, char *argv[]) {
                     keepChanged = false;
                     wfcSetWhichObserved(wfc, dstW, dstH, keep);
                 }
+            } else if (resetRequested) {
+                if (clearBoolsAll(dstW, dstH, keep)) {
+                    keepChanged = true;
+
+                    clearSurface(surfaceDst, NULL);
+
+                    guiState = guiStatePaused;
+                }
             } else {
                 SDL_Rect rect;
                 getPixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &rect);
 
                 if (!isRectZeroSize(rect) && isRightMouseButtonHeld()) {
-                    if (clearBools(dstW, dstH, keep, rect)) {
+                    if (clearBoolsRect(dstW, dstH, keep, rect)) {
                         keepChanged = true;
 
                         clearSurface(surfaceDst, &rect);
@@ -353,6 +381,21 @@ int main(int argc, char *argv[]) {
                 wfcSetWhichObserved(wfc, dstW, dstH, keep);
 
                 guiState = guiStatePaused;
+            } else if (resetRequested) {
+                wfcFree(wfc);
+                if (wfcInit(
+                        n, wfcOptions, bytesPerPixel,
+                        srcW, srcH, surfaceSrc->pixels,
+                        dstW, dstH, surfaceDst->pixels,
+                        NULL,
+                        &wfc) != 0) {
+                    fprintf(stderr, "WFC re-init failed.\n");
+                    ret = 1;
+                    goto cleanup;
+                }
+
+                wfcBlitAveraged(wfc, surfaceSrc->pixels,
+                    dstW, dstH, surfaceDst->pixels);
             } else {
                 int status = wfcStep(&wfc);
                 if (status == wfc_failed) {

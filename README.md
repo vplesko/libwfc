@@ -1,8 +1,10 @@
 # libwfc
 
-libwfc is a single-header C library for the Wave Function Collapse algorithm (WFC). It (currently) only covers 2D overlapping model WFC. WFC accepts a small reference image and outputs a larger image that resembles the input. See https://github.com/mxgmn/WaveFunctionCollapse for more details on the algorithm.
+libwfc is a single-header C library for the Wave Function Collapse algorithm (WFC). It (currently) only covers the 2D overlapping model. WFC accepts a small reference image and outputs a larger image that resembles the input. See https://github.com/mxgmn/WaveFunctionCollapse for more details on the algorithm.
 
 This project also offers a CLI and a GUI tool for the WFC process.
+
+`benchmark/` contains a benchmark test and results.
 
 @TODO add a gif
 
@@ -22,7 +24,7 @@ Call `wfc_generate`:
         // pattern width and height, 3 is a good starting value
         n,
         // options to control WFC, 0 if you don't want to enable any
-        wfc_optFlipH | wfc_optFlipV | wfc_optRotate,
+        wfc_optFlipH | wfc_optRotate | wfc_optEdgeFixV,
         // byte size of a single pixel value
         4,
         // dimensions and bytes of the input image
@@ -44,16 +46,16 @@ Run `make` to build both tools.
 Run the CLI with:
 
 ```
-bin/cli external\samples\Angular.png -n 3 -w 64 -h 64 -o output.png
+bin/cli external/samples/Angular.png -n 3 -w 64 -h 64 -o bin/gen.png
 ```
 
 And the GUI with:
 
 ```
-bin/gui external\samples\Angular.png -n 3 -w 64 -h 64 -o output.png
+bin/gui external/samples/Angular.png -n 3 -w 64 -h 64 -o bin/gen.png
 ```
 
-Simply run `bin/cli` to see the list of possible arguments.
+Simply run `bin/cli` or `bin/gui` to see the list of possible arguments.
 
 GUI lets you watch WFC as it runs and you can pause/unpause it. You can also delete parts of the generated image and force WFC to generate them anew.
 

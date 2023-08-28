@@ -124,6 +124,7 @@ enum {
 
     // Enable this option to allow rotating of patterns (by 90, 180, and 270
     // degrees).
+    // @TODO Introduce separate rotation options for different angles.
     wfc_optRotate = 1 << 2,
 
     // Enable this option to fix left and right edges of input image so that

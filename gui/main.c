@@ -337,26 +337,16 @@ int main(int argc, char *argv[]) {
         // update
 
         if (guiState == guiStatePaused || guiState == guiStateCompleted) {
-            if (resetRequested) {
-                if (clearBoolsAll(dstW, dstH, keep)) {
+            SDL_Rect rect;
+            getPixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &rect);
+
+            if (!isRectZeroSize(rect) && isRightMouseButtonHeld()) {
+                if (clearBoolsRect(dstW, dstH, keep, rect)) {
                     keepChanged = true;
 
-                    clearSurface(surfaceDst, NULL);
+                    clearSurface(surfaceDst, &rect);
 
                     guiState = guiStatePaused;
-                }
-            } else {
-                SDL_Rect rect;
-                getPixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &rect);
-
-                if (!isRectZeroSize(rect) && isRightMouseButtonHeld()) {
-                    if (clearBoolsRect(dstW, dstH, keep, rect)) {
-                        keepChanged = true;
-
-                        clearSurface(surfaceDst, &rect);
-
-                        guiState = guiStatePaused;
-                    }
                 }
             }
         }
@@ -424,6 +414,12 @@ int main(int argc, char *argv[]) {
                     keepChanged = false;
                     wfcSetWhichObserved(wfc, dstW, dstH, keep);
                 }
+            } else if (resetRequested) {
+                if (clearBoolsAll(dstW, dstH, keep)) {
+                    keepChanged = true;
+
+                    clearSurface(surfaceDst, NULL);
+                }
             } else if (pauseToggled) {
                 if (keepChanged) {
                     wfcFree(wfc);
@@ -447,7 +443,15 @@ int main(int argc, char *argv[]) {
                 guiState = guiStateRunning;
             }
         } else if (guiState == guiStateCompleted) {
-            // do nothing
+            if (resetRequested) {
+                if (clearBoolsAll(dstW, dstH, keep)) {
+                    keepChanged = true;
+
+                    clearSurface(surfaceDst, NULL);
+
+                    guiState = guiStatePaused;
+                }
+            }
         } else {
             assert(false);
         }

@@ -336,20 +336,8 @@ int main(int argc, char *argv[]) {
 
         // update
 
-        if (guiState == guiStatePaused || guiState == guiStateCompleted) {
-            SDL_Rect rect;
-            getPixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &rect);
-
-            if (!isRectZeroSize(rect) && isRightMouseButtonHeld()) {
-                if (clearBoolsRect(dstW, dstH, keep, rect)) {
-                    keepChanged = true;
-
-                    clearSurface(surfaceDst, &rect);
-
-                    guiState = guiStatePaused;
-                }
-            }
-        }
+        SDL_Rect cursor;
+        getPixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &cursor);
 
         if (guiState == guiStateRunning) {
             if (pauseToggled) {
@@ -414,6 +402,12 @@ int main(int argc, char *argv[]) {
                     keepChanged = false;
                     wfcSetWhichObserved(wfc, dstW, dstH, keep);
                 }
+            } else if (!isRectZeroSize(cursor) && isRightMouseButtonHeld()) {
+                if (clearBoolsRect(dstW, dstH, keep, cursor)) {
+                    keepChanged = true;
+
+                    clearSurface(surfaceDst, &cursor);
+                }
             } else if (resetRequested) {
                 if (clearBoolsAll(dstW, dstH, keep)) {
                     keepChanged = true;
@@ -443,7 +437,15 @@ int main(int argc, char *argv[]) {
                 guiState = guiStateRunning;
             }
         } else if (guiState == guiStateCompleted) {
-            if (resetRequested) {
+            if (!isRectZeroSize(cursor) && isRightMouseButtonHeld()) {
+                if (clearBoolsRect(dstW, dstH, keep, cursor)) {
+                    keepChanged = true;
+
+                    clearSurface(surfaceDst, &cursor);
+
+                    guiState = guiStatePaused;
+                }
+            } else if (resetRequested) {
                 if (clearBoolsAll(dstW, dstH, keep)) {
                     keepChanged = true;
 

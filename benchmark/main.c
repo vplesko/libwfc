@@ -8,6 +8,8 @@
 #define WFC_IMPLEMENTATION
 #include "wfc.h"
 
+// @TODO After optimizing some more, replace GIFs in README with faster ones.
+
 const int repeats = 5;
 
 double measure(

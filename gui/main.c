@@ -27,6 +27,7 @@ enum GuiState {
 
 const int screenW = 800, screenH = 600;
 const Uint32 ticksPerFrame = 1000 / 60;
+const int srcDstGap = 2;
 const int zoomMin = 1, zoomMax = 8;
 const int cursorSizeMin = 1, cursorSizeMax = 9;
 
@@ -138,7 +139,9 @@ SDL_Rect* getRenderRectSrc(
 
 SDL_Rect* getRenderRectDst(
     int zoom, int srcW, int dstW, int dstH, SDL_Rect *rect) {
-    *rect = (SDL_Rect){zoom * srcW + 2 * zoom, 0, zoom * dstW, zoom * dstH};
+    *rect = (SDL_Rect){
+        zoom * srcW + srcDstGap * zoom, 0,
+        zoom * dstW, zoom * dstH};
     return rect;
 }
 

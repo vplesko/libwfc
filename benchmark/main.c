@@ -110,10 +110,12 @@ void benchmarkText(const char *path, int n, int options, int dstW, int dstH) {
 int main(void) {
     srand((unsigned)time(NULL));
 
-    benchmarkImage("external/samples/Angular.png", 3, 0, 64, 64);
+    benchmarkImage("external/samples/NotKnot.png",
+        3, wfc_optFlip | wfc_optRotate, 64, 64);
 
     putchar('\n');
-    benchmarkText("benchmark/test.txt", 5, 0, 120, 120);
+    benchmarkText("benchmark/test.txt",
+        5, wfc_optFlip, 80, 80);
 
     return 0;
 }

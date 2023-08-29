@@ -635,14 +635,17 @@ static int testPatternCountHVFlip(void) {
 
     uint32_t src[srcW * srcH] = {
         1,2,
-        2,1,
+        3,1,
     };
 
-    state = wfc_init(n, wfc_optFlipV, sizeof(*src),
+    state = wfc_init(
+        n,
+        wfc_optFlipH | wfc_optFlipV | wfc_optEdgeFixH | wfc_optEdgeFixV,
+        sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         16, 16);
 
-    if (wfc_patternCount(state) != 2) {
+    if (wfc_patternCount(state) != 4) {
         PRINT_TEST_FAIL();
         ret = 1;
         goto cleanup;

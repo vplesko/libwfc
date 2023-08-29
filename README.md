@@ -1,5 +1,7 @@
 # libwfc
 
+**This is a single-person project, please do not send pull requests to this repo.**
+
 libwfc is a single-header C library for the Wave Function Collapse algorithm (WFC). It (currently) only covers the 2D overlapping model. WFC accepts a small reference image and outputs a larger image that resembles the input. See https://github.com/mxgmn/WaveFunctionCollapse for more details on the algorithm.
 
 This project also offers a CLI and a rudimentary GUI tool for the WFC process.

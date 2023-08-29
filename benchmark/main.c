@@ -13,11 +13,11 @@
 const int repeats = 5;
 
 double measure(
-    int n, int transf, int bytesPerPixel,
+    int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
     clock_t t0 = clock();
-    int res = wfc_generate(n, transf, bytesPerPixel,
+    int res = wfc_generate(n, options, bytesPerPixel,
         srcW, srcH, src, dstW, dstH, dst);
     clock_t t1 = clock();
 
@@ -27,7 +27,7 @@ double measure(
 }
 
 void benchmark(
-    int n, int transf, int bytesPerPixel,
+    int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
     int dstW, int dstH, unsigned char *dst) {
     bool first = true;
@@ -35,7 +35,7 @@ void benchmark(
 
     putchar('\t');
     for (int i = 0; i < repeats; ++i) {
-        double elapsed = measure(n, transf, bytesPerPixel,
+        double elapsed = measure(n, options, bytesPerPixel,
             srcW, srcH, src, dstW, dstH, dst);
 
         avg += elapsed;
@@ -53,7 +53,7 @@ void benchmark(
     printf("\tavg=%.4f min=%.4f max=%.4f\n", avg, min, max);
 }
 
-void benchmarkImage(const char *path, int n, int dstW, int dstH) {
+void benchmarkImage(const char *path, int n, int options, int dstW, int dstH) {
     const int bytesPerPixel = 4;
 
     unsigned char *src = NULL;
@@ -68,13 +68,13 @@ void benchmarkImage(const char *path, int n, int dstW, int dstH) {
     printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
         path, repeats, n, dstW, dstH);
 
-    benchmark(n, 0, bytesPerPixel, srcW, srcH, src, dstW, dstH, dst);
+    benchmark(n, options, bytesPerPixel, srcW, srcH, src, dstW, dstH, dst);
 
     free(dst);
     stbi_image_free(src);
 }
 
-void benchmarkText(const char *path, int n, int dstW, int dstH) {
+void benchmarkText(const char *path, int n, int options, int dstW, int dstH) {
     FILE *file = NULL;
     uint32_t *src = NULL;
     uint32_t *dst = NULL;
@@ -98,7 +98,7 @@ void benchmarkText(const char *path, int n, int dstW, int dstH) {
     printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
         path, repeats, n, dstW, dstH);
 
-    benchmark(n, 0, sizeof(*src),
+    benchmark(n, options, sizeof(*src),
         srcW, srcH, (unsigned char*)src, dstW, dstH, (unsigned char*)dst);
 
     free(dst);
@@ -109,10 +109,10 @@ void benchmarkText(const char *path, int n, int dstW, int dstH) {
 int main(void) {
     srand((unsigned)time(NULL));
 
-    benchmarkImage("external/samples/Angular.png", 3, 64, 64);
+    benchmarkImage("external/samples/Angular.png", 3, 0, 64, 64);
 
     putchar('\n');
-    benchmarkText("benchmark/test.txt", 5, 120, 120);
+    benchmarkText("benchmark/test.txt", 5, 0, 120, 120);
 
     return 0;
 }

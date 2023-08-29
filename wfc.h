@@ -121,6 +121,8 @@ enum {
     // Enable this option to allow vertical flipping of patterns (think of
     // x-axis as the mirror).
     wfc_optFlipV = 1 << 0,
+    // This is a combination of wfc_optFlipH and wfc_optFlipV.
+    wfc_optFlip = wfc_optFlipH | wfc_optFlipV,
 
     // Enable this option to allow rotating of patterns (by 90, 180, and 270
     // degrees).
@@ -132,7 +134,9 @@ enum {
     wfc_optEdgeFixH = 1 << 4,
     // Enable this option to fix top and bottom edges of input image so that
     // patterns may not wrap around them.
-    wfc_optEdgeFixV = 1 << 3
+    wfc_optEdgeFixV = 1 << 3,
+    // This is a combination of wfc_optEdgeFixH and wfc_optEdgeFixV.
+    wfc_optEdgeFix = wfc_optEdgeFixH | wfc_optEdgeFixV
 };
 
 // An opaque struct containing the WFC state. You should only interact with it

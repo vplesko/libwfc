@@ -423,7 +423,7 @@ static int testHVEdgeFixPattern(void) {
     uint32_t dst[dstW * dstH];
 
     int options = wfc_optEdgeFixH | wfc_optEdgeFixV |
-        wfc_optFlipH | wfc_optFlipV | wfc_optRotate;
+        wfc_optFlip | wfc_optRotate;
 
     if (wfc_generate(
         n, options, sizeof(*src),
@@ -461,7 +461,7 @@ static int testWide(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optFlipH | wfc_optFlipV, sizeof(*src),
+        n, wfc_optFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -492,7 +492,7 @@ static int testTall(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optFlipH | wfc_optFlipV, sizeof(*src),
+        n, wfc_optFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -523,7 +523,7 @@ static int testSrcBiggerThanDst(void) {
     uint32_t dst[dstW * dstH];
 
     if (wfc_generate(
-        n, wfc_optFlipH | wfc_optFlipV, sizeof(*src),
+        n, wfc_optFlip, sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         dstW, dstH, (unsigned char*)&dst) != 0) {
         PRINT_TEST_FAIL();
@@ -640,7 +640,7 @@ static int testPatternCountHVFlip(void) {
 
     state = wfc_init(
         n,
-        wfc_optFlipH | wfc_optFlipV | wfc_optEdgeFixH | wfc_optEdgeFixV,
+        wfc_optFlipH | wfc_optFlipV | wfc_optEdgeFix,
         sizeof(*src),
         srcW, srcH, (unsigned char*)&src,
         16, 16);

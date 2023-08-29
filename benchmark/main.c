@@ -12,6 +12,11 @@
 
 const int repeats = 5;
 
+void printPrelude(const char *path, int n, int options, int dstW, int dstH) {
+    printf("input=%s repeats=%d args={n=%d opt=%x dstW=%d dstH=%d}\n",
+        path, repeats, n, options, dstW, dstH);
+}
+
 double measure(
     int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,
@@ -65,9 +70,7 @@ void benchmarkImage(const char *path, int n, int options, int dstW, int dstH) {
 
     dst = malloc(dstW * dstH * bytesPerPixel);
 
-    printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
-        path, repeats, n, dstW, dstH);
-
+    printPrelude(path, n, options, dstW, dstH);
     benchmark(n, options, bytesPerPixel, srcW, srcH, src, dstW, dstH, dst);
 
     free(dst);
@@ -95,9 +98,7 @@ void benchmarkText(const char *path, int n, int options, int dstW, int dstH) {
 
     dst = malloc(dstW * dstH * sizeof(*dst));
 
-    printf("image=%s repeats=%d args={n=%d dstW=%d dstH=%d}\n",
-        path, repeats, n, dstW, dstH);
-
+    printPrelude(path, n, options, dstW, dstH);
     benchmark(n, options, sizeof(*src),
         srcW, srcH, (unsigned char*)src, dstW, dstH, (unsigned char*)dst);
 

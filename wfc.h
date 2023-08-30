@@ -465,6 +465,9 @@ int wfc_patternPresent(const wfc_State *state, int patt, int x, int y);
  * \param state State object pointer containing the wave to be queried. Must not
  * be null.
  *
+ * \param src Pointer to pixels comprising the source image. Must not be null.
+ * Must be of the same dimensions as the image that was passed to wfc_init().
+ *
  * \param patt Pattern index whose presence is being queried. Must be a valid
  * index.
  *
@@ -474,15 +477,12 @@ int wfc_patternPresent(const wfc_State *state, int patt, int x, int y);
  * \param y y coordinate of the destination image. Must be a valid y coordinate
  * for the image being generated.
  *
- * \param src Pointer to pixels comprising the source image. Must not be null.
- * Must be of the same dimensions as the image that was passed to wfc_init().
- *
  * \return Returns a pointer to the bytes for the corresponding pixel value.
  * Returns null if there was an error in the arguments.
 */
 const unsigned char* wfc_pixelToBlit(
-    const wfc_State *state,
-    int patt, int x, int y, const unsigned char *src);
+    const wfc_State *state, const unsigned char *src,
+    int patt, int x, int y);
 
 #ifdef __cplusplus
 }
@@ -1648,13 +1648,13 @@ int wfc_patternPresent(const wfc_State *state, int patt, int x, int y) {
 }
 
 const unsigned char* wfc_pixelToBlit(
-    const wfc_State *state,
-    int patt, int x, int y, const unsigned char *src) {
+    const wfc_State *state, const unsigned char *src,
+    int patt, int x, int y) {
     if (state == NULL ||
+        src == NULL ||
         patt < 0 || patt >= state->wave.d23 ||
         x < 0 || x >= state->dstD1 ||
-        y < 0 || y >= state->dstD0 ||
-        src == NULL) {
+        y < 0 || y >= state->dstD0) {
         return NULL;
     }
 

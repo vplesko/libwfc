@@ -935,34 +935,37 @@ static int testCallerError(void) {
     while (!wfc_step(stateCompleted));
     assert(wfc_status(stateCompleted) == wfc_completed);
 
+    unsigned char *srcBytes = (unsigned char*)&src;
+    unsigned char *dstBytes = (unsigned char*)&dst;
+
     if (wfc_generate(
         -1, 0, sizeof(*src),
-        srcW, srcH, (unsigned char*)&src,
-        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        srcW, srcH, srcBytes,
+        dstW, dstH, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
     if (wfc_generate(
         n, 0, 0,
-        srcW, srcH, (unsigned char*)&src,
-        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        srcW, srcH, srcBytes,
+        dstW, dstH, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
     if (wfc_generate(
         n, 0, sizeof(*src),
-        0, srcH, (unsigned char*)&src,
-        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        0, srcH, srcBytes,
+        dstW, dstH, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
     if (wfc_generate(
         n, 0, sizeof(*src),
-        srcW, 0, (unsigned char*)&src,
-        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        srcW, 0, srcBytes,
+        dstW, dstH, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
@@ -970,30 +973,30 @@ static int testCallerError(void) {
     if (wfc_generate(
         n, 0, sizeof(*src),
         srcW, srcH, NULL,
-        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        dstW, dstH, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
     if (wfc_generate(
         n, 0, sizeof(*src),
-        srcW, srcH, (unsigned char*)&src,
-        0, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        srcW, srcH, srcBytes,
+        0, dstH, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
     if (wfc_generate(
         n, 0, sizeof(*src),
-        srcW, srcH, (unsigned char*)&src,
-        dstW, 0, (unsigned char*)&dst) != wfc_callerError) {
+        srcW, srcH, srcBytes,
+        dstW, 0, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
     if (wfc_generate(
         n, 0, sizeof(*src),
-        srcW, srcH, (unsigned char*)&src,
+        srcW, srcH, srcBytes,
         dstW, dstH, NULL) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
@@ -1001,8 +1004,8 @@ static int testCallerError(void) {
     }
     if (wfc_generate(
         srcW + 1, 0, sizeof(*src),
-        srcW, srcH, (unsigned char*)&src,
-        dstW, dstH, (unsigned char*)&dst) != wfc_callerError) {
+        srcW, srcH, srcBytes,
+        dstW, dstH, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
@@ -1020,34 +1023,22 @@ static int testCallerError(void) {
         goto cleanup;
     }
 
-    if (wfc_blit(
-            NULL,
-            (unsigned char*)&src,
-            (unsigned char*)&dst) != wfc_callerError) {
+    if (wfc_blit(NULL, srcBytes, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_blit(
-            state,
-            (unsigned char*)&src,
-            (unsigned char*)&dst) != wfc_callerError) {
+    if (wfc_blit(state, srcBytes, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_blit(
-            stateCompleted,
-            NULL,
-            (unsigned char*)&dst) != wfc_callerError) {
+    if (wfc_blit(stateCompleted, NULL, dstBytes) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_blit(
-            stateCompleted,
-            (unsigned char*)&src,
-            NULL) != wfc_callerError) {
+    if (wfc_blit(stateCompleted, srcBytes, NULL) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
@@ -1085,32 +1076,27 @@ static int testCallerError(void) {
         goto cleanup;
     }
 
-    if (wfc_pixelToBlit(NULL, 0, 0, 0,
-            (unsigned char*)&src) != NULL) {
+    if (wfc_pixelToBlit(NULL, srcBytes, 0, 0, 0) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_pixelToBlit(state, -1, 0, 0,
-            (unsigned char*)&src) != NULL) {
+    if (wfc_pixelToBlit(state, srcBytes, -1, 0, 0) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_pixelToBlit(state, 0, -1, 0,
-            (unsigned char*)&src) != NULL) {
+    if (wfc_pixelToBlit(state, srcBytes, 0, -1, 0) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_pixelToBlit(state, 0, dstW + 1, 0,
-            (unsigned char*)&src) != NULL) {
+    if (wfc_pixelToBlit(state, srcBytes, 0, dstW + 1, 0) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_pixelToBlit(state, 0, 0, dstH + 1,
-            (unsigned char*)&src) != NULL) {
+    if (wfc_pixelToBlit(state, srcBytes, 0, 0, dstH + 1) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;

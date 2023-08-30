@@ -97,7 +97,7 @@ void wfcBlitAveraged(
                     assert(avail >= 0);
                     if (avail) {
                         const unsigned char* px =
-                            wfc_pixelToBlit(state, p, i, j, src);
+                            wfc_pixelToBlit(state, src, p, i, j);
                         assert(px != NULL);
 
                         sum += (int)px[b];
@@ -152,7 +152,7 @@ void wfcBlitObserved(
             int patt;
             if (!wfcIsObserved(wfc, i, j, &patt)) continue;
 
-            const unsigned char* px = wfc_pixelToBlit(state, patt, i, j, src);
+            const unsigned char* px = wfc_pixelToBlit(state, src, patt, i, j);
             assert(px != NULL);
 
             memcpy(&dst[j * dstW * bytesPerPixel + i * bytesPerPixel], px,

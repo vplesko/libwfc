@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
     }
 
     printPrelude(args, srcW, srcH, wfcPatternCount(wfc));
+    fprintf(stdout, "\n");
 
     while (1) {
         int status = wfcStep(&wfc);
@@ -80,6 +81,9 @@ int main(int argc, char *argv[]) {
         } else {
             assert(status == 0);
         }
+
+        fprintf(stdout, "%d/%d\r",
+            wfcObservedCount(wfc, args.dstW, args.dstH), args.dstW * args.dstH);
     }
 
     wfcBlit(wfc, srcPixels, dstPixels);

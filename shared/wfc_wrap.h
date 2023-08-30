@@ -138,6 +138,17 @@ bool wfcIsObserved(const struct WfcWrapper wfc, int x, int y, int *patt) {
     return foundSingle;
 }
 
+int wfcObservedCount(const struct WfcWrapper wfc, int dstW, int dstH) {
+    int cnt = 0;
+    for (int j = 0; j < dstH; ++j) {
+        for (int i = 0; i < dstW; ++i) {
+            if (wfcIsObserved(wfc, i, j, NULL)) ++cnt;
+        }
+    }
+
+    return cnt;
+}
+
 void wfcBlitObserved(
     const struct WfcWrapper wfc,
     const unsigned char *src,

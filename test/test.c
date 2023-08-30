@@ -1050,53 +1050,53 @@ static int testCallerError(void) {
         goto cleanup;
     }
 
-    if (wfc_patternPresent(NULL, 0, 0, 0) != wfc_callerError) {
+    if (wfc_patternPresentAt(NULL, 0, 0, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_patternPresent(state, -1, 0, 0) != wfc_callerError) {
+    if (wfc_patternPresentAt(state, -1, 0, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_patternPresent(state, 0, -1, 0) != wfc_callerError) {
+    if (wfc_patternPresentAt(state, 0, -1, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_patternPresent(state, 0, dstW + 1, 0) != wfc_callerError) {
+    if (wfc_patternPresentAt(state, 0, dstW + 1, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_patternPresent(state, 0, 0, dstH + 1) != wfc_callerError) {
+    if (wfc_patternPresentAt(state, 0, 0, dstH + 1) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
 
-    if (wfc_pixelToBlit(NULL, srcBytes, 0, 0, 0) != NULL) {
+    if (wfc_pixelToBlitAt(NULL, srcBytes, 0, 0, 0) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_pixelToBlit(state, srcBytes, -1, 0, 0) != NULL) {
+    if (wfc_pixelToBlitAt(state, srcBytes, -1, 0, 0) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_pixelToBlit(state, srcBytes, 0, -1, 0) != NULL) {
+    if (wfc_pixelToBlitAt(state, srcBytes, 0, -1, 0) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_pixelToBlit(state, srcBytes, 0, dstW + 1, 0) != NULL) {
+    if (wfc_pixelToBlitAt(state, srcBytes, 0, dstW + 1, 0) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_pixelToBlit(state, srcBytes, 0, 0, dstH + 1) != NULL) {
+    if (wfc_pixelToBlitAt(state, srcBytes, 0, 0, dstH + 1) != NULL) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;

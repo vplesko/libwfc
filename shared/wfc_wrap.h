@@ -93,11 +93,11 @@ void wfcBlitAveraged(
             for (int b = 0; b < bytesPerPixel; ++b) {
                 int sum = 0, cnt = 0;
                 for (int p = 0; p < pattCnt; ++p) {
-                    int avail = wfc_patternPresent(state, p, i, j);
+                    int avail = wfc_patternPresentAt(state, p, i, j);
                     assert(avail >= 0);
                     if (avail) {
                         const unsigned char* px =
-                            wfc_pixelToBlit(state, src, p, i, j);
+                            wfc_pixelToBlitAt(state, src, p, i, j);
                         assert(px != NULL);
 
                         sum += (int)px[b];
@@ -122,7 +122,7 @@ bool wfcIsObserved(const struct WfcWrapper wfc, int x, int y, int *patt) {
 
     bool foundSingle = false;
     for (int p = 0; p < pattCnt; ++p) {
-        int avail = wfc_patternPresent(state, p, x, y);
+        int avail = wfc_patternPresentAt(state, p, x, y);
         assert(avail >= 0);
         if (avail) {
             if (foundSingle) {
@@ -152,7 +152,7 @@ void wfcBlitObserved(
             int patt;
             if (!wfcIsObserved(wfc, i, j, &patt)) continue;
 
-            const unsigned char* px = wfc_pixelToBlit(state, src, patt, i, j);
+            const unsigned char* px = wfc_pixelToBlitAt(state, src, patt, i, j);
             assert(px != NULL);
 
             memcpy(&dst[j * dstW * bytesPerPixel + i * bytesPerPixel], px,

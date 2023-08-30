@@ -75,9 +75,9 @@ your own backtracking behaviour.
 
 WFC works by first gathering unique NxN patterns from the input image. You can
 get the number of patterns gathered with wfc_patternCount(). Use
-wfc_patternPresent() to check if a pattern is still present at a particular
-point. Use wfc_pixelToBlit() to get a pointer to pixel bytes corresponding to a
-particular pattern.
+wfc_patternPresentAt() to check if a pattern is still present at a particular
+point. Use wfc_pixelToBlitAt() to get a pointer to pixel bytes corresponding to
+a particular pattern.
 
 If you do not want to use standard C functions, you can define these macros
 before including this header:
@@ -447,7 +447,7 @@ int wfc_patternCount(const wfc_State *state);
  * \li wfc_callerError (a negative value) if there was an error in the
  * arguments.
 */
-int wfc_patternPresent(const wfc_State *state, int patt, int x, int y);
+int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y);
 
 /**
  * Returns a pointer to the bytes of the pixel value that would be blitted to a
@@ -480,7 +480,7 @@ int wfc_patternPresent(const wfc_State *state, int patt, int x, int y);
  * \return Returns a pointer to the bytes for the corresponding pixel value.
  * Returns null if there was an error in the arguments.
 */
-const unsigned char* wfc_pixelToBlit(
+const unsigned char* wfc_pixelToBlitAt(
     const wfc_State *state, const unsigned char *src,
     int patt, int x, int y);
 
@@ -1628,7 +1628,7 @@ int wfc_patternCount(const wfc_State *state) {
     return state->wave.d23;
 }
 
-int wfc_patternPresent(const wfc_State *state, int patt, int x, int y) {
+int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y) {
     if (state == NULL ||
         patt < 0 || patt >= state->wave.d23 ||
         x < 0 || x >= state->dstD1 ||
@@ -1647,7 +1647,7 @@ int wfc_patternPresent(const wfc_State *state, int patt, int x, int y) {
     return WFC__A3D_GET(state->wave, wC0, wC1, patt);
 }
 
-const unsigned char* wfc_pixelToBlit(
+const unsigned char* wfc_pixelToBlitAt(
     const wfc_State *state, const unsigned char *src,
     int patt, int x, int y) {
     if (state == NULL ||
@@ -1661,7 +1661,7 @@ const unsigned char* wfc_pixelToBlit(
     struct wfc__A3d_cu8 srcA =
         {state->srcD0, state->srcD1, state->bytesPerPixel, src};
 
-    // Similar case as in wfc_patternPresent(),
+    // Similar case as in wfc_patternPresentAt(),
     // except here we care about the offsets
     // which are also the pattern-space coordinates of the pixel.
     int pC0, pC1;

@@ -39,7 +39,7 @@ void benchmark(
     double avg = 0.0, min = 0.0, max = 0.0;
 
     for (int i = 0; i < repeats; ++i) {
-        printf("\r\t%d/%d", i, repeats);
+        printf("\t%d/%d\r", i, repeats);
         fflush(stdout);
 
         double elapsed = measure(n, options, bytesPerPixel,
@@ -52,7 +52,7 @@ void benchmark(
     }
     avg /= repeats;
 
-    printf("\r\tavg=%.4f min=%.4f max=%.4f\n", avg, min, max);
+    printf("\tavg=%.4f min=%.4f max=%.4f\n", avg, min, max);
 }
 
 void benchmarkImage(const char *path, int n, int options, int dstW, int dstH) {

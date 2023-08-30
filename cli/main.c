@@ -75,6 +75,7 @@ int main(int argc, char *argv[]) {
                 fprintf(stdout, "WFC is backtracking.\n");
             }
         } else if (status == wfc_completed) {
+            fprintf(stdout, "WFC completed.\n");
             break;
         } else {
             assert(status == 0);

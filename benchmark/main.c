@@ -38,8 +38,10 @@ void benchmark(
     bool first = true;
     double avg = 0.0, min = 0.0, max = 0.0;
 
-    putchar('\t');
     for (int i = 0; i < repeats; ++i) {
+        printf("\r\t%d/%d", i, repeats);
+        fflush(stdout);
+
         double elapsed = measure(n, options, bytesPerPixel,
             srcW, srcH, src, dstW, dstH, dst);
 
@@ -47,15 +49,10 @@ void benchmark(
         if (first || elapsed < min) min = elapsed;
         if (first || elapsed > max) max = elapsed;
         first = false;
-
-        if (i % 5 != 4) putchar('.');
-        else putchar('o');
-        fflush(stdout);
     }
     avg /= repeats;
 
-    putchar('\n');
-    printf("\tavg=%.4f min=%.4f max=%.4f\n", avg, min, max);
+    printf("\r\tavg=%.4f min=%.4f max=%.4f\n", avg, min, max);
 }
 
 void benchmarkImage(const char *path, int n, int options, int dstW, int dstH) {

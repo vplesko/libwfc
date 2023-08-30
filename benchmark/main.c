@@ -105,14 +105,14 @@ void benchmarkText(const char *path, int n, int options, int dstW, int dstH) {
 }
 
 int main(void) {
-    srand(1600000000);
+    srand(1600000001);
 
     benchmarkImage("external/samples/NotKnot.png",
         3, wfc_optFlip | wfc_optRotate, 64, 64);
 
     putchar('\n');
     benchmarkText("benchmark/test.txt",
-        5, wfc_optFlip, 80, 80);
+        5, wfc_optFlip/* | wfc_optRotate*/, 80, 80);
 
     return 0;
 }

@@ -158,3 +158,9 @@ int argsToWfcOptions(struct Args args) {
 
     return options;
 }
+
+void printPrelude(struct Args args, int srcW, int srcH, int pattCnt) {
+    fprintf(stdout, "Seed:       %d\n", args.seed);
+    fprintf(stdout, "Input size: %dx%d\n", srcW, srcH);
+    fprintf(stdout, "Patterns:   %d\n", pattCnt);
+}

@@ -283,6 +283,9 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
+    printPrelude(args, srcW, srcH, wfcPatternCount(&wfc));
+    fprintf(stdout, "\n");
+
     keep = malloc(dstW * dstH * sizeof(*keep));
 
     fprintf(stdout, "%s\n", instructions);

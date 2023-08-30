@@ -14,14 +14,14 @@ This project also offers a CLI and a rudimentary GUI tool for the WFC process.
 
 You only need `wfc.h`. Include it like this:
 
-```
+```c
     #define WFC_IMPLEMENTATION
     #include "wfc.h"
 ```
 
 Call `wfc_generate`:
 
-```
+```c
     wfc_generate(
         // pattern width and height, 3 is a good starting value
         n,

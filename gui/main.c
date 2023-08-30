@@ -283,7 +283,7 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    printPrelude(args, srcW, srcH, wfcPatternCount(&wfc));
+    printPrelude(args, srcW, srcH, wfcPatternCount(wfc));
     fprintf(stdout, "\n");
 
     keep = malloc(dstW * dstH * sizeof(*keep));
@@ -494,7 +494,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (args.pathOut != NULL) {
-        if (wfcStatus(&wfc) == wfc_completed) {
+        if (wfcStatus(wfc) == wfc_completed) {
             wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
             if (writeOut(&args, bytesPerPixel, surfaceDst->pixels) != 0) {
                 ret = 1;

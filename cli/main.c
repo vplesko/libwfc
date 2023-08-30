@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    printPrelude(args, srcW, srcH, wfcPatternCount(&wfc));
+    printPrelude(args, srcW, srcH, wfcPatternCount(wfc));
 
     while (1) {
         int status = wfcStep(&wfc);

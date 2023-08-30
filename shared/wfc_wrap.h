@@ -33,15 +33,14 @@ int wfcInit(
     return 0;
 }
 
-int wfcPatternCount(const struct WfcWrapper *wfc) {
-    int pattCnt = wfc_patternCount(wfc->states[wfc->len - 1]);
+int wfcPatternCount(const struct WfcWrapper wfc) {
+    int pattCnt = wfc_patternCount(wfc.states[wfc.len - 1]);
     assert(pattCnt >= 0);
     return pattCnt;
 }
 
-int wfcStatus(struct WfcWrapper *wfc) {
-    // @TODO This should call wfc_status instead and arg should be const.
-    return wfc_step(wfc->states[wfc->len - 1]);
+int wfcStatus(const struct WfcWrapper wfc) {
+    return wfc_status(wfc.states[wfc.len - 1]);
 }
 
 int wfcStep(struct WfcWrapper *wfc) {

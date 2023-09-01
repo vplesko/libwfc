@@ -105,6 +105,20 @@ int parseArgs(int argc, char * const *argv, struct Args *args, bool outReq) {
     if (status == unargs_err_args) {
         fprintf(stdout, "\n");
         unargs_help(argv[0], sizeof(params) / sizeof(*params), params);
+
+        fprintf(stdout, "\n");
+        fprintf(stdout, "Example(s):\n");
+        fprintf(stdout,
+            "\t%s external/samples/Angular.png "
+            "-n 3 -w 64 -h 64 -o bin/output.png -flip -rot\n",
+            argv[0]);
+        if (!outReq) {
+            fprintf(stdout,
+                "\t%s external/samples/Angular.png "
+                "-n 3 -w 64 -h 64 -flip -rot\n",
+                argv[0]);
+        }
+
         return -1;
     }
     assert(status == unargs_ok);

@@ -538,6 +538,25 @@ bool wfc__approxEq_f(float a, float b) {
     return fabsf((a - b) / a) < relDiff;
 }
 
+// @TODO Explain this code and credit
+// https://github.com/romeric/fastapprox/blob/master/fastapprox/src/fastlog.h.
+float wfc__log2f(float x) {
+    uint32_t xu;
+    memcpy(&xu, &x, sizeof(xu));
+    float y = (float)xu;
+
+    uint32_t mxu = (xu & 0x007FFFFF) | 0x3f000000;
+    float mx;
+    memcpy(&mx, &mxu, sizeof(mx));
+
+    return 1.1920928955078125e-7f * y - 124.22551499f -
+        1.498030302f * mx - 1.72587999f / (0.3520887068f + mx);
+}
+
+float wfc__mulLog2f(float x) {
+    return x * wfc__log2f(x);
+}
+
 // RNG utility
 
 // [0, 1)
@@ -1111,7 +1130,7 @@ void wfc__calcEntropies(
                 for (int p = 0; p < wave.d23; ++p) {
                     if (WFC__A3D_GET(wave, c0, c1, p)) {
                         float prob = (float)patts[p].freq / (float)totalFreq;
-                        entropy -= prob * log2f(prob);
+                        entropy -= wfc__mulLog2f(prob);
                     }
                 }
             }

@@ -540,6 +540,7 @@ bool wfc__approxEq_f(float a, float b) {
 
 // @TODO Explain this code and credit
 // https://github.com/romeric/fastapprox/blob/master/fastapprox/src/fastlog.h.
+// @TODO What if floats are not IEEE 754? (Check for __STDC_IEC_559__).
 float wfc__log2f(float x) {
     uint32_t xu;
     memcpy(&xu, &x, sizeof(xu));

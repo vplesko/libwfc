@@ -538,24 +538,38 @@ bool wfc__approxEq_f(float a, float b) {
     return fabsf((a - b) / a) < relDiff;
 }
 
-// @TODO Explain this code and credit
-// https://github.com/romeric/fastapprox/blob/master/fastapprox/src/fastlog.h.
-// @TODO What if floats are not IEEE 754? (Check for __STDC_IEC_559__).
+// Approximates log2(x), where x is in (0, 1] and not a subnormal.
+// Assumes IEEE 754 representation of float on the system.
 float wfc__log2f(float x) {
-    uint32_t xu;
+    // IEEE 754 representation constants.
+    const int32_t mantissaLen = 23;
+    const int32_t mantissaMask = (1 << mantissaLen) - 1;
+    const int32_t baseExponent = -127;
+
+    // Reinterpret x as int in standard compliant way.
+    int32_t xu;
     memcpy(&xu, &x, sizeof(xu));
-    float y = (float)xu;
 
-    uint32_t mxu = (xu & 0x007FFFFF) | 0x3f000000;
-    float mx;
-    memcpy(&mx, &mxu, sizeof(mx));
+    // Calculate exponent of x.
+    float e = (float)((xu >> mantissaLen) + baseExponent);
 
-    return 1.1920928955078125e-7f * y - 124.22551499f -
-        1.498030302f * mx - 1.72587999f / (0.3520887068f + mx);
-}
+    // Calculate mantissa of x. It will be in range [1, 2).
+    float m;
+    int32_t mxu = (xu & mantissaMask) | ((-baseExponent) << mantissaLen);
+    memcpy(&m, &mxu, sizeof(m));
 
-float wfc__mulLog2f(float x) {
-    return x * wfc__log2f(x);
+    // Use Remez algorithm-generated 3rd degree approximation polynomial
+    // for log2(a) where a is in range [1, 2].
+    float l = 0.15824871f;
+    l = l * m + -1.051875f;
+    l = l * m + 3.0478842f;
+    l = l * m + -2.1536207f;
+
+    // Add exponent to the calculation.
+    // Final log is log2(m*2^e)=log2(m)+e.
+    l += e;
+
+    return l;
 }
 
 // RNG utility
@@ -1131,7 +1145,7 @@ void wfc__calcEntropies(
                 for (int p = 0; p < wave.d23; ++p) {
                     if (WFC__A3D_GET(wave, c0, c1, p)) {
                         float prob = (float)patts[p].freq / (float)totalFreq;
-                        entropy -= wfc__mulLog2f(prob);
+                        entropy -= prob * wfc__log2f(prob);
                     }
                 }
             }

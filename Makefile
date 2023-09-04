@@ -22,8 +22,8 @@ GUI_HDRS = $(wildcard gui/*.h)
 TEST_HDRS = $(wildcard test/*.h)
 BENCHMARK_HDRS = $(wildcard benchmark/*.h)
 
-BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -I./ -Ishared -Iexternal/lib -g -fno-omit-frame-pointer
-BUILD_FLAGS_CXX = -std=c++11 -Wall -Wextra -pedantic -Werror -I./ -Ishared -Iexternal/lib -g -fno-omit-frame-pointer
+BUILD_FLAGS = -std=c99 -Wall -Wextra -pedantic -Werror -I. -Ishared -Iexternal/lib -g -fno-omit-frame-pointer
+BUILD_FLAGS_CXX = -std=c++11 -Wall -Wextra -pedantic -Werror -I. -Ishared -Iexternal/lib -g -fno-omit-frame-pointer
 ifdef VC
 	BUILD_FLAGS += -D_CRT_SECURE_NO_WARNINGS
 endif

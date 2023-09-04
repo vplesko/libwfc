@@ -1045,7 +1045,7 @@ bool wfc__restrictKept(
     struct wfc__A3d_u8 wave) {
     const int pattCnt = wave.d23, bytesPerPixel = dst.d23;
 
-    bool modified = false;
+    bool modif = false;
 
     for (int wC0 = 0; wC0 < wave.d03; ++wC0) {
         for (int wC1 = 0; wC1 < wave.d13; ++wC1) {
@@ -1073,7 +1073,7 @@ bool wfc__restrictKept(
 
                         if (memcmp(dPx, sPx, (size_t)bytesPerPixel) != 0) {
                             WFC__A3D_GET(wave, wC0, wC1, p) = 0;
-                            modified = true;
+                            modif = true;
                         }
                     }
                 }
@@ -1081,7 +1081,7 @@ bool wfc__restrictKept(
         }
     }
 
-    return modified;
+    return modif;
 }
 
 bool wfc__restrictEdges(
@@ -1090,18 +1090,18 @@ bool wfc__restrictEdges(
     struct wfc__A3d_u8 wave) {
     const int d0 = wave.d03, d1 = wave.d13, pattCnt = wave.d23;
 
-    bool modified = false;
+    bool modif = false;
 
     if (options & wfc__optEdgeFixC0) {
         for (int i = 0; i < d1; ++i) {
             for (int p = 0; p < pattCnt; ++p) {
                 if (WFC__A3D_GET(wave, 0, i, p) && !patts[p].edgeC0Lo) {
                     WFC__A3D_GET(wave, 0, i, p) = 0;
-                    modified = true;
+                    modif = true;
                 }
                 if (WFC__A3D_GET(wave, d0 - 1, i, p) && !patts[p].edgeC0Hi) {
                     WFC__A3D_GET(wave, d0 - 1, i, p) = 0;
-                    modified = true;
+                    modif = true;
                 }
             }
         }
@@ -1111,25 +1111,28 @@ bool wfc__restrictEdges(
             for (int p = 0; p < pattCnt; ++p) {
                 if (WFC__A3D_GET(wave, i, 0, p) && !patts[p].edgeC1Lo) {
                     WFC__A3D_GET(wave, i, 0, p) = 0;
-                    modified = true;
+                    modif = true;
                 }
                 if (WFC__A3D_GET(wave, i, d1 - 1, p) && !patts[p].edgeC1Hi) {
                     WFC__A3D_GET(wave, i, d1 - 1, p) = 0;
-                    modified = true;
+                    modif = true;
                 }
             }
         }
     }
 
-    return modified;
+    return modif;
 }
 
 void wfc__calcEntropies(
     const struct wfc__Pattern *patts,
     const struct wfc__A3d_u8 wave,
+    struct wfc__A2d_u8 modified,
     struct wfc__A2d_f entropies) {
     for (int c0 = 0; c0 < wave.d03; ++c0) {
         for (int c1 = 0; c1 < wave.d13; ++c1) {
+            if (!WFC__A2D_GET(modified, c0, c1)) continue;
+
             int totalFreq = 0;
             int presentPatts = 0;
             for (int p = 0; p < wave.d23; ++p) {
@@ -1159,7 +1162,9 @@ void wfc__observeOne(
     void *ctx,
     int pattCnt, const struct wfc__Pattern *patts,
     const struct wfc__A2d_f entropies,
-    struct wfc__A3d_u8 wave, int *obsC0, int *obsC1) {
+    struct wfc__A3d_u8 wave,
+    struct wfc__A2d_u8 modified,
+    int *obsC0, int *obsC1) {
     float smallest = 0;
     // The number of different wave points tied for the smallest entropy.
     int smallestCnt = 0;
@@ -1220,6 +1225,7 @@ void wfc__observeOne(
         WFC__A3D_GET(wave, chosenC0, chosenC1, i) = 0;
     }
     WFC__A3D_GET(wave, chosenC0, chosenC1, chosenPatt) = 1;
+    WFC__A2D_GET(modified, chosenC0, chosenC1) = 1;
 }
 
 // Propagate constraints from a recently modified point
@@ -1275,8 +1281,9 @@ bool wfc__propagateOntoNeighbours(
     int c0, int c1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
-    struct wfc__A3d_u8 wave) {
-    bool modified = false;
+    struct wfc__A3d_u8 wave,
+    struct wfc__A2d_u8 modified) {
+    bool modif = false;
 
     for (int offC0 = -(n - 1); offC0 <= n - 1; ++offC0) {
         for (int offC1 = -(n - 1); offC1 <= n - 1; ++offC1) {
@@ -1291,12 +1298,13 @@ bool wfc__propagateOntoNeighbours(
             if (wfc__propagateOntoOffset(n, c0, c1, offC0, offC1,
                     overlaps, wave)) {
                 WFC__A2D_GET_WRAP(ripple, c0 + offC0, c1 + offC1) = 1;
-                modified = true;
+                WFC__A2D_GET_WRAP(modified, c0 + offC0, c1 + offC1) = 1;
+                modif = true;
             }
         }
     }
 
-    return modified;
+    return modif;
 }
 
 // Constraints only need to be propagated from recently modified points.
@@ -1307,18 +1315,19 @@ void wfc__propagateFromRipple(
     int n, int options,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
-    struct wfc__A3d_u8 wave) {
-    bool modified = true;
-    while (modified) {
-        modified = false;
+    struct wfc__A3d_u8 wave,
+    struct wfc__A2d_u8 modified) {
+    bool modif = true;
+    while (modif) {
+        modif = false;
 
         for (int nC0 = 0; nC0 < wave.d03; ++nC0) {
             for (int nC1 = 0; nC1 < wave.d13; ++nC1) {
                 if (!WFC__A2D_GET(ripple, nC0, nC1)) continue;
 
                 if (wfc__propagateOntoNeighbours(n, options, nC0, nC1,
-                        overlaps, ripple, wave)) {
-                    modified = true;
+                        overlaps, ripple, wave, modified)) {
+                    modif = true;
                 }
 
                 WFC__A2D_GET(ripple, nC0, nC1) = 0;
@@ -1331,10 +1340,11 @@ void wfc__propagateFromAll(
     int n, int options,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
-    struct wfc__A3d_u8 wave) {
+    struct wfc__A3d_u8 wave,
+    struct wfc__A2d_u8 modified) {
     memset(ripple.a, 1, WFC__A2D_SIZE(ripple));
 
-    wfc__propagateFromRipple(n, options, overlaps, ripple, wave);
+    wfc__propagateFromRipple(n, options, overlaps, ripple, wave, modified);
 }
 
 void wfc__propagateFromSeed(
@@ -1342,11 +1352,12 @@ void wfc__propagateFromSeed(
     int seedC0, int seedC1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
-    struct wfc__A3d_u8 wave) {
+    struct wfc__A3d_u8 wave,
+    struct wfc__A2d_u8 modified) {
     memset(ripple.a, 0, WFC__A2D_SIZE(ripple));
     WFC__A2D_GET(ripple, seedC0, seedC1) = 1;
 
-    wfc__propagateFromRipple(n, options, overlaps, ripple, wave);
+    wfc__propagateFromRipple(n, options, overlaps, ripple, wave, modified);
 }
 
 int wfc__calcStatus(const struct wfc__A3d_u8 wave) {
@@ -1395,7 +1406,13 @@ struct wfc_State {
     struct wfc__A3d_u8 wave;
     // Allocated once and reused when new entropy values are calculated.
     struct wfc__A2d_f entropies;
-    // Array of bools that tells which wave points were recently modified.
+    // Array of bools that tells which wave points were modified
+    // in the last round of observation and propagation.
+    // Allocated once and reused in all propagation calls.
+    // @TODO Merge modified and ripple into a single array.
+    struct wfc__A2d_u8 modified;
+    // Array of bools that tells which wave points were very recently modified
+    // and need to have their constraints propagated again.
     // Allocated once and reused in all propagation calls.
     struct wfc__A2d_u8 ripple;
 };
@@ -1493,12 +1510,18 @@ wfc_State* wfc_initEx(
     if (options & wfc__optEdgeFixC1) state->wave.d13 -= n - 1;
     state->wave.d23 = pattCnt;
     state->wave.a = (uint8_t*)WFC_MALLOC(ctx, WFC__A3D_SIZE(state->wave));
-    for (int i = 0; i < WFC__A3D_LEN(state->wave); ++i) state->wave.a[i] = 1;
+    memset(state->wave.a, 1, WFC__A3D_SIZE(state->wave));
 
     state->entropies.d02 = state->wave.d03;
     state->entropies.d12 = state->wave.d13;
     state->entropies.a = (float*)WFC_MALLOC(
         ctx, WFC__A2D_SIZE(state->entropies));
+
+    state->modified.d02 = state->wave.d03;
+    state->modified.d12 = state->wave.d13;
+    state->modified.a = (uint8_t*)WFC_MALLOC(
+        ctx, WFC__A2D_SIZE(state->modified));
+    memset(state->modified.a, 1, WFC__A2D_SIZE(state->modified));
 
     state->ripple.d02 = state->wave.d03;
     state->ripple.d12 = state->wave.d13;
@@ -1528,7 +1551,7 @@ wfc_State* wfc_initEx(
 
     if (propagate) {
         wfc__propagateFromAll(n, options,
-            state->overlaps, state->ripple, state->wave);
+            state->overlaps, state->ripple, state->wave, state->modified);
         state->status = wfc__calcStatus(state->wave);
     }
 
@@ -1548,16 +1571,22 @@ int wfc_step(wfc_State *state) {
 
     int pattCnt = state->wave.d23;
 
-    wfc__calcEntropies(state->patts, state->wave, state->entropies);
+    wfc__calcEntropies(
+        state->patts, state->wave, state->modified,
+        state->entropies);
+
+    memset(state->modified.a, 0, WFC__A2D_SIZE(state->modified));
 
     int obsC0, obsC1;
     wfc__observeOne(
-        state->ctx, pattCnt, state->patts, state->entropies, state->wave,
+        state->ctx, pattCnt, state->patts, state->entropies,
+        state->wave, state->modified,
         &obsC0, &obsC1);
 
-    wfc__propagateFromSeed(state->n, state->options,
+    wfc__propagateFromSeed(
+        state->n, state->options,
         obsC0, obsC1,
-        state->overlaps, state->ripple, state->wave);
+        state->overlaps, state->ripple, state->wave, state->modified);
 
     state->status = wfc__calcStatus(state->wave);
 
@@ -1634,6 +1663,11 @@ wfc_State* wfc_clone(const wfc_State *state) {
     memcpy(clone->entropies.a, state->entropies.a,
         WFC__A2D_SIZE(state->entropies));
 
+    clone->modified.a = (uint8_t*)WFC_MALLOC(
+        state->ctx, WFC__A2D_SIZE(state->modified));
+    memcpy(clone->modified.a, state->modified.a,
+        WFC__A2D_SIZE(state->modified));
+
     clone->ripple.a = (uint8_t*)WFC_MALLOC(
         state->ctx, WFC__A2D_SIZE(state->ripple));
     memcpy(clone->ripple.a, state->ripple.a,
@@ -1649,6 +1683,7 @@ void wfc_free(wfc_State *state) {
     (void)ctx;
 
     WFC_FREE(ctx, state->ripple.a);
+    WFC_FREE(ctx, state->modified.a);
     WFC_FREE(ctx, state->entropies.a);
     WFC_FREE(ctx, state->wave.a);
     WFC_FREE(ctx, state->overlaps.a);

@@ -14,8 +14,8 @@ Result:
 
 ```
 input=external/samples/NotKnot.png repeats=5 args={n=3 opt=7 dstW=64 dstH=64}
-        avg=1.9586 min=1.8350 max=2.0030
+        avg=0.6786 min=0.6440 max=0.6990
 
 input=benchmark/test.txt repeats=5 args={n=5 opt=3 dstW=80 dstH=80}
-        avg=16.1846 min=15.9230 max=16.3290
+        avg=16.2276 min=16.0900 max=16.3120
 ```

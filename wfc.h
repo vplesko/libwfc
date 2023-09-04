@@ -477,8 +477,8 @@ int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y);
  * \param y y coordinate of the destination image. Must be a valid y coordinate
  * for the image being generated.
  *
- * \return Returns a pointer to the bytes for the corresponding pixel value.
- * Returns null if there was an error in the arguments.
+ * \return Returns a pointer to the bytes within src for the corresponding
+ * pixel value. Returns null if there was an error in the arguments.
 */
 const unsigned char* wfc_pixelToBlitAt(
     const wfc_State *state, const unsigned char *src,

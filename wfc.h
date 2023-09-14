@@ -76,7 +76,7 @@ your own backtracking behaviour.
 WFC works by first gathering unique NxN patterns from the input image. You can
 get the total number of patterns gathered with wfc_patternCount(). Use
 wfc_patternPresentAt() to check if a pattern is still present at a particular
-point. Use wfc_modified() to check if, during the previous step, a particular
+point. Use wfc_modifiedAt() to check if, during the previous step, a particular
 point was modified, ie. its set of present patterns was reduced. Use
 wfc_pixelToBlitAt() to get a pointer to pixel bytes corresponding to a
 particular pattern.
@@ -479,7 +479,7 @@ int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y);
  * \li wfc_callerError (a negative value) if there was an error in the
  * arguments.
 */
-int wfc_modified(const wfc_State *state, int x, int y);
+int wfc_modifiedAt(const wfc_State *state, int x, int y);
 
 /**
  * Returns a pointer to the bytes of the pixel value that would be blitted to a
@@ -1748,7 +1748,7 @@ int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y) {
     return WFC__A3D_GET(state->wave, wC0, wC1, patt);
 }
 
-int wfc_modified(const wfc_State *state, int x, int y) {
+int wfc_modifiedAt(const wfc_State *state, int x, int y) {
     if (state == NULL ||
         x < 0 || x >= state->dstD1 ||
         y < 0 || y >= state->dstD0) {

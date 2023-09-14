@@ -1081,27 +1081,27 @@ static int testCallerError(void) {
         goto cleanup;
     }
 
-    if (wfc_modified(NULL, 0, 0) != wfc_callerError) {
+    if (wfc_modifiedAt(NULL, 0, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_modified(state, -1, 0) != wfc_callerError) {
+    if (wfc_modifiedAt(state, -1, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_modified(state, dstW + 1, 0) != wfc_callerError) {
+    if (wfc_modifiedAt(state, dstW + 1, 0) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_modified(state, 0, -1) != wfc_callerError) {
+    if (wfc_modifiedAt(state, 0, -1) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;
     }
-    if (wfc_modified(state, 0, dstH + 1) != wfc_callerError) {
+    if (wfc_modifiedAt(state, 0, dstH + 1) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
         goto cleanup;

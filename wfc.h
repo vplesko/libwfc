@@ -74,10 +74,12 @@ wfc_clone() can be used to deep-copy a state object. You can use it to implement
 your own backtracking behaviour.
 
 WFC works by first gathering unique NxN patterns from the input image. You can
-get the number of patterns gathered with wfc_patternCount(). Use
+get the total number of patterns gathered with wfc_patternCount(). Use
 wfc_patternPresentAt() to check if a pattern is still present at a particular
-point. Use wfc_pixelToBlitAt() to get a pointer to pixel bytes corresponding to
-a particular pattern.
+point. Use wfc_modified() to check if, during the previous step, a particular
+point was modified, ie. its set of present patterns was reduced. Use
+wfc_pixelToBlitAt() to get a pointer to pixel bytes corresponding to a
+particular pattern.
 
 If you do not want to use standard C functions, you can define these macros
 before including this header:
@@ -428,8 +430,8 @@ int wfc_patternCount(const wfc_State *state);
  * indexes are in the range from zero (inclusive) to pattern count (exclusive).
  * You can get the pattern count by calling wfc_patternCount().
  *
- * \param state State object pointer containing the wave to be queried. Must not
- * be null.
+ * \param state State object pointer containing the wave point to be queried.
+ * Must not be null.
  *
  * \param patt Pattern index whose presence is being queried. Must be a valid
  * index.
@@ -450,6 +452,36 @@ int wfc_patternCount(const wfc_State *state);
 int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y);
 
 /**
+ * Returns whether the wave point with the given coordinates has been modified
+ * during the previous round of observation and propagations in wfc_step(). As
+ * WFC iterates, patterns from wave points get removed as points are observed
+ * and constraints are propagated - this function lets you know which points had
+ * their set of remaining patterns reduced.
+ *
+ * If called before any calls to wfc_step() had been made, responds as if all
+ * wave points have been modified.
+ *
+ * \param state State object pointer containing the wave point to be queried.
+ * Must not be null.
+ *
+ * \param x x coordinate of the destination image. Must be a valid x coordinate
+ * for the image being generated.
+ *
+ * \param y y coordinate of the destination image. Must be a valid y coordinate
+ * for the image being generated.
+ *
+ * \return Returns:
+ *
+ * \li 0 if the wave point was not recently modified;
+ * \li 1 if the wave point was modified during the previous round of observation
+ * and propagations in wfc_step() or if no calls to wfc_step() have yet been
+ * made;
+ * \li wfc_callerError (a negative value) if there was an error in the
+ * arguments.
+*/
+int wfc_modified(const wfc_State *state, int x, int y);
+
+/**
  * Returns a pointer to the bytes of the pixel value that would be blitted to a
  * destination image at the given coordinates if the given pattern was the one
  * chosen for the corresponding wave point.
@@ -462,8 +494,8 @@ int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y);
  * indexes are in the range from zero (inclusive) to pattern count (exclusive).
  * You can get the pattern count by calling wfc_patternCount().
  *
- * \param state State object pointer containing the wave to be queried. Must not
- * be null.
+ * \param state State object pointer containing the wave point to be queried.
+ * Must not be null.
  *
  * \param src Pointer to pixels comprising the source image. Must not be null.
  * Must be of the same dimensions as the image that was passed to wfc_init().
@@ -1714,6 +1746,19 @@ int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y) {
     wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
 
     return WFC__A3D_GET(state->wave, wC0, wC1, patt);
+}
+
+int wfc_modified(const wfc_State *state, int x, int y) {
+    if (state == NULL ||
+        x < 0 || x >= state->dstD1 ||
+        y < 0 || y >= state->dstD0) {
+        return wfc_callerError;
+    }
+
+    int wC0, wC1;
+    wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
+
+    return WFC__A2D_GET(state->modified, wC0, wC1);
 }
 
 const unsigned char* wfc_pixelToBlitAt(

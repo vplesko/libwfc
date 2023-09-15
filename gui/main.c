@@ -347,11 +347,10 @@ int main(int argc, char *argv[]) {
         if (guiState == guiStateRunning) {
             if (pauseToggled) {
                 clearSurface(surfaceDst, NULL);
-                wfcBlitObserved(wfc, surfaceSrc->pixels,
-                    dstW, dstH, surfaceDst->pixels);
+                wfcBlitObserved(wfc, surfaceSrc->pixels, surfaceDst->pixels);
 
                 keepChanged = false;
-                wfcSetWhichObserved(wfc, dstW, dstH, keep);
+                wfcSetWhichObserved(wfc, keep);
 
                 guiState = guiStatePaused;
             } else {
@@ -368,8 +367,8 @@ int main(int argc, char *argv[]) {
                         goto cleanup;
                     }
 
-                    wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                        dstW, dstH, surfaceDst->pixels);
+                    wfcBlitAveraged(
+                        wfc, surfaceSrc->pixels,surfaceDst->pixels);
                 }
 
                 int status = wfcStep(&wfc);
@@ -380,17 +379,17 @@ int main(int argc, char *argv[]) {
                         goto cleanup;
                     }
                     fprintf(stdout, "WFC is backtracking.\n");
-                    wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                        dstW, dstH, surfaceDst->pixels);
+                    wfcBlitAveraged(
+                        wfc, surfaceSrc->pixels, surfaceDst->pixels);
                 } else if (status == 0) {
-                    wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                        dstW, dstH, surfaceDst->pixels);
+                    wfcBlitAveraged(
+                        wfc, surfaceSrc->pixels, surfaceDst->pixels);
                 } else if (status == wfc_completed) {
                     wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
                     fprintf(stdout, "WFC completed.\n");
 
                     keepChanged = false;
-                    wfcSetWhichObserved(wfc, dstW, dstH, keep);
+                    wfcSetWhichObserved(wfc, keep);
 
                     guiState = guiStateCompleted;
                 } else {
@@ -401,11 +400,11 @@ int main(int argc, char *argv[]) {
             if (undoRequested) {
                 if (keepChanged) {
                     clearSurface(surfaceDst, NULL);
-                    wfcBlitObserved(wfc, surfaceSrc->pixels,
-                        dstW, dstH, surfaceDst->pixels);
+                    wfcBlitObserved(
+                        wfc, surfaceSrc->pixels, surfaceDst->pixels);
 
                     keepChanged = false;
-                    wfcSetWhichObserved(wfc, dstW, dstH, keep);
+                    wfcSetWhichObserved(wfc, keep);
                 }
             } else if (!isRectZeroSize(cursor) && isRightMouseButtonHeld()) {
                 if (clearBoolsRect(dstW, dstH, keep, cursor)) {
@@ -436,8 +435,8 @@ int main(int argc, char *argv[]) {
                     keepChanged = false;
                 }
 
-                wfcBlitAveraged(wfc, surfaceSrc->pixels,
-                    dstW, dstH, surfaceDst->pixels);
+                wfcBlitAveraged(
+                    wfc, surfaceSrc->pixels, surfaceDst->pixels);
 
                 guiState = guiStateRunning;
             }

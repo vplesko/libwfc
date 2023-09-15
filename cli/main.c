@@ -87,9 +87,9 @@ int main(int argc, char *argv[]) {
         }
 
         if (recountAll) {
-            observedCnt = wfcObservedCount(wfc, args.dstW, args.dstH, false);
+            observedCnt = wfcObservedCount(wfc, false);
         } else {
-            observedCnt += wfcObservedCount(wfc, args.dstW, args.dstH, true);
+            observedCnt += wfcObservedCount(wfc, true);
         }
         recountAll = false;
 

@@ -1,4 +1,6 @@
 struct WfcWrapper {
+    int dstW, dstH;
+
     int len, cap;
     struct wfc_State **states;
     int counter;
@@ -12,6 +14,9 @@ int wfcInit(
     int dstW, int dstH, const unsigned char *dst,
     bool *keep,
     struct WfcWrapper *wfc) {
+    wfc->dstW = dstW;
+    wfc->dstH = dstH;
+
     wfc->len = 0;
     wfc->cap = 50;
     wfc->states = malloc((size_t)wfc->cap * sizeof(*wfc->states));
@@ -79,17 +84,15 @@ void wfcBlit(
 }
 
 void wfcBlitAveraged(
-    const struct WfcWrapper wfc,
-    const unsigned char *src,
-    int dstW, int dstH, unsigned char *dst) {
+    const struct WfcWrapper wfc, const unsigned char *src, unsigned char *dst) {
     assert(wfc.len > 0);
 
     int bytesPerPixel = wfc.bytesPerPixel;
     const wfc_State *state = wfc.states[wfc.len - 1];
     int pattCnt = wfc_patternCount(state);
 
-    for (int j = 0; j < dstH; ++j) {
-        for (int i = 0; i < dstW; ++i) {
+    for (int j = 0; j < wfc.dstH; ++j) {
+        for (int i = 0; i < wfc.dstW; ++i) {
             for (int b = 0; b < bytesPerPixel; ++b) {
                 int sum = 0, cnt = 0;
                 for (int p = 0; p < pattCnt; ++p) {
@@ -108,7 +111,7 @@ void wfcBlitAveraged(
                 if (cnt == 0) continue;
 
                 unsigned char avg = (unsigned char)(sum / cnt);
-                dst[j * dstW * bytesPerPixel + i * bytesPerPixel + b] = avg;
+                dst[j * wfc.dstW * bytesPerPixel + i * bytesPerPixel + b] = avg;
             }
         }
     }
@@ -138,17 +141,14 @@ bool wfcIsObserved(const struct WfcWrapper wfc, int x, int y, int *patt) {
     return foundSingle;
 }
 
-int wfcObservedCount(
-    const struct WfcWrapper wfc,
-    int dstW, int dstH,
-    bool modifOnly) {
+int wfcObservedCount(const struct WfcWrapper wfc, bool modifOnly) {
     assert(wfc.len > 0);
 
     const wfc_State *state = wfc.states[wfc.len - 1];
 
     int cnt = 0;
-    for (int j = 0; j < dstH; ++j) {
-        for (int i = 0; i < dstW; ++i) {
+    for (int j = 0; j < wfc.dstH; ++j) {
+        for (int i = 0; i < wfc.dstW; ++i) {
             if (!modifOnly || wfc_modifiedAt(state, i, j)) {
                 if (wfcIsObserved(wfc, i, j, NULL)) ++cnt;
             }
@@ -159,33 +159,30 @@ int wfcObservedCount(
 }
 
 void wfcBlitObserved(
-    const struct WfcWrapper wfc,
-    const unsigned char *src,
-    int dstW, int dstH, unsigned char *dst) {
+    const struct WfcWrapper wfc, const unsigned char *src, unsigned char *dst) {
     assert(wfc.len > 0);
 
     int bytesPerPixel = wfc.bytesPerPixel;
     const wfc_State *state = wfc.states[wfc.len - 1];
 
-    for (int j = 0; j < dstH; ++j) {
-        for (int i = 0; i < dstW; ++i) {
+    for (int j = 0; j < wfc.dstH; ++j) {
+        for (int i = 0; i < wfc.dstW; ++i) {
             int patt;
             if (!wfcIsObserved(wfc, i, j, &patt)) continue;
 
             const unsigned char* px = wfc_pixelToBlitAt(state, src, patt, i, j);
             assert(px != NULL);
 
-            memcpy(&dst[j * dstW * bytesPerPixel + i * bytesPerPixel], px,
+            memcpy(&dst[j * wfc.dstW * bytesPerPixel + i * bytesPerPixel], px,
                 bytesPerPixel);
         }
     }
 }
 
-void wfcSetWhichObserved(
-    const struct WfcWrapper wfc, int dstW, int dstH, bool *dst) {
-    for (int j = 0; j < dstH; ++j) {
-        for (int i = 0; i < dstW; ++i) {
-            dst[j * dstW + i] = wfcIsObserved(wfc, i, j, NULL);
+void wfcSetWhichObserved(const struct WfcWrapper wfc, bool *dst) {
+    for (int j = 0; j < wfc.dstH; ++j) {
+        for (int i = 0; i < wfc.dstW; ++i) {
+            dst[j * wfc.dstW + i] = wfcIsObserved(wfc, i, j, NULL);
         }
     }
 }

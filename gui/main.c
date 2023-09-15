@@ -291,8 +291,7 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "%s\n", instructions);
 
     enum GuiState guiState = guiStateRunning;
-    // @TODO Rename to keepHasChanged.
-    bool keepChanged = false;
+    bool keepHasChanged = false;
     int zoom = zoomMin;
     int cursorSize = cursorSizeMin;
     updateWindowTitle(guiState, zoom, window);
@@ -358,7 +357,7 @@ int main(int argc, char *argv[]) {
                 clearSurface(surfaceDst, NULL);
                 wfcBlitObserved(wfc, surfaceSrc->pixels, surfaceDst->pixels);
 
-                keepChanged = false;
+                keepHasChanged = false;
                 wfcSetWhichObserved(wfc, keep);
 
                 guiState = guiStatePaused;
@@ -399,7 +398,7 @@ int main(int argc, char *argv[]) {
                     wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
                     fprintf(stdout, "WFC completed.\n");
 
-                    keepChanged = false;
+                    keepHasChanged = false;
                     wfcSetWhichObserved(wfc, keep);
 
                     guiState = guiStateCompleted;
@@ -409,28 +408,28 @@ int main(int argc, char *argv[]) {
             }
         } else if (guiState == guiStatePaused) {
             if (undoRequested) {
-                if (keepChanged) {
+                if (keepHasChanged) {
                     clearSurface(surfaceDst, NULL);
                     wfcBlitObserved(
                         wfc, surfaceSrc->pixels, surfaceDst->pixels);
 
-                    keepChanged = false;
+                    keepHasChanged = false;
                     wfcSetWhichObserved(wfc, keep);
                 }
             } else if (!isRectZeroSize(cursor) && isRightMouseButtonHeld()) {
                 if (clearBoolsRect(dstW, dstH, keep, cursor)) {
-                    keepChanged = true;
+                    keepHasChanged = true;
 
                     clearSurface(surfaceDst, &cursor);
                 }
             } else if (resetRequested) {
                 if (clearBoolsAll(dstW, dstH, keep)) {
-                    keepChanged = true;
+                    keepHasChanged = true;
 
                     clearSurface(surfaceDst, NULL);
                 }
             } else if (pauseToggled) {
-                if (keepChanged) {
+                if (keepHasChanged) {
                     wfcFree(wfc);
                     if (wfcInit(
                             n, wfcOptions, bytesPerPixel,
@@ -443,7 +442,7 @@ int main(int argc, char *argv[]) {
                         goto cleanup;
                     }
 
-                    keepChanged = false;
+                    keepHasChanged = false;
                 }
 
                 wfcBlitAveraged(
@@ -454,7 +453,7 @@ int main(int argc, char *argv[]) {
         } else if (guiState == guiStateCompleted) {
             if (!isRectZeroSize(cursor) && isRightMouseButtonHeld()) {
                 if (clearBoolsRect(dstW, dstH, keep, cursor)) {
-                    keepChanged = true;
+                    keepHasChanged = true;
 
                     clearSurface(surfaceDst, &cursor);
 
@@ -462,7 +461,7 @@ int main(int argc, char *argv[]) {
                 }
             } else if (resetRequested) {
                 if (clearBoolsAll(dstW, dstH, keep)) {
-                    keepChanged = true;
+                    keepHasChanged = true;
 
                     clearSurface(surfaceDst, NULL);
 

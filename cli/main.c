@@ -65,6 +65,9 @@ int main(int argc, char *argv[]) {
     printPrelude(args, srcW, srcH, wfcPatternCount(wfc));
     fprintf(stdout, "\n");
 
+    int observedCnt = 0;
+    bool recountAll = true;
+
     while (1) {
         int status = wfcStep(&wfc);
         if (status == wfc_failed) {
@@ -73,6 +76,7 @@ int main(int argc, char *argv[]) {
                 ret = 1;
                 goto cleanup;
             } else {
+                recountAll = true;
                 fprintf(stdout, "WFC is backtracking.\n");
             }
         } else if (status == wfc_completed) {
@@ -82,8 +86,14 @@ int main(int argc, char *argv[]) {
             assert(status == 0);
         }
 
-        fprintf(stdout, "%d/%d\r",
-            wfcObservedCount(wfc, args.dstW, args.dstH), args.dstW * args.dstH);
+        if (recountAll) {
+            observedCnt = wfcObservedCount(wfc, args.dstW, args.dstH, false);
+        } else {
+            observedCnt += wfcObservedCount(wfc, args.dstW, args.dstH, true);
+        }
+        recountAll = false;
+
+        fprintf(stdout, "%d/%d\r", observedCnt, args.dstW * args.dstH);
     }
 
     wfcBlit(wfc, srcPixels, dstPixels);

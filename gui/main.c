@@ -291,10 +291,13 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "%s\n", instructions);
 
     enum GuiState guiState = guiStateRunning;
+    // @TODO Rename to keepHasChanged.
     bool keepChanged = false;
     int zoom = zoomMin;
     int cursorSize = cursorSizeMin;
     updateWindowTitle(guiState, zoom, window);
+
+    bool reblitAll = true;
 
     bool quit = false;
     while (!quit) {
@@ -303,6 +306,7 @@ int main(int argc, char *argv[]) {
         bool pauseToggled = false;
         bool undoRequested = false;
         bool resetRequested = false;
+        bool windowResized = false;
 
         // input
 
@@ -312,7 +316,7 @@ int main(int argc, char *argv[]) {
                 quit = true;
             } else if (e.type == SDL_WINDOWEVENT) {
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    surfaceWin = SDL_GetWindowSurface(window);
+                    windowResized = true;
                 }
             } else if (e.type == SDL_KEYDOWN && e.key.repeat == 0) {
                 if (e.key.keysym.sym == SDLK_ESCAPE) {
@@ -341,6 +345,11 @@ int main(int argc, char *argv[]) {
 
         // update
 
+        if (windowResized) {
+            surfaceWin = SDL_GetWindowSurface(window);
+            reblitAll = true;
+        }
+
         SDL_Rect cursor;
         getPixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &cursor);
 
@@ -368,7 +377,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     wfcBlitAveraged(
-                        wfc, surfaceSrc->pixels,surfaceDst->pixels);
+                        wfc, false, surfaceSrc->pixels,surfaceDst->pixels);
                 }
 
                 int status = wfcStep(&wfc);
@@ -379,11 +388,13 @@ int main(int argc, char *argv[]) {
                         goto cleanup;
                     }
                     fprintf(stdout, "WFC is backtracking.\n");
+
                     wfcBlitAveraged(
-                        wfc, surfaceSrc->pixels, surfaceDst->pixels);
+                        wfc, false, surfaceSrc->pixels, surfaceDst->pixels);
                 } else if (status == 0) {
                     wfcBlitAveraged(
-                        wfc, surfaceSrc->pixels, surfaceDst->pixels);
+                        wfc, !reblitAll,
+                        surfaceSrc->pixels, surfaceDst->pixels);
                 } else if (status == wfc_completed) {
                     wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
                     fprintf(stdout, "WFC completed.\n");
@@ -436,7 +447,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 wfcBlitAveraged(
-                    wfc, surfaceSrc->pixels, surfaceDst->pixels);
+                    wfc, false, surfaceSrc->pixels, surfaceDst->pixels);
 
                 guiState = guiStateRunning;
             }
@@ -463,6 +474,7 @@ int main(int argc, char *argv[]) {
         }
 
         updateWindowTitle(guiState, zoom, window);
+        reblitAll = false;
 
         // render
 

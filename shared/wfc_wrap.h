@@ -84,7 +84,8 @@ void wfcBlit(
 }
 
 void wfcBlitAveraged(
-    const struct WfcWrapper wfc, const unsigned char *src, unsigned char *dst) {
+    const struct WfcWrapper wfc, bool modifOnly,
+    const unsigned char *src, unsigned char *dst) {
     assert(wfc.len > 0);
 
     int bytesPerPixel = wfc.bytesPerPixel;
@@ -93,6 +94,8 @@ void wfcBlitAveraged(
 
     for (int j = 0; j < wfc.dstH; ++j) {
         for (int i = 0; i < wfc.dstW; ++i) {
+            if (modifOnly && !wfc_modifiedAt(state, i, j)) continue;
+
             for (int b = 0; b < bytesPerPixel; ++b) {
                 int sum = 0, cnt = 0;
                 for (int p = 0; p < pattCnt; ++p) {

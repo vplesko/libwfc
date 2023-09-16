@@ -1187,7 +1187,7 @@ bool wfc__restrictEdges(
 void wfc__calcEntropies(
     const struct wfc__Pattern *patts,
     const struct wfc__A3d_u8 wave,
-    const struct wfc__A2d_u8 modified,
+    struct wfc__A2d_u8 modified,
     struct wfc__A2d_f entropies) {
     for (int c0 = 0; c0 < wave.d03; ++c0) {
         for (int c1 = 0; c1 < wave.d13; ++c1) {
@@ -1345,9 +1345,9 @@ bool wfc__propagateOntoNeighbours(
     int n, int options,
     int c0, int c1,
     const struct wfc__A3d_u8 overlaps,
+    struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
-    struct wfc__A2d_u8 modified,
-    struct wfc__A2d_u8 ripple) {
+    struct wfc__A2d_u8 modified) {
     // If patterns are 1x1, they never overlap
     // and points never constrain each other.
     if (n == 1) return false;
@@ -1388,9 +1388,9 @@ void wfc__propagateFromRipple(
     void *ctx,
     int n, int options,
     const struct wfc__A3d_u8 overlaps,
+    struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
-    struct wfc__A2d_u8 modified,
-    struct wfc__A2d_u8 ripple) {
+    struct wfc__A2d_u8 modified) {
     bool modif = true;
     while (modif) {
         modif = false;
@@ -1401,7 +1401,7 @@ void wfc__propagateFromRipple(
 
                 if (wfc__propagateOntoNeighbours(
                         ctx, n, options, nC0, nC1,
-                        overlaps, wave, modified, ripple)) {
+                        overlaps, ripple, wave, modified)) {
                     modif = true;
                 }
 
@@ -1415,12 +1415,12 @@ void wfc__propagateFromAll(
     void *ctx,
     int n, int options,
     const struct wfc__A3d_u8 overlaps,
+    struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
-    struct wfc__A2d_u8 modified,
-    struct wfc__A2d_u8 ripple) {
+    struct wfc__A2d_u8 modified) {
     memset(ripple.a, 1, WFC__A2D_SIZE(ripple));
 
-    wfc__propagateFromRipple(ctx, n, options, overlaps, wave, modified, ripple);
+    wfc__propagateFromRipple(ctx, n, options, overlaps, ripple, wave, modified);
 }
 
 void wfc__propagateFromSeed(
@@ -1428,13 +1428,13 @@ void wfc__propagateFromSeed(
     int n, int options,
     int seedC0, int seedC1,
     const struct wfc__A3d_u8 overlaps,
+    struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
-    struct wfc__A2d_u8 modified,
-    struct wfc__A2d_u8 ripple) {
+    struct wfc__A2d_u8 modified) {
     memset(ripple.a, 0, WFC__A2D_SIZE(ripple));
     WFC__A2D_GET(ripple, seedC0, seedC1) = 1;
 
-    wfc__propagateFromRipple(ctx, n, options, overlaps, wave, modified, ripple);
+    wfc__propagateFromRipple(ctx, n, options, overlaps, ripple, wave, modified);
 }
 
 int wfc__calcStatus(const struct wfc__A3d_u8 wave) {
@@ -1627,7 +1627,7 @@ wfc_State* wfc_initEx(
     if (propagate) {
         wfc__propagateFromAll(
             ctx, n, options,
-            state->overlaps, state->wave, state->modified, state->ripple);
+            state->overlaps, state->ripple, state->wave, state->modified);
         state->status = wfc__calcStatus(state->wave);
     }
 
@@ -1662,7 +1662,7 @@ int wfc_step(wfc_State *state) {
     wfc__propagateFromSeed(
         state->ctx, state->n, state->options,
         obsC0, obsC1,
-        state->overlaps, state->wave, state->modified, state->ripple);
+        state->overlaps, state->ripple, state->wave, state->modified);
 
     state->status = wfc__calcStatus(state->wave);
 

@@ -305,7 +305,6 @@ int main(int argc, char *argv[]) {
         bool pauseToggled = false;
         bool undoRequested = false;
         bool resetRequested = false;
-        bool windowResized = false;
 
         // input
 
@@ -315,7 +314,8 @@ int main(int argc, char *argv[]) {
                 quit = true;
             } else if (e.type == SDL_WINDOWEVENT) {
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    windowResized = true;
+                    surfaceWin = SDL_GetWindowSurface(window);
+                    reblitAll = true;
                 }
             } else if (e.type == SDL_KEYDOWN && e.key.repeat == 0) {
                 if (e.key.keysym.sym == SDLK_ESCAPE) {
@@ -343,11 +343,6 @@ int main(int argc, char *argv[]) {
         }
 
         // update
-
-        if (windowResized) {
-            surfaceWin = SDL_GetWindowSurface(window);
-            reblitAll = true;
-        }
 
         SDL_Rect cursor;
         getPixelRectCursor(zoom, cursorSize, srcW, dstW, dstH, &cursor);

@@ -1000,8 +1000,8 @@ bool wfc__overlapMatches(
     struct wfc__Pattern pattA, struct wfc__Pattern pattB) {
     (void)ctx;
 
-    WFC_ASSERT(ctx, abs(offC0) < n);
-    WFC_ASSERT(ctx, abs(offC1) < n);
+    WFC_ASSERT(ctx, abs(offC0) <= 1);
+    WFC_ASSERT(ctx, abs(offC1) <= 1);
 
     // Sizes of the overlap area.
     int overlapD0 = n - abs(offC0);
@@ -1044,21 +1044,21 @@ struct wfc__A4d_u8 wfc__calcOverlaps(
     int n, const struct wfc__A3d_cu8 src,
     int pattCnt, const struct wfc__Pattern *patts) {
     struct wfc__A4d_u8 overlaps;
-    overlaps.d04 = 2 * n - 1;
-    overlaps.d14 = 2 * n - 1;
+    overlaps.d04 = 3;
+    overlaps.d14 = 3;
     overlaps.d24 = pattCnt;
     overlaps.d34 = pattCnt;
     overlaps.a = (uint8_t*)WFC_MALLOC(ctx, WFC__A4D_SIZE(overlaps));
 
-    for (int offC0 = -(n - 1); offC0 <= n - 1; ++offC0) {
-        for (int offC1 = -(n - 1); offC1 <= n - 1; ++offC1) {
+    for (int offC0 = -1; offC0 <= +1; ++offC0) {
+        for (int offC1 = -1; offC1 <= +1; ++offC1) {
             for (int i = 0; i < pattCnt; ++i) {
                 for (int j = 0; j < pattCnt; ++j) {
                     bool overlap = wfc__overlapMatches(ctx, n, src,
                         offC0, offC1, patts[i], patts[j]);
-                    // Lowest offset is -(n-1), but lowest index is 0,
+                    // Lowest offset is -1, but lowest index is 0,
                     // so map to the range of valid indexes.
-                    WFC__A4D_GET(overlaps, offC0 + n - 1, offC1 + n - 1, i, j) =
+                    WFC__A4D_GET(overlaps, offC0 + 1, offC1 + 1, i, j) =
                         overlap ? 1 : 0;
                 }
             }
@@ -1264,7 +1264,7 @@ void wfc__observeOne(
 // onto neighbouring one at a particular offset.
 // Returns whether the neighbouring point was modified.
 bool wfc__propagateOntoOffset(
-    int n, int c0, int c1, int offC0, int offC1,
+    int c0, int c1, int offC0, int offC1,
     const struct wfc__A4d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
     const int nC0 = wfc__indWrap(c0 + offC0, wave.d03);
@@ -1291,10 +1291,10 @@ bool wfc__propagateOntoOffset(
         // without verifying the change with benchmarks.
         uint8_t total = 0;
         for (int pN = 0; pN < pattCnt; ++pN) {
-            // Lowest offset for overlaps is -(n-1), but lowest index is 0,
+            // Lowest offset for overlaps is -1, but lowest index is 0,
             // so map to the range of valid indexes.
             total |= WFC__A3D_GET(wave, c0, c1, pN) &
-                WFC__A4D_GET(overlaps, -offC0 + n - 1, -offC1 + n - 1, p, pN);
+                WFC__A4D_GET(overlaps, -offC0 + 1, -offC1 + 1, p, pN);
         }
 
         WFC__A3D_GET(wave, nC0, nC1, p) = total;
@@ -1334,8 +1334,8 @@ bool wfc__propagateOntoNeighbours(
                 continue;
             }
 
-            if (wfc__propagateOntoOffset(n, c0, c1, offC0, offC1,
-                    overlaps, wave)) {
+            if (wfc__propagateOntoOffset(
+                    c0, c1, offC0, offC1, overlaps, wave)) {
                 WFC__A2D_GET_WRAP(ripple, c0 + offC0, c1 + offC1) = 1;
                 WFC__A2D_GET_WRAP(modified, c0 + offC0, c1 + offC1) = 1;
                 modif = true;
@@ -1435,10 +1435,10 @@ struct wfc_State {
     // Whether, at a particual offset (first two coordinates),
     // two patterns (second two coordinates)
     // have matching subimage pixel values.
-    // Offsets are between -(n-1) and n-1,
+    // Offsets are between -1 and +1,
     // but indexes in the array still start at 0,
     // so mapping needs to be done before indexing.
-    // @TODO Change this to only store the necessary range of values.
+    // @TODO Change this to only store values for 4 cardinal directions.
     struct wfc__A4d_u8 overlaps;
     // Whether, for each point (first two coordinates),
     // a particular pattern (last coordinate)

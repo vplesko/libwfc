@@ -112,7 +112,7 @@ int main(void) {
 
     putchar('\n');
     benchmarkText("benchmark/test.txt",
-        5, wfc_optFlip/* | wfc_optRotate*/, 80, 80);
+        5, wfc_optFlip | wfc_optRotate, 80, 80);
 
     return 0;
 }

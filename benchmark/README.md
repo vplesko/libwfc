@@ -18,10 +18,10 @@ Result:
 
 ```
 input=external/samples/NotKnot.png repeats=5 args={n=3 opt=7 dstW=128 dstH=128}
-        avg=2.5772 min=2.5440 max=2.6190
+        avg=2.1970 min=2.1730 max=2.2180
 
-input=benchmark/test.txt repeats=5 args={n=5 opt=3 dstW=80 dstH=80}
-        avg=1.1960 min=1.1840 max=1.2020
+input=benchmark/test.txt repeats=5 args={n=5 opt=7 dstW=80 dstH=80}
+        avg=6.7238 min=6.5780 max=6.8800
 ```
 
 ## CLI

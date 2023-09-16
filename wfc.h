@@ -604,41 +604,6 @@ float wfc__log2f(float x) {
     return l;
 }
 
-enum wfc__Dir {
-    wfc__dirC0Less,
-    wfc__dirC0More,
-    wfc__dirC1Less,
-    wfc__dirC1More,
-
-    wfc__dirCnt
-};
-
-void wfc__dirToOffsets(enum wfc__Dir dir, int *offC0, int *offC1) {
-    int offC0_ = 0, offC1_ = 0;
-    if (dir == wfc__dirC0Less) offC0_ = -1;
-    else if (dir == wfc__dirC0More) offC0_ = +1;
-    else if (dir == wfc__dirC1Less) offC1_ = -1;
-    else if (dir == wfc__dirC1More) offC1_ = +1;
-    // Assertion that dir must be one of the values above is omitted
-    // for performance reasons.
-    // @TODO Can the assertion be included?
-
-    if (offC0 != NULL) *offC0 = offC0_;
-    if (offC1 != NULL) *offC1 = offC1_;
-}
-
-enum wfc__Dir wfc__dirOpposite(enum wfc__Dir dir) {
-    if (dir == wfc__dirC0Less) return wfc__dirC0More;
-    else if (dir == wfc__dirC0More) return wfc__dirC0Less;
-    else if (dir == wfc__dirC1Less) return wfc__dirC1More;
-    else if (dir == wfc__dirC1More) return wfc__dirC1Less;
-
-    // Assertion that dir must be one of the values above is omitted
-    // for performance reasons.
-    // @TODO Can the assertion be included?
-    return wfc__dirCnt;
-}
-
 // RNG utility
 
 // [0, 1)
@@ -765,6 +730,42 @@ enum {
 
     wfc__tfCnt = 1 << 4
 };
+
+enum wfc__Dir {
+    wfc__dirC0Less,
+    wfc__dirC0More,
+    wfc__dirC1Less,
+    wfc__dirC1More,
+
+    wfc__dirCnt
+};
+
+void wfc__dirToOffsets(void *ctx, enum wfc__Dir dir, int *offC0, int *offC1) {
+    (void)ctx;
+
+    int offC0_ = 0, offC1_ = 0;
+    if (dir == wfc__dirC0Less) offC0_ = -1;
+    else if (dir == wfc__dirC0More) offC0_ = +1;
+    else if (dir == wfc__dirC1Less) offC1_ = -1;
+    else if (dir == wfc__dirC1More) offC1_ = +1;
+    else WFC_ASSERT(ctx, false);
+
+    if (offC0 != NULL) *offC0 = offC0_;
+    if (offC1 != NULL) *offC1 = offC1_;
+}
+
+enum wfc__Dir wfc__dirOpposite(void *ctx, enum wfc__Dir dir) {
+    (void)ctx;
+
+    if (dir == wfc__dirC0Less) return wfc__dirC0More;
+    else if (dir == wfc__dirC0More) return wfc__dirC0Less;
+    else if (dir == wfc__dirC1Less) return wfc__dirC1More;
+    else if (dir == wfc__dirC1More) return wfc__dirC1Less;
+    else WFC_ASSERT(ctx, false);
+
+    // Unreachable.
+    return (enum wfc__Dir)0;
+}
 
 struct wfc__Pattern {
     // Coordinates of the top-left pixel in the source image.
@@ -1034,7 +1035,7 @@ bool wfc__overlapMatches(
     (void)ctx;
 
     int offC0, offC1;
-    wfc__dirToOffsets(dir, &offC0, &offC1);
+    wfc__dirToOffsets(ctx, dir, &offC0, &offC1);
 
     // Sizes of the overlap area.
     int overlapD0 = n - abs(offC0);
@@ -1291,13 +1292,14 @@ void wfc__observeOne(
 // onto the neighbouring one in a particular direction.
 // Returns whether the neighbouring point was modified.
 bool wfc__propagateOntoDirection(
+    void *ctx,
     int c0, int c1, enum wfc__Dir dir,
     const struct wfc__A3d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
     int offC0, offC1;
-    wfc__dirToOffsets(dir, &offC0, &offC1);
+    wfc__dirToOffsets(ctx, dir, &offC0, &offC1);
 
-    enum wfc__Dir dirOpposite = wfc__dirOpposite(dir);
+    enum wfc__Dir dirOpposite = wfc__dirOpposite(ctx, dir);
 
     const int nC0 = wfc__indWrap(c0 + offC0, wave.d03);
     const int nC1 = wfc__indWrap(c1 + offC1, wave.d13);
@@ -1339,6 +1341,7 @@ bool wfc__propagateOntoDirection(
 }
 
 bool wfc__propagateOntoNeighbours(
+    void *ctx,
     int n, int options,
     int c0, int c1,
     const struct wfc__A3d_u8 overlaps,
@@ -1356,7 +1359,7 @@ bool wfc__propagateOntoNeighbours(
     // between. This is still a large performance improvement.
     for (int dir = 0; dir < wfc__dirCnt; ++dir) {
         int offC0, offC1;
-        wfc__dirToOffsets((enum wfc__Dir)dir, &offC0, &offC1);
+        wfc__dirToOffsets(ctx, (enum wfc__Dir)dir, &offC0, &offC1);
 
         // Constraints are not propagated along fixed edges.
         if (((options & wfc__optEdgeFixC0) &&
@@ -1367,7 +1370,7 @@ bool wfc__propagateOntoNeighbours(
         }
 
         if (wfc__propagateOntoDirection(
-                c0, c1, (enum wfc__Dir)dir, overlaps, wave)) {
+                ctx, c0, c1, (enum wfc__Dir)dir, overlaps, wave)) {
             WFC__A2D_GET_WRAP(ripple, c0 + offC0, c1 + offC1) = 1;
             WFC__A2D_GET_WRAP(modified, c0 + offC0, c1 + offC1) = 1;
             modif = true;
@@ -1382,6 +1385,7 @@ bool wfc__propagateOntoNeighbours(
 // ripple will get set at their coordinate
 // and cause the propagation to keep going.
 void wfc__propagateFromRipple(
+    void *ctx,
     int n, int options,
     const struct wfc__A3d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
@@ -1395,7 +1399,8 @@ void wfc__propagateFromRipple(
             for (int nC1 = 0; nC1 < wave.d13; ++nC1) {
                 if (!WFC__A2D_GET(ripple, nC0, nC1)) continue;
 
-                if (wfc__propagateOntoNeighbours(n, options, nC0, nC1,
+                if (wfc__propagateOntoNeighbours(
+                        ctx, n, options, nC0, nC1,
                         overlaps, ripple, wave, modified)) {
                     modif = true;
                 }
@@ -1407,6 +1412,7 @@ void wfc__propagateFromRipple(
 }
 
 void wfc__propagateFromAll(
+    void *ctx,
     int n, int options,
     const struct wfc__A3d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
@@ -1414,10 +1420,11 @@ void wfc__propagateFromAll(
     struct wfc__A2d_u8 modified) {
     memset(ripple.a, 1, WFC__A2D_SIZE(ripple));
 
-    wfc__propagateFromRipple(n, options, overlaps, ripple, wave, modified);
+    wfc__propagateFromRipple(ctx, n, options, overlaps, ripple, wave, modified);
 }
 
 void wfc__propagateFromSeed(
+    void *ctx,
     int n, int options,
     int seedC0, int seedC1,
     const struct wfc__A3d_u8 overlaps,
@@ -1427,7 +1434,7 @@ void wfc__propagateFromSeed(
     memset(ripple.a, 0, WFC__A2D_SIZE(ripple));
     WFC__A2D_GET(ripple, seedC0, seedC1) = 1;
 
-    wfc__propagateFromRipple(n, options, overlaps, ripple, wave, modified);
+    wfc__propagateFromRipple(ctx, n, options, overlaps, ripple, wave, modified);
 }
 
 int wfc__calcStatus(const struct wfc__A3d_u8 wave) {
@@ -1618,7 +1625,8 @@ wfc_State* wfc_initEx(
     }
 
     if (propagate) {
-        wfc__propagateFromAll(n, options,
+        wfc__propagateFromAll(
+            ctx, n, options,
             state->overlaps, state->ripple, state->wave, state->modified);
         state->status = wfc__calcStatus(state->wave);
     }
@@ -1652,7 +1660,7 @@ int wfc_step(wfc_State *state) {
         &obsC0, &obsC1);
 
     wfc__propagateFromSeed(
-        state->n, state->options,
+        state->ctx, state->n, state->options,
         obsC0, obsC1,
         state->overlaps, state->ripple, state->wave, state->modified);
 

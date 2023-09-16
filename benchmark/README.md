@@ -1,10 +1,10 @@
 ## Environment
 
  - Windows 10
- - Intel Core i7-4771
+ - Intel Core i7-8750H
  - clang 16
- - gcc 12.2.0
- - Visual C++ (x64) 14.36.32532
+ - gcc 13.1.0
+ - Visual C++ (x64) 14.30.30708
 
 ## Benchmark test
 
@@ -18,10 +18,10 @@ Result:
 
 ```
 input=external/samples/NotKnot.png repeats=5 args={n=3 opt=7 dstW=128 dstH=128}
-        avg=4.1814 min=4.1420 max=4.2170
+        avg=3.4732 min=3.4410 max=3.5080
 
 input=benchmark/test.txt repeats=5 args={n=5 opt=3 dstW=80 dstH=80}
-        avg=16.2622 min=16.0820 max=16.4480
+        avg=15.4406 min=15.1820 max=15.8140
 ```
 
 ## CLI
@@ -38,14 +38,14 @@ Result:
 
 ```
 [...]
-0.01user 0.00system 0:15.12elapsed 0%CPU (0avgtext+0avgdata 4888maxresident)k
-0inputs+0outputs (1324major+0minor)pagefaults 0swaps
+0.00user 0.03system 0:04.44elapsed 0%CPU (0avgtext+0avgdata 4852maxresident)k
+0inputs+0outputs (1309major+0minor)pagefaults 0swaps
 
 [...]
-0.00user 0.00system 0:15.71elapsed 0%CPU (0avgtext+0avgdata 4892maxresident)k
-0inputs+0outputs (1295major+0minor)pagefaults 0swaps
+0.00user 0.00system 0:04.33elapsed 0%CPU (0avgtext+0avgdata 4852maxresident)k
+0inputs+0outputs (1280major+0minor)pagefaults 0swaps
 
 [...]
-0.01user 0.00system 0:15.48elapsed 0%CPU (0avgtext+0avgdata 4900maxresident)k
-0inputs+0outputs (1296major+0minor)pagefaults 0swaps
+0.00user 0.00system 0:04.39elapsed 0%CPU (0avgtext+0avgdata 4848maxresident)k
+0inputs+0outputs (1280major+0minor)pagefaults 0swaps
 ```

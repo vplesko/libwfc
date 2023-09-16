@@ -31,7 +31,6 @@ BUILD_FLAGS_DBG = -O2
 BUILD_FLAGS_REL = -O3 -mavx2
 
 LINK_FLAGS =
-# @TODO Remove if not needed.
 ifndef VC
 	LINK_FLAGS += -lm
 endif

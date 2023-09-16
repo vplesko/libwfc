@@ -1299,7 +1299,7 @@ bool wfc__propagateOntoDirection(
     int offC0, offC1;
     wfc__dirToOffsets(ctx, dir, &offC0, &offC1);
 
-    enum wfc__Dir dirOpposite = wfc__dirOpposite(ctx, dir);
+    int dirOpposite = (int)wfc__dirOpposite(ctx, dir);
 
     const int nC0 = wfc__indWrap(c0 + offC0, wave.d03);
     const int nC1 = wfc__indWrap(c1 + offC1, wave.d13);

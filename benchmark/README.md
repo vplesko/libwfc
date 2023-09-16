@@ -18,10 +18,10 @@ Result:
 
 ```
 input=external/samples/NotKnot.png repeats=5 args={n=3 opt=7 dstW=128 dstH=128}
-        avg=3.4732 min=3.4410 max=3.5080
+        avg=2.2066 min=2.1810 max=2.2300
 
 input=benchmark/test.txt repeats=5 args={n=5 opt=3 dstW=80 dstH=80}
-        avg=15.4406 min=15.1820 max=15.8140
+        avg=11.3184 min=11.2960 max=11.3680
 ```
 
 ## CLI
@@ -38,14 +38,14 @@ Result:
 
 ```
 [...]
-0.00user 0.03system 0:04.44elapsed 0%CPU (0avgtext+0avgdata 4852maxresident)k
+0.00user 0.00system 0:02.89elapsed 0%CPU (0avgtext+0avgdata 4848maxresident)k
 0inputs+0outputs (1309major+0minor)pagefaults 0swaps
 
 [...]
-0.00user 0.00system 0:04.33elapsed 0%CPU (0avgtext+0avgdata 4852maxresident)k
+0.00user 0.01system 0:02.85elapsed 0%CPU (0avgtext+0avgdata 4848maxresident)k
 0inputs+0outputs (1280major+0minor)pagefaults 0swaps
 
 [...]
-0.00user 0.00system 0:04.39elapsed 0%CPU (0avgtext+0avgdata 4848maxresident)k
-0inputs+0outputs (1280major+0minor)pagefaults 0swaps
+0.00user 0.01system 0:02.85elapsed 0%CPU (0avgtext+0avgdata 4848maxresident)k
+0inputs+0outputs (1281major+0minor)pagefaults 0swaps
 ```

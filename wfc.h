@@ -1315,10 +1315,17 @@ bool wfc__propagateOntoNeighbours(
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
+    if (n == 1) return false;
+
     bool modif = false;
 
-    for (int offC0 = -(n - 1); offC0 <= n - 1; ++offC0) {
-        for (int offC1 = -(n - 1); offC1 <= n - 1; ++offC1) {
+    // Only propagate to the cardinally adjacent neighbours as an optimization.
+    // All contraints will eventually be propagated, but with extra steps in
+    // between. This is still a large performance improvement.
+    for (int offC0 = -1; offC0 <= +1; ++offC0) {
+        for (int offC1 = -1; offC1 <= +1; ++offC1) {
+            if (abs(offC0) + abs(offC1) != 1) continue;
+
             // Constraints are not propagated along fixed edges.
             if (((options & wfc__optEdgeFixC0) &&
                     (c0 + offC0 < 0 || c0 + offC0 >= wave.d03)) ||
@@ -1431,6 +1438,7 @@ struct wfc_State {
     // Offsets are between -(n-1) and n-1,
     // but indexes in the array still start at 0,
     // so mapping needs to be done before indexing.
+    // @TODO Change this to only store the necessary range of values.
     struct wfc__A4d_u8 overlaps;
     // Whether, for each point (first two coordinates),
     // a particular pattern (last coordinate)

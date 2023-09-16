@@ -1187,7 +1187,7 @@ bool wfc__restrictEdges(
 void wfc__calcEntropies(
     const struct wfc__Pattern *patts,
     const struct wfc__A3d_u8 wave,
-    struct wfc__A2d_u8 modified,
+    const struct wfc__A2d_u8 modified,
     struct wfc__A2d_f entropies) {
     for (int c0 = 0; c0 < wave.d03; ++c0) {
         for (int c1 = 0; c1 < wave.d13; ++c1) {

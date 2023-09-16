@@ -29,6 +29,8 @@ const int screenW = 800, screenH = 600;
 const Uint32 ticksPerFrame = 1000 / 60;
 const int srcDstGap = 2;
 const int zoomMin = 1, zoomMax = 8;
+// @TODO Revisit speedMax value after more optimizations are done.
+const int speedMin = 1, speedMax = 16;
 const int cursorSizeMin = 1, cursorSizeMax = 9;
 
 const char *instructions =
@@ -36,6 +38,8 @@ const char *instructions =
     "\tSpace        - Pause/unpause\n"
     "\tZ            - Zoom in\n"
     "\tShift Z      - Zoom out\n"
+    "\tX            - Increase speed\n"
+    "\tShift X      - Decrease speed\n"
     "\tC            - Increase cursor size\n"
     "\tShift C      - Decrease cursor size\n"
     "\tRight mouse  - Erase (when paused or completed)\n"
@@ -101,6 +105,14 @@ void decZoom(int *zoom) {
     if ((*zoom) / 2 >= zoomMin) (*zoom) /= 2;
 }
 
+void incSpeed(int *speed) {
+    if ((*speed) * 2 <= speedMax) (*speed) *= 2;
+}
+
+void decSpeed(int *speed) {
+    if ((*speed) / 2 >= speedMin) (*speed) /= 2;
+}
+
 void incCursorSize(int *cursorSize) {
     if ((*cursorSize) + 2 <= cursorSizeMax) {
         (*cursorSize) += 2;
@@ -113,7 +125,8 @@ void decCursorSize(int *cursorSize) {
     }
 }
 
-void updateWindowTitle(enum GuiState guiState, int zoom, SDL_Window *window) {
+void updateWindowTitle(
+    enum GuiState guiState, int zoom, int speed, SDL_Window *window) {
     enum { cap = 200 };
     char buff[cap];
 
@@ -122,8 +135,8 @@ void updateWindowTitle(enum GuiState guiState, int zoom, SDL_Window *window) {
     else if (guiState == guiStatePaused) status = " (PAUSED)";
 
     int code = snprintf(buff, cap,
-        "%s - %dx%s",
-        "WFC GUI", zoom, status);
+        "%s - Zoom:%d Speed:%d%s",
+        "WFC GUI", zoom, speed, status);
     assert(code >= 0 && code + 1 <= cap);
 
     SDL_SetWindowTitle(window, buff);
@@ -293,8 +306,9 @@ int main(int argc, char *argv[]) {
     enum GuiState guiState = guiStateRunning;
     bool keepHasChanged = false;
     int zoom = zoomMin;
+    int speed = speedMin;
     int cursorSize = cursorSizeMin;
-    updateWindowTitle(guiState, zoom, window);
+    updateWindowTitle(guiState, zoom, speed, window);
 
     bool reblitAll = true;
 
@@ -325,6 +339,12 @@ int main(int argc, char *argv[]) {
                         decZoom(&zoom);
                     } else {
                         incZoom(&zoom);
+                    }
+                } else if (e.key.keysym.sym == SDLK_x) {
+                    if (isShiftHeld()) {
+                        decSpeed(&speed);
+                    } else {
+                        incSpeed(&speed);
                     }
                 } else if (e.key.keysym.sym == SDLK_c) {
                     if (isShiftHeld()) {
@@ -374,7 +394,7 @@ int main(int argc, char *argv[]) {
                         wfc, false, surfaceSrc->pixels,surfaceDst->pixels);
                 }
 
-                for (int i = 0; i < 2; ++i) {
+                for (int i = 0; i < speed; ++i) {
                     int status = wfcStep(&wfc);
                     if (status == wfc_failed) {
                         if (wfcBacktrack(&wfc) != 0) {
@@ -471,7 +491,7 @@ int main(int argc, char *argv[]) {
             assert(false);
         }
 
-        updateWindowTitle(guiState, zoom, window);
+        updateWindowTitle(guiState, zoom, speed, window);
         reblitAll = false;
 
         // render

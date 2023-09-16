@@ -703,6 +703,7 @@ void wfc__indToCoords2d(int d1, int ind, int *c0, int *c1) {
 // uint8_ts are used instead of bools for performance concerns.
 WFC__A2D_DEF(bool, b);
 WFC__A2D_DEF(uint8_t, u8);
+WFC__A2D_DEF(int, i);
 WFC__A2D_DEF(float, f);
 WFC__A3D_DEF(uint8_t, u8);
 WFC__A3D_DEF(const uint8_t, cu8);
@@ -1437,17 +1438,32 @@ void wfc__propagateFromSeed(
     wfc__propagateFromRipple(ctx, n, options, overlaps, ripple, wave, modified);
 }
 
-int wfc__calcStatus(const struct wfc__A3d_u8 wave) {
-    int minPatts = wave.d23, maxPatts = 0;
+void wfc__updateWavePattCnts(
+    const struct wfc__A3d_u8 wave,
+    const struct wfc__A2d_u8 modified,
+    struct wfc__A2d_i wavePattCnts) {
     for (int c0 = 0; c0 < wave.d03; ++c0) {
         for (int c1 = 0; c1 < wave.d13; ++c1) {
+            if (!WFC__A2D_GET(modified, c0, c1)) continue;
+
             int cntPatts = 0;
             for (int p = 0; p < wave.d23; ++p) {
                 if (WFC__A3D_GET(wave, c0, c1, p)) ++cntPatts;
             }
 
-            if (cntPatts < minPatts) minPatts = cntPatts;
-            if (cntPatts > maxPatts) maxPatts = cntPatts;
+            WFC__A2D_GET(wavePattCnts, c0, c1) = cntPatts;
+        }
+    }
+}
+
+int wfc__calcStatus(int pattCnt, const struct wfc__A2d_i wavePattCnts) {
+    int minPatts = pattCnt, maxPatts = 0;
+    for (int c0 = 0; c0 < wavePattCnts.d02; ++c0) {
+        for (int c1 = 0; c1 < wavePattCnts.d12; ++c1) {
+            int cnt = WFC__A2D_GET(wavePattCnts, c0, c1);
+
+            minPatts = wfc__min_i(minPatts, cnt);
+            maxPatts = wfc__max_i(maxPatts, cnt);
         }
     }
 
@@ -1479,6 +1495,8 @@ struct wfc_State {
     // a particular pattern (last coordinate)
     // is still present.
     struct wfc__A3d_u8 wave;
+    // Number of remaining patterns on corresponding wave points.
+    struct wfc__A2d_i wavePattCnts;
     // Allocated once and reused when new entropy values are calculated.
     struct wfc__A2d_f entropies;
     // Array of bools that tells which wave points were modified
@@ -1587,6 +1605,11 @@ wfc_State* wfc_initEx(
     state->wave.a = (uint8_t*)WFC_MALLOC(ctx, WFC__A3D_SIZE(state->wave));
     memset(state->wave.a, 1, WFC__A3D_SIZE(state->wave));
 
+    state->wavePattCnts.d02 = state->wave.d03;
+    state->wavePattCnts.d12 = state->wave.d13;
+    state->wavePattCnts.a = (int*)WFC_MALLOC(
+        ctx, WFC__A2D_SIZE(state->wavePattCnts));
+
     state->entropies.d02 = state->wave.d03;
     state->entropies.d12 = state->wave.d13;
     state->entropies.a = (float*)WFC_MALLOC(
@@ -1628,8 +1651,10 @@ wfc_State* wfc_initEx(
         wfc__propagateFromAll(
             ctx, n, options,
             state->overlaps, state->ripple, state->wave, state->modified);
-        state->status = wfc__calcStatus(state->wave);
     }
+
+    wfc__updateWavePattCnts(state->wave, state->modified, state->wavePattCnts);
+    state->status = wfc__calcStatus(pattCnt, state->wavePattCnts);
 
     return state;
 }
@@ -1664,7 +1689,8 @@ int wfc_step(wfc_State *state) {
         obsC0, obsC1,
         state->overlaps, state->ripple, state->wave, state->modified);
 
-    state->status = wfc__calcStatus(state->wave);
+    wfc__updateWavePattCnts(state->wave, state->modified, state->wavePattCnts);
+    state->status = wfc__calcStatus(pattCnt, state->wavePattCnts);
 
     return state->status;
 }
@@ -1734,6 +1760,11 @@ wfc_State* wfc_clone(const wfc_State *state) {
     memcpy(clone->wave.a, state->wave.a,
         WFC__A3D_SIZE(state->wave));
 
+    clone->wavePattCnts.a = (int*)WFC_MALLOC(
+        state->ctx, WFC__A2D_SIZE(state->wavePattCnts));
+    memcpy(clone->wavePattCnts.a, state->wavePattCnts.a,
+        WFC__A2D_SIZE(state->wavePattCnts));
+
     clone->entropies.a = (float*)WFC_MALLOC(
         state->ctx, WFC__A2D_SIZE(state->entropies));
     memcpy(clone->entropies.a, state->entropies.a,
@@ -1761,6 +1792,7 @@ void wfc_free(wfc_State *state) {
     WFC_FREE(ctx, state->ripple.a);
     WFC_FREE(ctx, state->modified.a);
     WFC_FREE(ctx, state->entropies.a);
+    WFC_FREE(ctx, state->wavePattCnts.a);
     WFC_FREE(ctx, state->wave.a);
     WFC_FREE(ctx, state->overlaps.a);
     WFC_FREE(ctx, state->patts);

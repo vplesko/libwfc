@@ -604,6 +604,41 @@ float wfc__log2f(float x) {
     return l;
 }
 
+enum wfc__Dir {
+    wfc__dirC0Less,
+    wfc__dirC0More,
+    wfc__dirC1Less,
+    wfc__dirC1More,
+
+    wfc__dirCnt
+};
+
+void wfc__dirToOffsets(enum wfc__Dir dir, int *offC0, int *offC1) {
+    int offC0_ = 0, offC1_ = 0;
+    if (dir == wfc__dirC0Less) offC0_ = -1;
+    else if (dir == wfc__dirC0More) offC0_ = +1;
+    else if (dir == wfc__dirC1Less) offC1_ = -1;
+    else if (dir == wfc__dirC1More) offC1_ = +1;
+    // Assertion that dir must be one of the values above is omitted
+    // for performance reasons.
+    // @TODO Can the assertion be included?
+
+    if (offC0 != NULL) *offC0 = offC0_;
+    if (offC1 != NULL) *offC1 = offC1_;
+}
+
+enum wfc__Dir wfc__dirOpposite(enum wfc__Dir dir) {
+    if (dir == wfc__dirC0Less) return wfc__dirC0More;
+    else if (dir == wfc__dirC0More) return wfc__dirC0Less;
+    else if (dir == wfc__dirC1Less) return wfc__dirC1More;
+    else if (dir == wfc__dirC1More) return wfc__dirC1Less;
+
+    // Assertion that dir must be one of the values above is omitted
+    // for performance reasons.
+    // @TODO Can the assertion be included?
+    return wfc__dirCnt;
+}
+
 // RNG utility
 
 // [0, 1)
@@ -700,13 +735,12 @@ void wfc__indToCoords2d(int d1, int ind, int *c0, int *c1) {
     if (c1 != NULL) *c1 = c1_;
 }
 
-// Bools are not used in some places due to performance concerns.
+// uint8_ts are used instead of bools for performance concerns.
 WFC__A2D_DEF(bool, b);
 WFC__A2D_DEF(uint8_t, u8);
 WFC__A2D_DEF(float, f);
 WFC__A3D_DEF(uint8_t, u8);
 WFC__A3D_DEF(const uint8_t, cu8);
-WFC__A4D_DEF(uint8_t, u8);
 
 // WFC code
 
@@ -991,17 +1025,16 @@ struct wfc__Pattern* wfc__gatherPatterns(
 }
 
 // Returns whether the subimage overlap between patterns A and B match up,
-// where pattern B is at the given offset from pattern A.
-// Absolute values of offsets should be less than n.
+// where pattern B is directly at the given direction away from pattern A.
 bool wfc__overlapMatches(
     void *ctx,
     int n, const struct wfc__A3d_cu8 src,
-    int offC0, int offC1,
+    enum wfc__Dir dir,
     struct wfc__Pattern pattA, struct wfc__Pattern pattB) {
     (void)ctx;
 
-    WFC_ASSERT(ctx, abs(offC0) <= 1);
-    WFC_ASSERT(ctx, abs(offC1) <= 1);
+    int offC0, offC1;
+    wfc__dirToOffsets(dir, &offC0, &offC1);
 
     // Sizes of the overlap area.
     int overlapD0 = n - abs(offC0);
@@ -1039,28 +1072,22 @@ bool wfc__overlapMatches(
     return true;
 }
 
-struct wfc__A4d_u8 wfc__calcOverlaps(
+struct wfc__A3d_u8 wfc__calcOverlaps(
     void *ctx,
     int n, const struct wfc__A3d_cu8 src,
     int pattCnt, const struct wfc__Pattern *patts) {
-    struct wfc__A4d_u8 overlaps;
-    overlaps.d04 = 3;
-    overlaps.d14 = 3;
-    overlaps.d24 = pattCnt;
-    overlaps.d34 = pattCnt;
-    overlaps.a = (uint8_t*)WFC_MALLOC(ctx, WFC__A4D_SIZE(overlaps));
+    struct wfc__A3d_u8 overlaps;
+    overlaps.d03 = wfc__dirCnt;
+    overlaps.d13 = pattCnt;
+    overlaps.d23 = pattCnt;
+    overlaps.a = (uint8_t*)WFC_MALLOC(ctx, WFC__A3D_SIZE(overlaps));
 
-    for (int offC0 = -1; offC0 <= +1; ++offC0) {
-        for (int offC1 = -1; offC1 <= +1; ++offC1) {
-            for (int i = 0; i < pattCnt; ++i) {
-                for (int j = 0; j < pattCnt; ++j) {
-                    bool overlap = wfc__overlapMatches(ctx, n, src,
-                        offC0, offC1, patts[i], patts[j]);
-                    // Lowest offset is -1, but lowest index is 0,
-                    // so map to the range of valid indexes.
-                    WFC__A4D_GET(overlaps, offC0 + 1, offC1 + 1, i, j) =
-                        overlap ? 1 : 0;
-                }
+    for (int dir = 0; dir < wfc__dirCnt; ++dir) {
+        for (int i = 0; i < pattCnt; ++i) {
+            for (int j = 0; j < pattCnt; ++j) {
+                bool overlap = wfc__overlapMatches(ctx, n, src,
+                    (enum wfc__Dir)dir, patts[i], patts[j]);
+                WFC__A3D_GET(overlaps, dir, i, j) = overlap ? 1 : 0;
             }
         }
     }
@@ -1261,12 +1288,17 @@ void wfc__observeOne(
 }
 
 // Propagate constraints from a recently modified point
-// onto neighbouring one at a particular offset.
+// onto the neighbouring one in a particular direction.
 // Returns whether the neighbouring point was modified.
-bool wfc__propagateOntoOffset(
-    int c0, int c1, int offC0, int offC1,
-    const struct wfc__A4d_u8 overlaps,
+bool wfc__propagateOntoDirection(
+    int c0, int c1, enum wfc__Dir dir,
+    const struct wfc__A3d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
+    int offC0, offC1;
+    wfc__dirToOffsets(dir, &offC0, &offC1);
+
+    enum wfc__Dir dirOpposite = wfc__dirOpposite(dir);
+
     const int nC0 = wfc__indWrap(c0 + offC0, wave.d03);
     const int nC1 = wfc__indWrap(c1 + offC1, wave.d13);
     const int pattCnt = wave.d23;
@@ -1291,10 +1323,8 @@ bool wfc__propagateOntoOffset(
         // without verifying the change with benchmarks.
         uint8_t total = 0;
         for (int pN = 0; pN < pattCnt; ++pN) {
-            // Lowest offset for overlaps is -1, but lowest index is 0,
-            // so map to the range of valid indexes.
             total |= WFC__A3D_GET(wave, c0, c1, pN) &
-                WFC__A4D_GET(overlaps, -offC0 + 1, -offC1 + 1, p, pN);
+                WFC__A3D_GET(overlaps, dirOpposite, p, pN);
         }
 
         WFC__A3D_GET(wave, nC0, nC1, p) = total;
@@ -1311,10 +1341,12 @@ bool wfc__propagateOntoOffset(
 bool wfc__propagateOntoNeighbours(
     int n, int options,
     int c0, int c1,
-    const struct wfc__A4d_u8 overlaps,
+    const struct wfc__A3d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
+    // If patterns are 1x1, they never overlap
+    // and points never constrain each other.
     if (n == 1) return false;
 
     bool modif = false;
@@ -1322,24 +1354,23 @@ bool wfc__propagateOntoNeighbours(
     // Only propagate to the cardinally adjacent neighbours as an optimization.
     // All contraints will eventually be propagated, but with extra steps in
     // between. This is still a large performance improvement.
-    for (int offC0 = -1; offC0 <= +1; ++offC0) {
-        for (int offC1 = -1; offC1 <= +1; ++offC1) {
-            if (abs(offC0) + abs(offC1) != 1) continue;
+    for (int dir = 0; dir < wfc__dirCnt; ++dir) {
+        int offC0, offC1;
+        wfc__dirToOffsets((enum wfc__Dir)dir, &offC0, &offC1);
 
-            // Constraints are not propagated along fixed edges.
-            if (((options & wfc__optEdgeFixC0) &&
-                    (c0 + offC0 < 0 || c0 + offC0 >= wave.d03)) ||
-                ((options & wfc__optEdgeFixC1) &&
-                    (c1 + offC1 < 0 || c1 + offC1 >= wave.d13))) {
-                continue;
-            }
+        // Constraints are not propagated along fixed edges.
+        if (((options & wfc__optEdgeFixC0) &&
+                (c0 + offC0 < 0 || c0 + offC0 >= wave.d03)) ||
+            ((options & wfc__optEdgeFixC1) &&
+                (c1 + offC1 < 0 || c1 + offC1 >= wave.d13))) {
+            continue;
+        }
 
-            if (wfc__propagateOntoOffset(
-                    c0, c1, offC0, offC1, overlaps, wave)) {
-                WFC__A2D_GET_WRAP(ripple, c0 + offC0, c1 + offC1) = 1;
-                WFC__A2D_GET_WRAP(modified, c0 + offC0, c1 + offC1) = 1;
-                modif = true;
-            }
+        if (wfc__propagateOntoDirection(
+                c0, c1, (enum wfc__Dir)dir, overlaps, wave)) {
+            WFC__A2D_GET_WRAP(ripple, c0 + offC0, c1 + offC1) = 1;
+            WFC__A2D_GET_WRAP(modified, c0 + offC0, c1 + offC1) = 1;
+            modif = true;
         }
     }
 
@@ -1352,7 +1383,7 @@ bool wfc__propagateOntoNeighbours(
 // and cause the propagation to keep going.
 void wfc__propagateFromRipple(
     int n, int options,
-    const struct wfc__A4d_u8 overlaps,
+    const struct wfc__A3d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
@@ -1377,7 +1408,7 @@ void wfc__propagateFromRipple(
 
 void wfc__propagateFromAll(
     int n, int options,
-    const struct wfc__A4d_u8 overlaps,
+    const struct wfc__A3d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
@@ -1389,7 +1420,7 @@ void wfc__propagateFromAll(
 void wfc__propagateFromSeed(
     int n, int options,
     int seedC0, int seedC1,
-    const struct wfc__A4d_u8 overlaps,
+    const struct wfc__A3d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
@@ -1432,14 +1463,11 @@ struct wfc_State {
     int srcD0, srcD1, dstD0, dstD1;
     // Patterns collected from source.
     struct wfc__Pattern *patts;
-    // Whether, at a particual offset (first two coordinates),
-    // two patterns (second two coordinates)
+    // Whether, in a particual direction (first index),
+    // two patterns (last two indexes)
     // have matching subimage pixel values.
-    // Offsets are between -1 and +1,
-    // but indexes in the array still start at 0,
-    // so mapping needs to be done before indexing.
-    // @TODO Change this to only store values for 4 cardinal directions.
-    struct wfc__A4d_u8 overlaps;
+    // wfc__Dir is used for the first index.
+    struct wfc__A3d_u8 overlaps;
     // Whether, for each point (first two coordinates),
     // a particular pattern (last coordinate)
     // is still present.
@@ -1689,9 +1717,9 @@ wfc_State* wfc_clone(const wfc_State *state) {
     memcpy(clone->patts, state->patts, pattsSz);
 
     clone->overlaps.a = (uint8_t*)WFC_MALLOC(
-        state->ctx, WFC__A4D_SIZE(state->overlaps));
+        state->ctx, WFC__A3D_SIZE(state->overlaps));
     memcpy(clone->overlaps.a, state->overlaps.a,
-        WFC__A4D_SIZE(state->overlaps));
+        WFC__A3D_SIZE(state->overlaps));
 
     clone->wave.a = (uint8_t*)WFC_MALLOC(
         state->ctx, WFC__A3D_SIZE(state->wave));

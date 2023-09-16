@@ -33,11 +33,11 @@ const int cursorSizeMin = 1, cursorSizeMax = 9;
 
 const char *instructions =
     "Controls:\n"
-    "\t+            - Zoom in\n"
-    "\t-            - Zoom out\n"
     "\tSpace        - Pause/unpause\n"
-    "\tCtrl +       - Increase cursor size\n"
-    "\tCtrl -       - Decrease cursor size\n"
+    "\tZ            - Zoom in\n"
+    "\tShift Z      - Zoom out\n"
+    "\tC            - Increase cursor size\n"
+    "\tShift C      - Decrease cursor size\n"
     "\tRight mouse  - Erase (when paused or completed)\n"
     "\tU            - Undo erasure\n"
     "\tR            - Reset\n"
@@ -76,9 +76,9 @@ bool clearBoolsRect(int w, int h, bool *m, SDL_Rect rect) {
     return modified;
 }
 
-bool isCtrlHeld(void) {
+bool isShiftHeld(void) {
     const Uint8 *state = SDL_GetKeyboardState(NULL);
-    return state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
+    return state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT];
 }
 
 bool isRightMouseButtonHeld(void) {
@@ -320,17 +320,17 @@ int main(int argc, char *argv[]) {
             } else if (e.type == SDL_KEYDOWN && e.key.repeat == 0) {
                 if (e.key.keysym.sym == SDLK_ESCAPE) {
                     quit = true;
-                } else if (e.key.keysym.sym == SDLK_KP_PLUS) {
-                    if (isCtrlHeld()) {
-                        incCursorSize(&cursorSize);
+                } else if (e.key.keysym.sym == SDLK_z) {
+                    if (isShiftHeld()) {
+                        decZoom(&zoom);
                     } else {
                         incZoom(&zoom);
                     }
-                } else if (e.key.keysym.sym == SDLK_KP_MINUS) {
-                    if (isCtrlHeld()) {
+                } else if (e.key.keysym.sym == SDLK_c) {
+                    if (isShiftHeld()) {
                         decCursorSize(&cursorSize);
                     } else {
-                        decZoom(&zoom);
+                        incCursorSize(&cursorSize);
                     }
                 } else if (e.key.keysym.sym == SDLK_SPACE) {
                     pauseToggled = true;

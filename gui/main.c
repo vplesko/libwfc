@@ -374,31 +374,35 @@ int main(int argc, char *argv[]) {
                         wfc, false, surfaceSrc->pixels,surfaceDst->pixels);
                 }
 
-                int status = wfcStep(&wfc);
-                if (status == wfc_failed) {
-                    if (wfcBacktrack(&wfc) != 0) {
-                        fprintf(stdout, "WFC failed.\n");
-                        ret = 1;
-                        goto cleanup;
+                for (int i = 0; i < 2; ++i) {
+                    int status = wfcStep(&wfc);
+                    if (status == wfc_failed) {
+                        if (wfcBacktrack(&wfc) != 0) {
+                            fprintf(stdout, "WFC failed.\n");
+                            ret = 1;
+                            goto cleanup;
+                        }
+                        fprintf(stdout, "WFC is backtracking.\n");
+
+                        wfcBlitAveraged(
+                            wfc, false, surfaceSrc->pixels, surfaceDst->pixels);
+                    } else if (status == 0) {
+                        wfcBlitAveraged(
+                            wfc, !reblitAll,
+                            surfaceSrc->pixels, surfaceDst->pixels);
+                    } else if (status == wfc_completed) {
+                        wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
+                        fprintf(stdout, "WFC completed.\n");
+
+                        keepHasChanged = false;
+                        wfcSetWhichObserved(wfc, keep);
+
+                        guiState = guiStateCompleted;
+
+                        break;
+                    } else {
+                        assert(false);
                     }
-                    fprintf(stdout, "WFC is backtracking.\n");
-
-                    wfcBlitAveraged(
-                        wfc, false, surfaceSrc->pixels, surfaceDst->pixels);
-                } else if (status == 0) {
-                    wfcBlitAveraged(
-                        wfc, !reblitAll,
-                        surfaceSrc->pixels, surfaceDst->pixels);
-                } else if (status == wfc_completed) {
-                    wfcBlit(wfc, surfaceSrc->pixels, surfaceDst->pixels);
-                    fprintf(stdout, "WFC completed.\n");
-
-                    keepHasChanged = false;
-                    wfcSetWhichObserved(wfc, keep);
-
-                    guiState = guiStateCompleted;
-                } else {
-                    assert(false);
                 }
             }
         } else if (guiState == guiStatePaused) {

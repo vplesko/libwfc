@@ -1144,17 +1144,17 @@ int main(void) {
     unsigned seed = (unsigned)time(NULL);
     srand(seed);
 
-    if (testBasicN1() != 0 ||
-        testHFlipN1() != 0 ||
-        testVFlipN1() != 0 ||
-        testHVFlipN1() != 0 ||
-        testBasicN3() != 0 ||
+    if (testBasicN3() != 0 ||
         testHFlipN3() != 0 ||
         testVFlipN3() != 0 ||
         testHVFlipN3() != 0 ||
         testVEdgeFixN3() != 0 ||
         testHEdgeFixN3() != 0 ||
         testHVEdgeFixN3() != 0 ||
+        testBasicN1() != 0 ||
+        testHFlipN1() != 0 ||
+        testVFlipN1() != 0 ||
+        testHVFlipN1() != 0 ||
         testHVEdgeFixOneSolution() != 0 ||
         testPattern() != 0 ||
         testHVEdgeFixPattern() != 0 ||

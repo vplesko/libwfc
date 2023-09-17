@@ -1396,8 +1396,8 @@ void wfc__propagateFromRipple(
     while (modif) {
         modif = false;
 
-        for (int nC0 = 0; nC0 < wave.d03; ++nC0) {
-            for (int nC1 = 0; nC1 < wave.d13; ++nC1) {
+        for (int nC0 = 0; nC0 < ripple.d02; ++nC0) {
+            for (int nC1 = 0; nC1 < ripple.d12; ++nC1) {
                 if (!WFC__A2D_GET(ripple, nC0, nC1)) continue;
 
                 if (wfc__propagateOntoNeighbours(

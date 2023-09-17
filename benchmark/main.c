@@ -108,11 +108,11 @@ int main(void) {
     srand(1600000001);
 
     benchmarkImage("external/samples/NotKnot.png",
-        3, wfc_optFlip | wfc_optRotate, 128, 128);
+        3, wfc_optFlip | wfc_optRotate, 256, 256);
 
     putchar('\n');
     benchmarkText("benchmark/test.txt",
-        5, wfc_optFlip | wfc_optRotate, 80, 80);
+        5, wfc_optFlip | wfc_optRotate, 100, 100);
 
     return 0;
 }

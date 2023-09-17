@@ -17,11 +17,11 @@ bin/benchmark/main
 Result:
 
 ```
-input=external/samples/NotKnot.png repeats=5 args={n=3 opt=7 dstW=128 dstH=128}
-        avg=2.1970 min=2.1730 max=2.2180
+input=external/samples/NotKnot.png repeats=5 args={n=3 opt=7 dstW=256 dstH=256}
+        avg=13.7938 min=13.5030 max=14.0220
 
-input=benchmark/test.txt repeats=5 args={n=5 opt=7 dstW=80 dstH=80}
-        avg=6.7238 min=6.5780 max=6.8800
+input=benchmark/test.txt repeats=5 args={n=5 opt=7 dstW=100 dstH=100}
+        avg=8.1724 min=8.1370 max=8.2010
 ```
 
 ## CLI

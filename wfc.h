@@ -1292,7 +1292,7 @@ void wfc__observeOne(
 // Propagate constraints from a recently modified point
 // onto the neighbouring one in a particular direction.
 // Returns whether the neighbouring point was modified.
-bool wfc__propagateOntoDirection(
+bool wfc__propagateOntoDirectionResolve(
     void *ctx,
     int c0, int c1, enum wfc__Dir dir,
     const struct wfc__A3d_u8 overlaps,
@@ -1341,39 +1341,32 @@ bool wfc__propagateOntoDirection(
     return oldPresentPattCnt != newPresentPattCnt;
 }
 
-bool wfc__propagateOntoNeighbours(
+bool wfc__propagateOntoDirection(
     void *ctx, int options,
-    int c0, int c1,
+    int c0, int c1, enum wfc__Dir dir,
     const struct wfc__A3d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
-    bool modif = false;
+    int offC0, offC1;
+    wfc__dirToOffsets(ctx, dir, &offC0, &offC1);
 
-    // Only propagate to the cardinally adjacent neighbours as an optimization.
-    // All contraints will eventually be propagated, but with extra steps in
-    // between. This is still a large performance improvement.
-    for (int dir = 0; dir < wfc__dirCnt; ++dir) {
-        int offC0, offC1;
-        wfc__dirToOffsets(ctx, (enum wfc__Dir)dir, &offC0, &offC1);
-
-        // Constraints are not propagated along fixed edges.
-        if (((options & wfc__optEdgeFixC0) &&
-                (c0 + offC0 < 0 || c0 + offC0 >= wave.d03)) ||
-            ((options & wfc__optEdgeFixC1) &&
-                (c1 + offC1 < 0 || c1 + offC1 >= wave.d13))) {
-            continue;
-        }
-
-        if (wfc__propagateOntoDirection(
-                ctx, c0, c1, (enum wfc__Dir)dir, overlaps, wave)) {
-            WFC__A2D_GET_WRAP(ripple, c0 + offC0, c1 + offC1) = 1;
-            WFC__A2D_GET_WRAP(modified, c0 + offC0, c1 + offC1) = 1;
-            modif = true;
-        }
+    // Constraints are not propagated along fixed edges.
+    if (((options & wfc__optEdgeFixC0) &&
+            (c0 + offC0 < 0 || c0 + offC0 >= wave.d03)) ||
+        ((options & wfc__optEdgeFixC1) &&
+            (c1 + offC1 < 0 || c1 + offC1 >= wave.d13))) {
+        return false;
     }
 
-    return modif;
+    if (wfc__propagateOntoDirectionResolve(ctx, c0, c1, dir, overlaps, wave)) {
+        WFC__A2D_GET_WRAP(ripple, c0 + offC0, c1 + offC1) = 1;
+        WFC__A2D_GET_WRAP(modified, c0 + offC0, c1 + offC1) = 1;
+
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // Constraints only need to be propagated from recently modified points.
@@ -1399,10 +1392,16 @@ void wfc__propagateFromRipple(
             for (int nC1 = 0; nC1 < ripple.d12; ++nC1) {
                 if (!WFC__A2D_GET(ripple, nC0, nC1)) continue;
 
-                if (wfc__propagateOntoNeighbours(
-                        ctx, options, nC0, nC1,
-                        overlaps, ripple, wave, modified)) {
-                    modif = true;
+                // Only propagate to the cardinally adjacent neighbours.
+                // All constraints will eventually be propagated,
+                // but with extra steps in between.
+                // This is still a large performance improvement.
+                for (int dir = 0; dir < wfc__dirCnt; ++dir) {
+                    if (wfc__propagateOntoDirection(
+                            ctx, options, nC0, nC1, (enum wfc__Dir)dir,
+                            overlaps, ripple, wave, modified)) {
+                        modif = true;
+                    }
                 }
 
                 WFC__A2D_GET(ripple, nC0, nC1) = 0;

@@ -700,6 +700,10 @@ void wfc__indToCoords2d(int d1, int ind, int *c0, int *c1) {
     if (c1 != NULL) *c1 = c1_;
 }
 
+int wfc__coords2dToInd(int d1, int c0, int c1) {
+    return c0 * d1 + c1;
+}
+
 // uint8_ts are used instead of bools for performance concerns.
 WFC__A2D_DEF(bool, b);
 WFC__A2D_DEF(uint8_t, u8);
@@ -766,6 +770,18 @@ enum wfc__Dir wfc__dirOpposite(void *ctx, enum wfc__Dir dir) {
 
     // Unreachable.
     return (enum wfc__Dir)0;
+}
+
+void wfc__coords2dPlusDir(
+    void *ctx, int c0, int c1, enum wfc__Dir dir, int *rC0, int *rC1) {
+    int offC0, offC1;
+    wfc__dirToOffsets(ctx, dir, &offC0, &offC1);
+
+    int rC0_ = c0 + offC0;
+    int rC1_ = c1 + offC1;
+
+    if (rC0 != NULL) *rC0 = rC0_;
+    if (rC1 != NULL) *rC1 = rC1_;
 }
 
 struct wfc__Pattern {
@@ -1292,19 +1308,26 @@ void wfc__observeOne(
 // Propagate constraints from a recently modified point
 // onto the neighbouring one in a particular direction.
 // Returns whether the neighbouring point was modified.
-bool wfc__propagateOntoDirectionResolve(
-    void *ctx,
+bool wfc__propagateOntoDirection(
+    void *ctx, int options,
     int c0, int c1, enum wfc__Dir dir,
     const struct wfc__A3d_u8 overlaps,
     struct wfc__A3d_u8 wave) {
-    int offC0, offC1;
-    wfc__dirToOffsets(ctx, dir, &offC0, &offC1);
+    int nC0, nC1;
+    wfc__coords2dPlusDir(ctx, c0, c1, dir, &nC0, &nC1);
+
+    // Constraints are not propagated along fixed edges.
+    if (((options & wfc__optEdgeFixC0) && (nC0 < 0 || nC0 >= wave.d03)) ||
+        ((options & wfc__optEdgeFixC1) && (nC1 < 0 || nC1 >= wave.d13))) {
+        return false;
+    }
+
+    nC0 = wfc__indWrap(nC0, wave.d03);
+    nC1 = wfc__indWrap(nC1, wave.d13);
+
+    const int pattCnt = wave.d23;
 
     int dirOpposite = (int)wfc__dirOpposite(ctx, dir);
-
-    const int nC0 = wfc__indWrap(c0 + offC0, wave.d03);
-    const int nC1 = wfc__indWrap(c1 + offC1, wave.d13);
-    const int pattCnt = wave.d23;
 
     // We will compare the old and new pattern count at the neighbouring point
     // to know whether we modified it.
@@ -1341,72 +1364,75 @@ bool wfc__propagateOntoDirectionResolve(
     return oldPresentPattCnt != newPresentPattCnt;
 }
 
-bool wfc__propagateOntoDirection(
-    void *ctx, int options,
-    int c0, int c1, enum wfc__Dir dir,
-    const struct wfc__A3d_u8 overlaps,
-    struct wfc__A2d_u8 ripple,
-    struct wfc__A3d_u8 wave,
-    struct wfc__A2d_u8 modified) {
-    int offC0, offC1;
-    wfc__dirToOffsets(ctx, dir, &offC0, &offC1);
-
-    // Constraints are not propagated along fixed edges.
-    if (((options & wfc__optEdgeFixC0) &&
-            (c0 + offC0 < 0 || c0 + offC0 >= wave.d03)) ||
-        ((options & wfc__optEdgeFixC1) &&
-            (c1 + offC1 < 0 || c1 + offC1 >= wave.d13))) {
-        return false;
-    }
-
-    if (wfc__propagateOntoDirectionResolve(ctx, c0, c1, dir, overlaps, wave)) {
-        WFC__A2D_GET_WRAP(ripple, c0 + offC0, c1 + offC1) = 1;
-        WFC__A2D_GET_WRAP(modified, c0 + offC0, c1 + offC1) = 1;
-
-        return true;
-    } else {
-        return false;
-    }
-}
-
-// Constraints only need to be propagated from recently modified points.
-// As additional wave points are constrained,
-// ripple will get set at their coordinate
-// and cause the propagation to keep going.
 void wfc__propagateFromRipple(
-    void *ctx,
-    int n, int options,
+    void *ctx, int n, int options,
     const struct wfc__A3d_u8 overlaps,
-    struct wfc__A2d_u8 ripple,
+    int head, int tail, struct wfc__A2d_i ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
     // If patterns are 1x1, they never overlap
     // and points never constrain each other.
+    // @TODO Remove if unnecessary.
     if (n == 1) return;
 
-    bool modif = true;
-    while (modif) {
-        modif = false;
+    // Constraints only need to be propagated from recently modified points.
+    // As additional wave points are constrained,
+    // constraint propagation repeats from those points
+    // causing the propagation to keep going.
 
-        for (int nC0 = 0; nC0 < ripple.d02; ++nC0) {
-            for (int nC1 = 0; nC1 < ripple.d12; ++nC1) {
-                if (!WFC__A2D_GET(ripple, nC0, nC1)) continue;
+    // The way ripple is used is as a linked list represented with an array
+    // whose elements contain indexes of the next linked element.
+    // Negative index means no next elements (sort of like a null pointer).
+    // Each element corresponds to a wave point with the same coordinates.
+    // If a point is inside this linked list,
+    // that means constraints need to be propagated from that point.
 
-                // Only propagate to the cardinally adjacent neighbours.
-                // All constraints will eventually be propagated,
-                // but with extra steps in between.
-                // This is still a large performance improvement.
-                for (int dir = 0; dir < wfc__dirCnt; ++dir) {
-                    if (wfc__propagateOntoDirection(
-                            ctx, options, nC0, nC1, (enum wfc__Dir)dir,
-                            overlaps, ripple, wave, modified)) {
-                        modif = true;
-                    }
+    // In each iteration, constraints are propagated from head.
+    // New points are added after tail
+    // if they become modified and are not already in the list.
+    // Propagation ends when the list is empty.
+    while (head >= 0) {
+        // This function uses both raw 1D array indexes and full coordinates.
+        int headC0, headC1;
+        wfc__indToCoords2d(ripple.d12, head, &headC0, &headC1);
+
+        // Only propagate to the cardinally adjacent neighbours.
+        // All constraints will eventually be propagated,
+        // but with extra iterations in between.
+        // This is still a significant performance improvement.
+        for (int dir = 0; dir < wfc__dirCnt; ++dir) {
+            if (wfc__propagateOntoDirection(
+                    ctx, options,
+                    headC0, headC1, (enum wfc__Dir)dir,
+                    overlaps, wave)) {
+                int nextC0, nextC1;
+                wfc__coords2dPlusDir(
+                    ctx, headC0, headC1, (enum wfc__Dir)dir, &nextC0, &nextC1);
+                nextC0 = wfc__indWrap(nextC0, ripple.d02);
+                nextC1 = wfc__indWrap(nextC1, ripple.d12);
+
+                int next = wfc__coords2dToInd(ripple.d12, nextC0, nextC1);
+
+                // If next was modified and is not in the list,
+                // add it to the list to be propagated from later on.
+                // We know that an element is not in the list
+                // if it's not pointing to anything and is not the tail.
+                if (ripple.a[next] < 0 && next != tail) {
+                    ripple.a[tail] = next;
+                    tail = next;
                 }
 
-                WFC__A2D_GET(ripple, nC0, nC1) = 0;
+                WFC__A2D_GET(modified, nextC0, nextC1) = 1;
             }
         }
+
+        // Remove head from the list
+        // as we just propagated all we wanted from it.
+        // Remove it by setting head to its next element
+        // and having the old head no longer point to anything.
+        int newHead = ripple.a[head];
+        ripple.a[head] = -1;
+        head = newHead;
     }
 }
 
@@ -1414,12 +1440,20 @@ void wfc__propagateFromAll(
     void *ctx,
     int n, int options,
     const struct wfc__A3d_u8 overlaps,
-    struct wfc__A2d_u8 ripple,
+    struct wfc__A2d_i ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
-    memset(ripple.a, 1, WFC__A2D_SIZE(ripple));
+    // The linked list will contain all elements in order.
+    // Each element will point to the next one,
+    // except for the last element, which will be the tail.
+    int head = 0, tail = WFC__A2D_LEN(ripple) - 1;
+    for (int i = head; i < tail; ++i) {
+        ripple.a[i] = i + 1;
+    }
+    ripple.a[tail] = -1;
 
-    wfc__propagateFromRipple(ctx, n, options, overlaps, ripple, wave, modified);
+    wfc__propagateFromRipple(
+        ctx, n, options, overlaps, head, tail, ripple, wave, modified);
 }
 
 void wfc__propagateFromSeed(
@@ -1427,13 +1461,19 @@ void wfc__propagateFromSeed(
     int n, int options,
     int seedC0, int seedC1,
     const struct wfc__A3d_u8 overlaps,
-    struct wfc__A2d_u8 ripple,
+    struct wfc__A2d_i ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
-    memset(ripple.a, 0, WFC__A2D_SIZE(ripple));
-    WFC__A2D_GET(ripple, seedC0, seedC1) = 1;
+    // Only one element will be in the linked list
+    // and will be both the head and the tail.
+    // No one has a next element to point to.
+    for (int i = 0; i < WFC__A2D_LEN(ripple); ++i) {
+        ripple.a[i] = -1;
+    }
+    int head = wfc__coords2dToInd(ripple.d12, seedC0, seedC1), tail = head;
 
-    wfc__propagateFromRipple(ctx, n, options, overlaps, ripple, wave, modified);
+    wfc__propagateFromRipple(
+        ctx, n, options, overlaps, head, tail, ripple, wave, modified);
 }
 
 void wfc__updateWavePattCnts(
@@ -1500,12 +1540,11 @@ struct wfc_State {
     // Array of bools that tells which wave points were modified
     // in the last round of observation and propagation.
     // Allocated once and reused in all propagation calls.
-    // @TODO Merge modified and ripple into a single array.
     struct wfc__A2d_u8 modified;
-    // Array of bools that tells which wave points were very recently modified
-    // and need to have their constraints propagated again.
+    // Scratch space used for constraint propagation.
+    // Check out propagation code to understand how it's used.
     // Allocated once and reused in all propagation calls.
-    struct wfc__A2d_u8 ripple;
+    struct wfc__A2d_i ripple;
 };
 
 int wfc_generate(
@@ -1621,7 +1660,7 @@ wfc_State* wfc_initEx(
 
     state->ripple.d02 = state->wave.d03;
     state->ripple.d12 = state->wave.d13;
-    state->ripple.a = (uint8_t*)WFC_MALLOC(ctx, WFC__A2D_SIZE(state->ripple));
+    state->ripple.a = (int*)WFC_MALLOC(ctx, WFC__A2D_SIZE(state->ripple));
 
     // Usually, all patterns are present in all wave points,
     // unless some extra options were used.
@@ -1773,7 +1812,7 @@ wfc_State* wfc_clone(const wfc_State *state) {
     memcpy(clone->modified.a, state->modified.a,
         WFC__A2D_SIZE(state->modified));
 
-    clone->ripple.a = (uint8_t*)WFC_MALLOC(
+    clone->ripple.a = (int*)WFC_MALLOC(
         state->ctx, WFC__A2D_SIZE(state->ripple));
     memcpy(clone->ripple.a, state->ripple.a,
         WFC__A2D_SIZE(state->ripple));

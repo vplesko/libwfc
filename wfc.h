@@ -561,16 +561,17 @@ int wfc__max_i(int a, int b) {
 }
 
 bool wfc__approxEq_f(float a, float b) {
-    const float absDiff = 0.001f;
-    const float relDiff = FLT_EPSILON;
+    const float absDiffMax = 0.001f;
+    const float relDiffMax = FLT_EPSILON;
 
-    if (fabsf(a - b) < absDiff) return true;
+    if (fabsf(a - b) < absDiffMax) return true;
 
-    if (fabsf(a) < fabsf(b)) return fabsf((a - b) / b) < relDiff;
-    return fabsf((a - b) / a) < relDiff;
+    if (fabsf(a) < fabsf(b)) return fabsf((a - b) / b) < relDiffMax;
+    return fabsf((a - b) / a) < relDiffMax;
 }
 
 // Approximates log2(x), where x is in (0, 1] and not a subnormal.
+// Works for x greater than 1, but accuracy may be low.
 // Assumes IEEE 754 representation of float on the system.
 float wfc__log2f(float x) {
     // IEEE 754 representation constants.

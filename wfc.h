@@ -1342,17 +1342,12 @@ bool wfc__propagateOntoDirection(
 }
 
 bool wfc__propagateOntoNeighbours(
-    void *ctx,
-    int n, int options,
+    void *ctx, int options,
     int c0, int c1,
     const struct wfc__A3d_u8 overlaps,
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
-    // If patterns are 1x1, they never overlap
-    // and points never constrain each other.
-    if (n == 1) return false;
-
     bool modif = false;
 
     // Only propagate to the cardinally adjacent neighbours as an optimization.
@@ -1392,6 +1387,10 @@ void wfc__propagateFromRipple(
     struct wfc__A2d_u8 ripple,
     struct wfc__A3d_u8 wave,
     struct wfc__A2d_u8 modified) {
+    // If patterns are 1x1, they never overlap
+    // and points never constrain each other.
+    if (n == 1) return;
+
     bool modif = true;
     while (modif) {
         modif = false;
@@ -1401,7 +1400,7 @@ void wfc__propagateFromRipple(
                 if (!WFC__A2D_GET(ripple, nC0, nC1)) continue;
 
                 if (wfc__propagateOntoNeighbours(
-                        ctx, n, options, nC0, nC1,
+                        ctx, options, nC0, nC1,
                         overlaps, ripple, wave, modified)) {
                     modif = true;
                 }

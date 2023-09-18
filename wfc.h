@@ -1372,7 +1372,6 @@ void wfc__propagateFromRipple(
     struct wfc__A2d_u8 modified) {
     // If patterns are 1x1, they never overlap
     // and points never constrain each other.
-    // @TODO Remove if unnecessary.
     if (n == 1) return;
 
     // Constraints only need to be propagated from recently modified points.

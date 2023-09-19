@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
             assert(status == 0);
         }
 
-        if (++printCounter == 100) {
+        if (++printCounter == 10) {
             printProgress(wfc, args.dstW, args.dstH);
             printCounter = 0;
         }

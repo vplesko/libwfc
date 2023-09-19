@@ -856,6 +856,43 @@ cleanup:
     return ret;
 }
 
+static int testCollapsedCount(void) {
+    enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
+
+    int ret = 0;
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,5,
+        5,5,6,5,
+        5,6,6,5,
+        5,5,5,5,
+    };
+
+    wfc_State *state = wfc_init(
+        n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH);
+    assert(state != NULL);
+
+    while (!wfc_step(state));
+    if (wfc_status(state) != wfc_completed) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+    if (wfc_collapsedCount(state) != dstW * dstH) {
+        PRINT_TEST_FAIL();
+        ret = 1;
+        goto cleanup;
+    }
+
+cleanup:
+    wfc_free(state);
+
+    return ret;
+}
+
 static int testKeep(void) {
     enum { n = 3, srcW = 4, srcH = 4, dstW = 8, dstH = 8 };
 
@@ -1044,6 +1081,12 @@ static int testCallerError(void) {
         goto cleanup;
     }
 
+    if (wfc_collapsedCount(NULL) != wfc_callerError) {
+        PRINT_TEST_FAIL();
+        ret = -1;
+        goto cleanup;
+    }
+
     if (wfc_patternCount(NULL) != wfc_callerError) {
         PRINT_TEST_FAIL();
         ret = -1;
@@ -1171,6 +1214,7 @@ int main(void) {
         testPatternCountVFlipRotate() != 0 ||
         testPatternCountHVFlipRotate() != 0 ||
         testClone() != 0 ||
+        testCollapsedCount() != 0 ||
         testKeep() != 0 ||
         testCallerError() != 0) {
         printf("Seed was: %u\n", seed);

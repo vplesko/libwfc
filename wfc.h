@@ -78,8 +78,9 @@ get the total number of patterns gathered with wfc_patternCount(). Use
 wfc_patternPresentAt() to check if a pattern is still present at a particular
 point. Use wfc_modifiedAt() to check if, during the previous step, a particular
 point was modified, ie. its set of present patterns was reduced. Use
-wfc_pixelToBlitAt() to get a pointer to pixel bytes corresponding to a
-particular pattern.
+wfc_collapsedCount() to get the number of wave points collapsed to a single
+pattern. Use wfc_pixelToBlitAt() to get a pointer to pixel bytes corresponding
+to a particular pattern.
 
 If you do not want to use standard C functions, you can define these macros
 before including this header:
@@ -407,6 +408,21 @@ wfc_State* wfc_clone(const wfc_State *state);
  * \param state Pointer to the state object to deallocate.
 */
 void wfc_free(wfc_State *state);
+
+/**
+ * Returns the number of wave points collapsed to a single pattern.
+ *
+ * If a wave point has been reduced to a single pattern at some step, but at a
+ * later step reduced to zero patterns (meaning WFC has failed), it will still
+ * register towards this count.
+ *
+ * \param state State object pointer for which to query the number of collapsed
+ * wave points. Must not be null.
+ *
+ * \return Returns the number of collapsed wave points. Returns wfc_callerError
+ * (a negative value) if \c state is null.
+*/
+int wfc_collapsedCount(const wfc_State *state);
 
 /**
  * Returns the number of unique patterns gathered from the input image when the
@@ -1476,10 +1492,11 @@ void wfc__propagateFromSeed(
         ctx, n, options, overlaps, head, tail, ripple, wave, modified);
 }
 
-void wfc__updateWavePattCnts(
+void wfc__updateCnts(
     const struct wfc__A3d_u8 wave,
     const struct wfc__A2d_u8 modified,
-    struct wfc__A2d_i wavePattCnts) {
+    struct wfc__A2d_i wavePattCnts,
+    int *collapsedCnt) {
     for (int c0 = 0; c0 < wave.d03; ++c0) {
         for (int c1 = 0; c1 < wave.d13; ++c1) {
             if (!WFC__A2D_GET(modified, c0, c1)) continue;
@@ -1490,6 +1507,7 @@ void wfc__updateWavePattCnts(
             }
 
             WFC__A2D_GET(wavePattCnts, c0, c1) = cntPatts;
+            if (cntPatts == 1) ++(*collapsedCnt);
         }
     }
 }
@@ -1522,6 +1540,8 @@ struct wfc_State {
     void *ctx;
     int n, options, bytesPerPixel;
     int srcD0, srcD1, dstD0, dstD1;
+    // Number of collapsed wave points.
+    int collapsedCnt;
     // Patterns collected from source.
     struct wfc__Pattern *patts;
     // Whether, in a particual direction (first index),
@@ -1628,6 +1648,7 @@ wfc_State* wfc_initEx(
     state->srcD1 = srcW;
     state->dstD0 = dstH;
     state->dstD1 = dstW;
+    state->collapsedCnt = 0;
 
     int pattCnt;
     state->patts = wfc__gatherPatterns(ctx, n, options, srcA, &pattCnt);
@@ -1690,7 +1711,8 @@ wfc_State* wfc_initEx(
             state->overlaps, state->ripple, state->wave, state->modified);
     }
 
-    wfc__updateWavePattCnts(state->wave, state->modified, state->wavePattCnts);
+    wfc__updateCnts(state->wave, state->modified,
+        state->wavePattCnts, &state->collapsedCnt);
     state->status = wfc__calcStatus(pattCnt, state->wavePattCnts);
 
     return state;
@@ -1726,7 +1748,8 @@ int wfc_step(wfc_State *state) {
         obsC0, obsC1,
         state->overlaps, state->ripple, state->wave, state->modified);
 
-    wfc__updateWavePattCnts(state->wave, state->modified, state->wavePattCnts);
+    wfc__updateCnts(state->wave, state->modified,
+        state->wavePattCnts, &state->collapsedCnt);
     state->status = wfc__calcStatus(pattCnt, state->wavePattCnts);
 
     return state->status;
@@ -1834,6 +1857,12 @@ void wfc_free(wfc_State *state) {
     WFC_FREE(ctx, state->overlaps.a);
     WFC_FREE(ctx, state->patts);
     WFC_FREE(ctx, state);
+}
+
+int wfc_collapsedCount(const wfc_State *state) {
+    if (state == NULL) return wfc_callerError;
+
+    return state->collapsedCnt;
 }
 
 int wfc_patternCount(const wfc_State *state) {

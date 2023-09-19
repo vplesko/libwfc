@@ -145,14 +145,10 @@ bool wfcIsCollapsed(const struct WfcWrapper wfc, int x, int y, int *patt) {
 }
 
 int wfcCollapsedCount(const struct WfcWrapper wfc) {
-    int cnt = 0;
-    for (int j = 0; j < wfc.dstH; ++j) {
-        for (int i = 0; i < wfc.dstW; ++i) {
-            if (wfcIsCollapsed(wfc, i, j, NULL)) ++cnt;
-        }
-    }
+    assert(wfc.len > 0);
 
-    return cnt;
+    const wfc_State *state = wfc.states[wfc.len - 1];
+    return wfc_collapsedCount(state);
 }
 
 void wfcBlitCollapsed(

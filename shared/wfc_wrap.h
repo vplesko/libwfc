@@ -144,17 +144,11 @@ bool wfcIsObserved(const struct WfcWrapper wfc, int x, int y, int *patt) {
     return foundSingle;
 }
 
-int wfcObservedCount(const struct WfcWrapper wfc, bool modifOnly) {
-    assert(wfc.len > 0);
-
-    const wfc_State *state = wfc.states[wfc.len - 1];
-
+int wfcObservedCount(const struct WfcWrapper wfc) {
     int cnt = 0;
     for (int j = 0; j < wfc.dstH; ++j) {
         for (int i = 0; i < wfc.dstW; ++i) {
-            if (!modifOnly || wfc_modifiedAt(state, i, j)) {
-                if (wfcIsObserved(wfc, i, j, NULL)) ++cnt;
-            }
+            if (wfcIsObserved(wfc, i, j, NULL)) ++cnt;
         }
     }
 

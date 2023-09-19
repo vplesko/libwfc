@@ -35,7 +35,7 @@ $ time .\bin\cli.exe .\external\samples\NotKnot.png -n 3 -w 128 -h 128 -o .\bin\
 Result (multiple runs):
 
 ```
-0:01.28
-0:01.26
-0:01.24
+0:01.00
+0:00.93
+0:00.91
 ```

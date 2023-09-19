@@ -17,6 +17,10 @@
 #include "wfc_args.h"
 #include "wfc_wrap.h"
 
+void printProgress(const struct WfcWrapper wfc, int dstW, int dstH) {
+    fprintf(stdout, "%d/%d\r", wfcCollapsedCount(wfc), dstW * dstH);
+}
+
 int main(int argc, char *argv[]) {
     int ret = 0;
 
@@ -65,6 +69,7 @@ int main(int argc, char *argv[]) {
     printPrelude(args, srcW, srcH, wfcPatternCount(wfc));
     fprintf(stdout, "\n");
 
+    printProgress(wfc, args.dstW, args.dstH);
     int printCounter = 0;
 
     while (1) {
@@ -85,9 +90,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (++printCounter == 100) {
-            fprintf(stdout,
-                "%d/%d\r", wfcCollapsedCount(wfc), args.dstW * args.dstH);
-
+            printProgress(wfc, args.dstW, args.dstH);
             printCounter = 0;
         }
     }

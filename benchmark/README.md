@@ -18,10 +18,10 @@ Result:
 
 ```
 input=external/samples/NotKnot.png repeats=5 args={n=3 opt=7 dstW=256 dstH=256}
-        avg=6.7566 min=6.6260 max=6.8740
+        avg=6.4072 min=6.2960 max=6.5170
 
 input=benchmark/test.txt repeats=5 args={n=5 opt=7 dstW=100 dstH=100}
-        avg=9.0612 min=9.0190 max=9.1300
+        avg=4.8008 min=4.7960 max=4.8090
 ```
 
 ## CLI
@@ -35,7 +35,7 @@ $ time .\bin\cli.exe .\external\samples\NotKnot.png -n 3 -w 128 -h 128 -o .\bin\
 Result (multiple runs):
 
 ```
-0:01.00
-0:00.93
-0:00.91
+0:00.84
+0:00.75
+0:00.78
 ```

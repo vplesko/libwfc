@@ -576,6 +576,18 @@ int wfc__max_i(int a, int b) {
     return a < b ? b : a;
 }
 
+// Counts the number of 1 bits in a value.
+int wfc__popcount_u(unsigned n) {
+    int cnt = 0;
+    for (; n != 0; ++cnt) n &= n - 1;
+
+    return cnt;
+}
+
+int wfc__roundUpToDivBy(int n, int div) {
+    return (n + div - 1) / div;
+}
+
 bool wfc__approxEq_f(float a, float b) {
     const float absDiffMax = 0.001f;
     const float relDiffMax = FLT_EPSILON;
@@ -721,6 +733,29 @@ int wfc__coords2dToInd(int d1, int c0, int c1) {
     return c0 * d1 + c1;
 }
 
+int wfc__bitPackLen(int cnt) {
+    const int uSzBits = (int)sizeof(unsigned) * 8;
+
+    return wfc__roundUpToDivBy(cnt, uSzBits);
+}
+
+bool wfc__getBit(const unsigned *a, int ind) {
+    const int uSzBits = (int)sizeof(unsigned) * 8;
+
+    const unsigned bitMask = 1u << (unsigned)(ind % uSzBits);
+
+    return a[ind / uSzBits] & bitMask;
+}
+
+void wfc__setBit(unsigned *a, int ind, bool val) {
+    const int uSzBits = (int)sizeof(unsigned) * 8;
+
+    const unsigned bitMask = 1u << (unsigned)(ind % uSzBits);
+
+    if (val) a[ind / uSzBits] |= bitMask;
+    else a[ind / uSzBits] &= ~bitMask;
+}
+
 // uint8_ts are used instead of bools for performance concerns.
 WFC__A2D_DEF(bool, b);
 WFC__A2D_DEF(uint8_t, u8);
@@ -728,6 +763,7 @@ WFC__A2D_DEF(int, i);
 WFC__A2D_DEF(float, f);
 WFC__A3D_DEF(uint8_t, u8);
 WFC__A3D_DEF(const uint8_t, cu8);
+WFC__A3D_DEF(unsigned, u);
 
 // WFC code
 
@@ -799,6 +835,34 @@ void wfc__coords2dPlusDir(
 
     if (rC0 != NULL) *rC0 = rC0_;
     if (rC1 != NULL) *rC1 = rC1_;
+}
+
+bool wfc__getBitA3d(
+    const struct wfc__A3d_u arr, int c0, int c1, int c2) {
+    return wfc__getBit(&WFC__A3D_GET(arr, c0, c1, 0), c2);
+}
+
+void wfc__setBitA3d(
+    const struct wfc__A3d_u arr, int c0, int c1, int c2, bool val) {
+    wfc__setBit(&WFC__A3D_GET(arr, c0, c1, 0), c2, val);
+}
+
+void wfc__setBitPackA3d(
+    const struct wfc__A3d_u arr, int c0, int c1, bool val) {
+    memset(
+        &WFC__A3D_GET(arr, c0, c1, 0),
+        val ? 0xFF : 0,
+        (size_t)arr.d23 * sizeof(*arr.a));
+}
+
+int wfc__popcountBitPackA3d(
+    const struct wfc__A3d_u arr, int c0, int c1) {
+    int cnt = 0;
+    for (int i = 0; i < arr.d23; ++i) {
+        cnt += wfc__popcount_u(WFC__A3D_GET(arr, c0, c1, i));
+    }
+
+    return cnt;
 }
 
 struct wfc__Pattern {
@@ -906,7 +970,7 @@ void wfc__fillPattEdges(
 // but with different offsets.
 void wfc__coordsDstToWave(
     int dC0, int dC1,
-    const struct wfc__A3d_u8 wave,
+    const struct wfc__A3d_u wave,
     int *wC0, int *wC1,
     int *offC0, int *offC1) {
     int wC0_ = wfc__min_i(dC0, wave.d03 - 1);
@@ -1107,22 +1171,23 @@ bool wfc__overlapMatches(
     return true;
 }
 
-struct wfc__A3d_u8 wfc__calcOverlaps(
+struct wfc__A3d_u wfc__calcOverlaps(
     void *ctx,
     int n, const struct wfc__A3d_cu8 src,
     int pattCnt, const struct wfc__Pattern *patts) {
-    struct wfc__A3d_u8 overlaps;
+    struct wfc__A3d_u overlaps;
     overlaps.d03 = wfc__dirCnt;
     overlaps.d13 = pattCnt;
-    overlaps.d23 = pattCnt;
-    overlaps.a = (uint8_t*)WFC_MALLOC(ctx, WFC__A3D_SIZE(overlaps));
+    overlaps.d23 = wfc__bitPackLen(pattCnt);
+    overlaps.a = (unsigned*)WFC_MALLOC(ctx, WFC__A3D_SIZE(overlaps));
 
+    memset(overlaps.a, 0, WFC__A3D_SIZE(overlaps));
     for (int dir = 0; dir < wfc__dirCnt; ++dir) {
         for (int i = 0; i < pattCnt; ++i) {
             for (int j = 0; j < pattCnt; ++j) {
                 bool overlap = wfc__overlapMatches(ctx, n, src,
                     (enum wfc__Dir)dir, patts[i], patts[j]);
-                WFC__A3D_GET(overlaps, dir, i, j) = overlap ? 1 : 0;
+                wfc__setBitA3d(overlaps, dir, i, j, overlap);
             }
         }
     }
@@ -1133,11 +1198,11 @@ struct wfc__A3d_u8 wfc__calcOverlaps(
 bool wfc__restrictKept(
     int n,
     const struct wfc__A3d_cu8 src,
-    const struct wfc__Pattern *patts,
+    int pattCnt, const struct wfc__Pattern *patts,
     const struct wfc__A3d_cu8 dst,
     const struct wfc__A2d_b keep,
-    struct wfc__A3d_u8 wave) {
-    const int pattCnt = wave.d23, bytesPerPixel = dst.d23;
+    struct wfc__A3d_u wave) {
+    const int bytesPerPixel = dst.d23;
 
     bool modif = false;
 
@@ -1153,7 +1218,7 @@ bool wfc__restrictKept(
                     const unsigned char *dPx = &WFC__A3D_GET(dst, dC0, dC1, 0);
 
                     for (int p = 0; p < pattCnt; ++p) {
-                        if (!WFC__A3D_GET(wave, wC0, wC1, p)) continue;
+                        if (!wfc__getBitA3d(wave, wC0, wC1, p)) continue;
 
                         int sC0, sC1;
                         wfc__coordsPattToSrc(
@@ -1166,7 +1231,7 @@ bool wfc__restrictKept(
                             &WFC__A3D_GET(src, sC0, sC1, 0);
 
                         if (memcmp(dPx, sPx, (size_t)bytesPerPixel) != 0) {
-                            WFC__A3D_GET(wave, wC0, wC1, p) = 0;
+                            wfc__setBitA3d(wave, wC0, wC1, p, false);
                             modif = true;
                         }
                     }
@@ -1180,21 +1245,21 @@ bool wfc__restrictKept(
 
 bool wfc__restrictEdges(
     int options,
-    const struct wfc__Pattern *patts,
-    struct wfc__A3d_u8 wave) {
-    const int d0 = wave.d03, d1 = wave.d13, pattCnt = wave.d23;
+    int pattCnt, const struct wfc__Pattern *patts,
+    struct wfc__A3d_u wave) {
+    const int d0 = wave.d03, d1 = wave.d13;
 
     bool modif = false;
 
     if (options & wfc__optEdgeFixC0) {
         for (int i = 0; i < d1; ++i) {
             for (int p = 0; p < pattCnt; ++p) {
-                if (WFC__A3D_GET(wave, 0, i, p) && !patts[p].edgeC0Lo) {
-                    WFC__A3D_GET(wave, 0, i, p) = 0;
+                if (wfc__getBitA3d(wave, 0, i, p) && !patts[p].edgeC0Lo) {
+                    wfc__setBitA3d(wave, 0, i, p, false);
                     modif = true;
                 }
-                if (WFC__A3D_GET(wave, d0 - 1, i, p) && !patts[p].edgeC0Hi) {
-                    WFC__A3D_GET(wave, d0 - 1, i, p) = 0;
+                if (wfc__getBitA3d(wave, d0 - 1, i, p) && !patts[p].edgeC0Hi) {
+                    wfc__setBitA3d(wave, d0 - 1, i, p, false);
                     modif = true;
                 }
             }
@@ -1203,12 +1268,12 @@ bool wfc__restrictEdges(
     if (options & wfc__optEdgeFixC1) {
         for (int i = 0; i < d0; ++i) {
             for (int p = 0; p < pattCnt; ++p) {
-                if (WFC__A3D_GET(wave, i, 0, p) && !patts[p].edgeC1Lo) {
-                    WFC__A3D_GET(wave, i, 0, p) = 0;
+                if (wfc__getBitA3d(wave, i, 0, p) && !patts[p].edgeC1Lo) {
+                    wfc__setBitA3d(wave, i, 0, p, false);
                     modif = true;
                 }
-                if (WFC__A3D_GET(wave, i, d1 - 1, p) && !patts[p].edgeC1Hi) {
-                    WFC__A3D_GET(wave, i, d1 - 1, p) = 0;
+                if (wfc__getBitA3d(wave, i, d1 - 1, p) && !patts[p].edgeC1Hi) {
+                    wfc__setBitA3d(wave, i, d1 - 1, p, false);
                     modif = true;
                 }
             }
@@ -1219,8 +1284,8 @@ bool wfc__restrictEdges(
 }
 
 void wfc__calcEntropies(
-    const struct wfc__Pattern *patts,
-    const struct wfc__A3d_u8 wave,
+    int pattCnt, const struct wfc__Pattern *patts,
+    const struct wfc__A3d_u wave,
     const struct wfc__A2d_u8 modified,
     struct wfc__A2d_f entropies) {
     for (int c0 = 0; c0 < wave.d03; ++c0) {
@@ -1229,8 +1294,8 @@ void wfc__calcEntropies(
 
             int totalFreq = 0;
             int presentPatts = 0;
-            for (int p = 0; p < wave.d23; ++p) {
-                if (WFC__A3D_GET(wave, c0, c1, p)) {
+            for (int p = 0; p < pattCnt; ++p) {
+                if (wfc__getBitA3d(wave, c0, c1, p)) {
                     totalFreq += patts[p].freq;
                     ++presentPatts;
                 }
@@ -1239,8 +1304,8 @@ void wfc__calcEntropies(
             float entropy = 0.0f;
             // If is here to ensure entropy of collapsed points is exactly 0.
             if (presentPatts > 1) {
-                for (int p = 0; p < wave.d23; ++p) {
-                    if (WFC__A3D_GET(wave, c0, c1, p)) {
+                for (int p = 0; p < pattCnt; ++p) {
+                    if (wfc__getBitA3d(wave, c0, c1, p)) {
                         float prob = (float)patts[p].freq / (float)totalFreq;
                         entropy -= prob * wfc__log2f(prob);
                     }
@@ -1256,7 +1321,7 @@ void wfc__observeOne(
     void *ctx,
     int pattCnt, const struct wfc__Pattern *patts,
     const struct wfc__A2d_f entropies,
-    struct wfc__A3d_u8 wave,
+    struct wfc__A3d_u wave,
     struct wfc__A2d_u8 modified,
     int *obsC0, int *obsC1) {
     float smallest = 0;
@@ -1296,14 +1361,14 @@ void wfc__observeOne(
     {
         int totalFreq = 0;
         for (int i = 0; i < pattCnt; ++i) {
-            if (WFC__A3D_GET(wave, chosenC0, chosenC1, i)) {
+            if (wfc__getBitA3d(wave, chosenC0, chosenC1, i)) {
                 totalFreq += patts[i].freq;
             }
         }
         int chosenInst = wfc__rand_i(ctx, totalFreq);
 
         for (int i = 0; i < pattCnt; ++i) {
-            if (WFC__A3D_GET(wave, chosenC0, chosenC1, i)) {
+            if (wfc__getBitA3d(wave, chosenC0, chosenC1, i)) {
                 if (chosenInst < patts[i].freq) {
                     chosenPatt = i;
                     break;
@@ -1315,10 +1380,8 @@ void wfc__observeOne(
 
     *obsC0 = chosenC0;
     *obsC1 = chosenC1;
-    for (int i = 0; i < pattCnt; ++i) {
-        WFC__A3D_GET(wave, chosenC0, chosenC1, i) = 0;
-    }
-    WFC__A3D_GET(wave, chosenC0, chosenC1, chosenPatt) = 1;
+    wfc__setBitPackA3d(wave, chosenC0, chosenC1, false);
+    wfc__setBitA3d(wave, chosenC0, chosenC1, chosenPatt, true);
     WFC__A2D_GET(modified, chosenC0, chosenC1) = 1;
 }
 
@@ -1326,10 +1389,10 @@ void wfc__observeOne(
 // onto the neighbouring one in a particular direction.
 // Returns whether the neighbouring point was modified.
 bool wfc__propagateOntoDirection(
-    void *ctx, int options,
+    void *ctx, int options, int pattCnt,
     int c0, int c1, enum wfc__Dir dir,
-    const struct wfc__A3d_u8 overlaps,
-    struct wfc__A3d_u8 wave) {
+    const struct wfc__A3d_u overlaps,
+    struct wfc__A3d_u wave) {
     int nC0, nC1;
     wfc__coords2dPlusDir(ctx, c0, c1, dir, &nC0, &nC1);
 
@@ -1342,50 +1405,41 @@ bool wfc__propagateOntoDirection(
     nC0 = wfc__indWrap(nC0, wave.d03);
     nC1 = wfc__indWrap(nC1, wave.d13);
 
-    const int pattCnt = wave.d23;
-
     int dirOpposite = (int)wfc__dirOpposite(ctx, dir);
 
     // We will compare the old and new pattern count at the neighbouring point
     // to know whether we modified it.
-    int oldPresentPattCnt = 0;
-    for (int p = 0; p < pattCnt; ++p) {
-        if (WFC__A3D_GET(wave, nC0, nC1, p)) ++oldPresentPattCnt;
-    }
+    int oldPresentPattCnt = wfc__popcountBitPackA3d(wave, nC0, nC1);
 
     // For each pattern at the neighbouring point
     // figure out whether it can be kept,
     // which is the case if there is a pattern at starting point
     // whose overlap matches.
     for (int p = 0; p < pattCnt; ++p) {
-        if (!WFC__A3D_GET(wave, nC0, nC1, p)) continue;
+        if (!wfc__getBitA3d(wave, nC0, nC1, p)) continue;
 
         // This is a very nested and hot loop in the code,
         // so a few optimizations were made.
-        // Do NOT use logical operators or breaks inside it
-        // without verifying the change with benchmarks.
-        uint8_t total = 0;
-        for (int pN = 0; pN < pattCnt; ++pN) {
-            total |= WFC__A3D_GET(wave, c0, c1, pN) &
-                WFC__A3D_GET(overlaps, dirOpposite, p, pN);
+        // All changes should be verified with benchmarks.
+        unsigned total = 0;
+        for (int i = 0; i < wave.d23; ++i) {
+            total |= WFC__A3D_GET(wave, c0, c1, i) &
+                WFC__A3D_GET(overlaps, dirOpposite, p, i);
         }
 
-        WFC__A3D_GET(wave, nC0, nC1, p) = total;
+        wfc__setBitA3d(wave, nC0, nC1, p, total);
     }
 
-    int newPresentPattCnt = 0;
-    for (int p = 0; p < pattCnt; ++p) {
-        if (WFC__A3D_GET(wave, nC0, nC1, p)) ++newPresentPattCnt;
-    }
+    int newPresentPattCnt = wfc__popcountBitPackA3d(wave, nC0, nC1);
 
     return oldPresentPattCnt != newPresentPattCnt;
 }
 
 void wfc__propagateFromRipple(
-    void *ctx, int n, int options,
-    const struct wfc__A3d_u8 overlaps,
+    void *ctx, int n, int options, int pattCnt,
+    const struct wfc__A3d_u overlaps,
     int head, int tail, struct wfc__A2d_i ripple,
-    struct wfc__A3d_u8 wave,
+    struct wfc__A3d_u wave,
     struct wfc__A2d_u8 modified) {
     // If patterns are 1x1, they never overlap
     // and points never constrain each other.
@@ -1418,7 +1472,7 @@ void wfc__propagateFromRipple(
         // This is still a significant performance improvement.
         for (int dir = 0; dir < wfc__dirCnt; ++dir) {
             if (wfc__propagateOntoDirection(
-                    ctx, options,
+                    ctx, options, pattCnt,
                     headC0, headC1, (enum wfc__Dir)dir,
                     overlaps, wave)) {
                 int nextC0, nextC1;
@@ -1453,11 +1507,10 @@ void wfc__propagateFromRipple(
 }
 
 void wfc__propagateFromAll(
-    void *ctx,
-    int n, int options,
-    const struct wfc__A3d_u8 overlaps,
+    void *ctx, int n, int options, int pattCnt,
+    const struct wfc__A3d_u overlaps,
     struct wfc__A2d_i ripple,
-    struct wfc__A3d_u8 wave,
+    struct wfc__A3d_u wave,
     struct wfc__A2d_u8 modified) {
     // The linked list will contain all elements in order.
     // Each element will point to the next one,
@@ -1469,16 +1522,15 @@ void wfc__propagateFromAll(
     ripple.a[tail] = -1;
 
     wfc__propagateFromRipple(
-        ctx, n, options, overlaps, head, tail, ripple, wave, modified);
+        ctx, n, options, pattCnt, overlaps, head, tail, ripple, wave, modified);
 }
 
 void wfc__propagateFromSeed(
-    void *ctx,
-    int n, int options,
+    void *ctx, int n, int options, int pattCnt,
     int seedC0, int seedC1,
-    const struct wfc__A3d_u8 overlaps,
+    const struct wfc__A3d_u overlaps,
     struct wfc__A2d_i ripple,
-    struct wfc__A3d_u8 wave,
+    struct wfc__A3d_u wave,
     struct wfc__A2d_u8 modified) {
     // Only one element will be in the linked list
     // and will be both the head and the tail.
@@ -1489,11 +1541,11 @@ void wfc__propagateFromSeed(
     int head = wfc__coords2dToInd(ripple.d12, seedC0, seedC1), tail = head;
 
     wfc__propagateFromRipple(
-        ctx, n, options, overlaps, head, tail, ripple, wave, modified);
+        ctx, n, options, pattCnt, overlaps, head, tail, ripple, wave, modified);
 }
 
 void wfc__updateCnts(
-    const struct wfc__A3d_u8 wave,
+    const struct wfc__A3d_u wave,
     const struct wfc__A2d_u8 modified,
     struct wfc__A2d_i wavePattCnts,
     int *collapsedCnt) {
@@ -1501,10 +1553,7 @@ void wfc__updateCnts(
         for (int c1 = 0; c1 < wave.d13; ++c1) {
             if (!WFC__A2D_GET(modified, c0, c1)) continue;
 
-            int cntPatts = 0;
-            for (int p = 0; p < wave.d23; ++p) {
-                if (WFC__A3D_GET(wave, c0, c1, p)) ++cntPatts;
-            }
+            int cntPatts = wfc__popcountBitPackA3d(wave, c0, c1);
 
             WFC__A2D_GET(wavePattCnts, c0, c1) = cntPatts;
             if (cntPatts == 1) ++(*collapsedCnt);
@@ -1542,17 +1591,25 @@ struct wfc_State {
     int srcD0, srcD1, dstD0, dstD1;
     // Number of collapsed wave points.
     int collapsedCnt;
+    // Number of collected patterns.
+    int pattCnt;
     // Patterns collected from source.
     struct wfc__Pattern *patts;
-    // Whether, in a particual direction (first index),
-    // two patterns (last two indexes)
+    // Whether, in a particular direction (first index),
+    // two patterns (second index and bit pack position)
     // have matching subimage pixel values.
     // wfc__Dir is used for the first index.
-    struct wfc__A3d_u8 overlaps;
+    // This is a series of bit packs stored as arrays of unsigned.
+    // Ergo, booleans are represented as bits and tightly packed.
+    // Use bit pack utility functions when working with this array.
+    struct wfc__A3d_u overlaps;
     // Whether, for each point (first two coordinates),
-    // a particular pattern (last coordinate)
+    // a particular pattern (bit pack position)
     // is still present.
-    struct wfc__A3d_u8 wave;
+    // This is a series of bit packs stored as arrays of unsigned.
+    // Ergo, booleans are represented as bits and tightly packed.
+    // Use bit pack utility functions when working with this array.
+    struct wfc__A3d_u wave;
     // Number of remaining patterns on corresponding wave points.
     struct wfc__A2d_i wavePattCnts;
     // Allocated once and reused when new entropy values are calculated.
@@ -1650,18 +1707,32 @@ wfc_State* wfc_initEx(
     state->dstD1 = dstW;
     state->collapsedCnt = 0;
 
-    int pattCnt;
-    state->patts = wfc__gatherPatterns(ctx, n, options, srcA, &pattCnt);
+    state->patts = wfc__gatherPatterns(ctx, n, options, srcA, &state->pattCnt);
 
-    state->overlaps = wfc__calcOverlaps(ctx, n, srcA, pattCnt, state->patts);
+    state->overlaps = wfc__calcOverlaps(
+        ctx, n, srcA, state->pattCnt, state->patts);
 
     state->wave.d03 = dstH;
     if (options & wfc__optEdgeFixC0) state->wave.d03 -= n - 1;
     state->wave.d13 = dstW;
     if (options & wfc__optEdgeFixC1) state->wave.d13 -= n - 1;
-    state->wave.d23 = pattCnt;
-    state->wave.a = (uint8_t*)WFC_MALLOC(ctx, WFC__A3D_SIZE(state->wave));
-    memset(state->wave.a, 1, WFC__A3D_SIZE(state->wave));
+    state->wave.d23 = wfc__bitPackLen(state->pattCnt);
+    state->wave.a = (unsigned*)WFC_MALLOC(ctx, WFC__A3D_SIZE(state->wave));
+    // Set all patterns as present.
+    memset(state->wave.a, 0xFF, WFC__A3D_SIZE(state->wave));
+    // Surplus bit pack positions don't correspond to any real patterns
+    // so they get set to false.
+    {
+        const int pLo = state->pattCnt;
+        const int pHi = state->wave.d23 * (int)sizeof(*state->wave.a) * 8;
+        for (int c0 = 0; c0 < state->wave.d03; ++c0) {
+            for (int c1 = 0; c1 < state->wave.d13; ++c1) {
+                for (int p = pLo; p < pHi; ++p) {
+                    wfc__setBitA3d(state->wave, c0, c1, p, false);
+                }
+            }
+        }
+    }
 
     state->wavePattCnts.d02 = state->wave.d03;
     state->wavePattCnts.d12 = state->wave.d13;
@@ -1694,26 +1765,29 @@ wfc_State* wfc_initEx(
         struct wfc__A2d_b keepA = {state->dstD0, state->dstD1, keep};
 
         if (wfc__restrictKept(
-                n, srcA, state->patts, dstA, keepA, state->wave)) {
+                n, srcA,
+                state->pattCnt, state->patts,
+                dstA, keepA, state->wave)) {
             propagate = true;
         }
     }
 
     if (options & (wfc__optEdgeFixC0 | wfc__optEdgeFixC1)) {
-        if (wfc__restrictEdges(options, state->patts, state->wave)) {
+        if (wfc__restrictEdges(
+                options, state->pattCnt, state->patts, state->wave)) {
             propagate = true;
         }
     }
 
     if (propagate) {
         wfc__propagateFromAll(
-            ctx, n, options,
+            ctx, n, options, state->pattCnt,
             state->overlaps, state->ripple, state->wave, state->modified);
     }
 
     wfc__updateCnts(state->wave, state->modified,
         state->wavePattCnts, &state->collapsedCnt);
-    state->status = wfc__calcStatus(pattCnt, state->wavePattCnts);
+    state->status = wfc__calcStatus(state->pattCnt, state->wavePattCnts);
 
     return state;
 }
@@ -1729,28 +1803,26 @@ int wfc_step(wfc_State *state) {
 
     if (state->status != 0) return state->status;
 
-    int pattCnt = state->wave.d23;
-
     wfc__calcEntropies(
-        state->patts, state->wave, state->modified,
+        state->pattCnt, state->patts, state->wave, state->modified,
         state->entropies);
 
     memset(state->modified.a, 0, WFC__A2D_SIZE(state->modified));
 
     int obsC0, obsC1;
     wfc__observeOne(
-        state->ctx, pattCnt, state->patts, state->entropies,
+        state->ctx, state->pattCnt, state->patts, state->entropies,
         state->wave, state->modified,
         &obsC0, &obsC1);
 
     wfc__propagateFromSeed(
-        state->ctx, state->n, state->options,
+        state->ctx, state->n, state->options, state->pattCnt,
         obsC0, obsC1,
         state->overlaps, state->ripple, state->wave, state->modified);
 
     wfc__updateCnts(state->wave, state->modified,
         state->wavePattCnts, &state->collapsedCnt);
-    state->status = wfc__calcStatus(pattCnt, state->wavePattCnts);
+    state->status = wfc__calcStatus(state->pattCnt, state->wavePattCnts);
 
     return state->status;
 }
@@ -1768,16 +1840,14 @@ int wfc_blit(
     struct wfc__A3d_u8 dstA =
         {state->dstD0, state->dstD1, state->bytesPerPixel, dst};
 
-    int pattCnt = state->wave.d23;
-
     for (int c0 = 0; c0 < state->dstD0; ++c0) {
         for (int c1 = 0; c1 < state->dstD1; ++c1) {
             int wC0, wC1, pC0, pC1;
             wfc__coordsDstToWave(c0, c1, state->wave, &wC0, &wC1, &pC0, &pC1);
 
             int patt = 0;
-            for (int p = 0; p < pattCnt; ++p) {
-                if (WFC__A3D_GET(state->wave, wC0, wC1, p)) {
+            for (int p = 0; p < state->pattCnt; ++p) {
+                if (wfc__getBitA3d(state->wave, wC0, wC1, p)) {
                     patt = p;
                     break;
                 }
@@ -1805,17 +1875,16 @@ wfc_State* wfc_clone(const wfc_State *state) {
 
     *clone = *state;
 
-    int pattCnt = state->wave.d23;
-    size_t pattsSz = (size_t)pattCnt * sizeof(*state->patts);
+    size_t pattsSz = (size_t)state->pattCnt * sizeof(*state->patts);
     clone->patts = (struct wfc__Pattern*)WFC_MALLOC(state->ctx, pattsSz);
     memcpy(clone->patts, state->patts, pattsSz);
 
-    clone->overlaps.a = (uint8_t*)WFC_MALLOC(
+    clone->overlaps.a = (unsigned*)WFC_MALLOC(
         state->ctx, WFC__A3D_SIZE(state->overlaps));
     memcpy(clone->overlaps.a, state->overlaps.a,
         WFC__A3D_SIZE(state->overlaps));
 
-    clone->wave.a = (uint8_t*)WFC_MALLOC(
+    clone->wave.a = (unsigned*)WFC_MALLOC(
         state->ctx, WFC__A3D_SIZE(state->wave));
     memcpy(clone->wave.a, state->wave.a,
         WFC__A3D_SIZE(state->wave));
@@ -1868,12 +1937,12 @@ int wfc_collapsedCount(const wfc_State *state) {
 int wfc_patternCount(const wfc_State *state) {
     if (state == NULL) return wfc_callerError;
 
-    return state->wave.d23;
+    return state->pattCnt;
 }
 
 int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y) {
     if (state == NULL ||
-        patt < 0 || patt >= state->wave.d23 ||
+        patt < 0 || patt >= state->pattCnt ||
         x < 0 || x >= state->dstD1 ||
         y < 0 || y >= state->dstD0) {
         return wfc_callerError;
@@ -1887,7 +1956,7 @@ int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y) {
     int wC0, wC1;
     wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
 
-    return WFC__A3D_GET(state->wave, wC0, wC1, patt);
+    return wfc__getBitA3d(state->wave, wC0, wC1, patt);
 }
 
 int wfc_modifiedAt(const wfc_State *state, int x, int y) {
@@ -1908,7 +1977,7 @@ const unsigned char* wfc_pixelToBlitAt(
     int patt, int x, int y) {
     if (state == NULL ||
         src == NULL ||
-        patt < 0 || patt >= state->wave.d23 ||
+        patt < 0 || patt >= state->pattCnt ||
         x < 0 || x >= state->dstD1 ||
         y < 0 || y >= state->dstD0) {
         return NULL;

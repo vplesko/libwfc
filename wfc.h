@@ -847,12 +847,12 @@ void wfc__setBitA3d(
     wfc__setBit(&WFC__A3D_GET(arr, c0, c1, 0), c2, val);
 }
 
-void wfc__setBitPackA3d(
-    const struct wfc__A3d_u arr, int c0, int c1, bool val) {
-    memset(
-        &WFC__A3D_GET(arr, c0, c1, 0),
-        val ? 0xFF : 0,
-        (size_t)arr.d23 * sizeof(*arr.a));
+// Bit packs may have surplus bit positions that need to equal 0.
+// That is why a function to set all bits to 1 is not provided
+// as it would be easy to make the mistake of setting surplus bits to 1.
+void wfc__clearBitPackA3d(
+    const struct wfc__A3d_u arr, int c0, int c1) {
+    memset(&WFC__A3D_GET(arr, c0, c1, 0), 0, (size_t)arr.d23 * sizeof(*arr.a));
 }
 
 int wfc__popcountBitPackA3d(
@@ -1380,7 +1380,7 @@ void wfc__observeOne(
 
     *obsC0 = chosenC0;
     *obsC1 = chosenC1;
-    wfc__setBitPackA3d(wave, chosenC0, chosenC1, false);
+    wfc__clearBitPackA3d(wave, chosenC0, chosenC1);
     wfc__setBitA3d(wave, chosenC0, chosenC1, chosenPatt, true);
     WFC__A2D_GET(modified, chosenC0, chosenC1) = 1;
 }

@@ -1221,7 +1221,7 @@ void wfc__calcEntropies(
             }
 
             float entropy = 0.0f;
-            // If is here to ensure entropy of observed points is exactly 0.
+            // If is here to ensure entropy of collapsed points is exactly 0.
             if (presentPatts > 1) {
                 for (int p = 0; p < wave.d23; ++p) {
                     if (WFC__A3D_GET(wave, c0, c1, p)) {
@@ -1247,7 +1247,7 @@ void wfc__observeOne(
     // The number of different wave points tied for the smallest entropy.
     int smallestCnt = 0;
     for (int i = 0; i < WFC__A2D_LEN(entropies); ++i) {
-        // Skip observed points.
+        // Skip collapsed points.
         if (entropies.a[i] == 0.0f) continue;
 
         if (smallestCnt > 0 && wfc__approxEq_f(entropies.a[i], smallest)) {

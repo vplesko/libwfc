@@ -120,7 +120,7 @@ void wfcBlitAveraged(
     }
 }
 
-bool wfcIsObserved(const struct WfcWrapper wfc, int x, int y, int *patt) {
+bool wfcIsCollapsed(const struct WfcWrapper wfc, int x, int y, int *patt) {
     assert(wfc.len > 0);
 
     const wfc_State *state = wfc.states[wfc.len - 1];
@@ -144,18 +144,18 @@ bool wfcIsObserved(const struct WfcWrapper wfc, int x, int y, int *patt) {
     return foundSingle;
 }
 
-int wfcObservedCount(const struct WfcWrapper wfc) {
+int wfcCollapsedCount(const struct WfcWrapper wfc) {
     int cnt = 0;
     for (int j = 0; j < wfc.dstH; ++j) {
         for (int i = 0; i < wfc.dstW; ++i) {
-            if (wfcIsObserved(wfc, i, j, NULL)) ++cnt;
+            if (wfcIsCollapsed(wfc, i, j, NULL)) ++cnt;
         }
     }
 
     return cnt;
 }
 
-void wfcBlitObserved(
+void wfcBlitCollapsed(
     const struct WfcWrapper wfc, const unsigned char *src, unsigned char *dst) {
     assert(wfc.len > 0);
 
@@ -165,7 +165,7 @@ void wfcBlitObserved(
     for (int j = 0; j < wfc.dstH; ++j) {
         for (int i = 0; i < wfc.dstW; ++i) {
             int patt;
-            if (!wfcIsObserved(wfc, i, j, &patt)) continue;
+            if (!wfcIsCollapsed(wfc, i, j, &patt)) continue;
 
             const unsigned char* px = wfc_pixelToBlitAt(state, src, patt, i, j);
             assert(px != NULL);
@@ -176,10 +176,10 @@ void wfcBlitObserved(
     }
 }
 
-void wfcSetWhichObserved(const struct WfcWrapper wfc, bool *dst) {
+void wfcSetWhichCollapsed(const struct WfcWrapper wfc, bool *dst) {
     for (int j = 0; j < wfc.dstH; ++j) {
         for (int i = 0; i < wfc.dstW; ++i) {
-            dst[j * wfc.dstW + i] = wfcIsObserved(wfc, i, j, NULL);
+            dst[j * wfc.dstW + i] = wfcIsCollapsed(wfc, i, j, NULL);
         }
     }
 }

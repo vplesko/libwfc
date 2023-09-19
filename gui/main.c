@@ -370,10 +370,10 @@ int main(int argc, char *argv[]) {
         if (guiState == guiStateRunning) {
             if (pauseToggled) {
                 clearSurface(surfaceDst, NULL);
-                wfcBlitObserved(wfc, surfaceSrc->pixels, surfaceDst->pixels);
+                wfcBlitCollapsed(wfc, surfaceSrc->pixels, surfaceDst->pixels);
 
                 keepHasChanged = false;
-                wfcSetWhichObserved(wfc, keep);
+                wfcSetWhichCollapsed(wfc, keep);
 
                 guiState = guiStatePaused;
             } else {
@@ -415,7 +415,7 @@ int main(int argc, char *argv[]) {
                         fprintf(stdout, "WFC completed.\n");
 
                         keepHasChanged = false;
-                        wfcSetWhichObserved(wfc, keep);
+                        wfcSetWhichCollapsed(wfc, keep);
 
                         guiState = guiStateCompleted;
 
@@ -429,11 +429,11 @@ int main(int argc, char *argv[]) {
             if (undoRequested) {
                 if (keepHasChanged) {
                     clearSurface(surfaceDst, NULL);
-                    wfcBlitObserved(
+                    wfcBlitCollapsed(
                         wfc, surfaceSrc->pixels, surfaceDst->pixels);
 
                     keepHasChanged = false;
-                    wfcSetWhichObserved(wfc, keep);
+                    wfcSetWhichCollapsed(wfc, keep);
                 }
             } else if (!isRectZeroSize(cursor) && isRightMouseButtonHeld()) {
                 if (clearBoolsRect(dstW, dstH, keep, cursor)) {

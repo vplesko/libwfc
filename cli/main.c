@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 
         if (++printCounter == 100) {
             fprintf(stdout,
-                "%d/%d\r", wfcObservedCount(wfc), args.dstW * args.dstH);
+                "%d/%d\r", wfcCollapsedCount(wfc), args.dstW * args.dstH);
 
             printCounter = 0;
         }

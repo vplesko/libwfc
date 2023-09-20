@@ -37,7 +37,7 @@ Result (multiple runs; skip on backtrack or fail):
 ```
 
 ```
-.\bin\cli.exe .\external\samples\Cat.png -n 3 -w 256 -h 256 -o .\bin\output.png -flip -rot
+.\bin\cli.exe .\external\samples\Cat.png -n 3 -w 128 -h 128 -o .\bin\output.png -flip -rot
 ```
 
 Result (multiple runs; skip on backtrack or fail):

@@ -8,11 +8,7 @@
 
 ## Benchmark test
 
-```
-$ make WIN=1 VC=1 benchmark
-clang -std=c99 -Wall -Wextra -pedantic -Werror -I./ -Ishared -Iexternal/lib -g -fno-omit-frame-pointer -D_CRT_SECURE_NO_WARNINGS -O3 -mavx2 benchmark/main.c -o bin/benchmark/main  bin/lib/stb_image_impl.obj
-bin/benchmark/main
-```
+Can be run with `make benchmark`.
 
 Result:
 
@@ -26,16 +22,40 @@ input=benchmark/test.txt repeats=5 args={n=5 opt=7 dstW=100 dstH=100}
 
 ## CLI
 
-```
-$ make WIN=1 VC=1 cli
-
-$ time .\bin\cli.exe .\external\samples\NotKnot.png -n 3 -w 128 -h 128 -o .\bin\output.png -flip -rot
-```
-
-Result (multiple runs):
+Can be built with `make cli`.
 
 ```
-0:00.84
-0:00.75
-0:00.78
+.\bin\cli.exe .\external\samples\NotKnot.png -n 3 -w 256 -h 256 -o .\bin\output.png -flip -rot
+```
+
+Result (multiple runs; skip on backtrack or fail):
+
+```
+0:06.58
+0:06.63
+0:06.60
+```
+
+```
+.\bin\cli.exe .\external\samples\Cat.png -n 3 -w 256 -h 256 -o .\bin\output.png -flip -rot
+```
+
+Result (multiple runs; skip on backtrack or fail):
+
+```
+0:08.49
+0:08.73
+0:08.54
+```
+
+```
+.\bin\cli.exe .\external\samples\BrownFox.png -n 5 -w 50 -h 50 -o .\bin\output.png -flip -rot
+```
+
+Result (multiple runs; skip on backtrack or fail):
+
+```
+0:15.04
+0:14.57
+0:17.18
 ```

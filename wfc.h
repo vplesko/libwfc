@@ -585,7 +585,7 @@ int wfc__popcount_u(unsigned n) {
 }
 
 int wfc__roundUpToDivBy(int n, int div) {
-    return (n + div - 1) / div;
+    return ((n + div - 1) / div) * div;
 }
 
 bool wfc__approxEq_f(float a, float b) {
@@ -736,7 +736,7 @@ int wfc__coords2dToInd(int d1, int c0, int c1) {
 int wfc__bitPackLen(int cnt) {
     const int uSzBits = (int)sizeof(unsigned) * 8;
 
-    return wfc__roundUpToDivBy(cnt, uSzBits);
+    return wfc__roundUpToDivBy(cnt, uSzBits) / uSzBits;
 }
 
 bool wfc__getBit(const unsigned *a, int ind) {

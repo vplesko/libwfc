@@ -14,10 +14,10 @@ Result:
 
 ```
 input=external/samples/NotKnot.png repeats=5 args={n=3 opt=7 dstW=256 dstH=256}
-        avg=6.4072 min=6.2960 max=6.5170
+        avg=6.2326 min=6.1690 max=6.3180
 
 input=benchmark/test.txt repeats=5 args={n=5 opt=7 dstW=100 dstH=100}
-        avg=4.8008 min=4.7960 max=4.8090
+        avg=4.7548 min=4.7430 max=4.7670
 ```
 
 ## CLI
@@ -25,37 +25,37 @@ input=benchmark/test.txt repeats=5 args={n=5 opt=7 dstW=100 dstH=100}
 Can be built with `make cli`.
 
 ```
-.\bin\cli.exe .\external\samples\NotKnot.png -n 3 -w 256 -h 256 -o .\bin\output.png -flip -rot
+time .\bin\cli.exe .\external\samples\NotKnot.png -n 3 -w 256 -h 256 -o .\bin\output.png -flip -rot -seed 1600001001
 ```
 
-Result (multiple runs; skip on backtrack or fail):
+Result (multiple runs):
 
 ```
-0:06.58
-0:06.63
-0:06.60
-```
-
-```
-.\bin\cli.exe .\external\samples\Cat.png -n 3 -w 128 -h 128 -o .\bin\output.png -flip -rot
-```
-
-Result (multiple runs; skip on backtrack or fail):
-
-```
-0:08.49
-0:08.73
-0:08.54
+0:06.78
+0:06.69
+0:06.70
 ```
 
 ```
-.\bin\cli.exe .\external\samples\BrownFox.png -n 5 -w 50 -h 50 -o .\bin\output.png -flip -rot
+time .\bin\cli.exe .\external\samples\Cat.png -n 3 -w 256 -h 256 -o .\bin\output.png -flip -rot -seed 1600001001
 ```
 
-Result (multiple runs; skip on backtrack or fail):
+Result (multiple runs):
 
 ```
-0:15.04
-0:14.57
-0:17.18
+0:36.83
+0:36.83
+0:36.57
+```
+
+```
+time .\bin\cli.exe .\external\samples\BrownFox.png -n 5 -w 50 -h 50 -o .\bin\output.png -flip -rot -seed 1600001001
+```
+
+Result (multiple runs):
+
+```
+0:14.60
+0:14.61
+0:14.69
 ```

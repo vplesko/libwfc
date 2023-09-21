@@ -105,7 +105,7 @@ void benchmarkText(const char *path, int n, int options, int dstW, int dstH) {
 }
 
 int main(void) {
-    srand(1600000001);
+    srand(1600001001);
 
     benchmarkImage("external/samples/NotKnot.png",
         3, wfc_optFlip | wfc_optRotate, 256, 256);

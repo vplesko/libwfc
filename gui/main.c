@@ -29,8 +29,7 @@ const int screenW = 800, screenH = 600;
 const Uint32 ticksPerFrame = 1000 / 60;
 const int srcDstGap = 2;
 const int zoomMin = 1, zoomMax = 8;
-// @TODO Revisit speedMax value after more optimizations are done.
-const int speedMin = 1, speedMax = 16;
+const int speedMin = 1, speedMax = 64;
 const int cursorSizeMin = 1, cursorSizeMax = 9;
 
 const char *instructions =

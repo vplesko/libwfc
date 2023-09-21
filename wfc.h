@@ -588,18 +588,22 @@ int wfc__roundUpToDivBy(int n, int div) {
     return ((n + div - 1) / div) * div;
 }
 
-bool wfc__approxEq_f(float a, float b) {
-    const float absDiffMax = 0.001f;
-    const float relDiffMax = FLT_EPSILON;
+// a and b must be non-negative.
+// Assumes IEEE 754 representation of float on the system.
+bool wfc__approxEqNonNeg_f(float a, float b) {
+    const int ulpsDiff = 8;
 
-    if (fabsf(a - b) < absDiffMax) return true;
+    // Reinterpret floats as 32-bit ints in a standard compliant way.
+    int32_t ia, ib;
+    memcpy(&ia, &a, sizeof(a));
+    memcpy(&ib, &b, sizeof(b));
 
-    if (fabsf(a) < fabsf(b)) return fabsf((a - b) / b) < relDiffMax;
-    return fabsf((a - b) / a) < relDiffMax;
+    // Check that bit representations are close to each other.
+    return abs(ia - ib) < ulpsDiff;
 }
 
-// Approximates log2(x), where x is in (0, 1] and not a subnormal.
-// Works for x greater than 1, but accuracy may be low.
+// Approximates log2(x), where x is positive
+// and not NaN, infinity, nor a subnormal.
 // Assumes IEEE 754 representation of float on the system.
 float wfc__log2f(float x) {
     // IEEE 754 representation constants.
@@ -607,7 +611,7 @@ float wfc__log2f(float x) {
     const int32_t mantissaMask = (1 << mantissaLen) - 1;
     const int32_t baseExponent = -127;
 
-    // Reinterpret x as int in standard compliant way.
+    // Reinterpret x as int in a standard compliant way.
     int32_t xu;
     memcpy(&xu, &x, sizeof(xu));
 
@@ -1331,7 +1335,8 @@ void wfc__observeOne(
         // Skip collapsed points.
         if (entropies.a[i] == 0.0f) continue;
 
-        if (smallestCnt > 0 && wfc__approxEq_f(entropies.a[i], smallest)) {
+        if (smallestCnt > 0 &&
+            wfc__approxEqNonNeg_f(entropies.a[i], smallest)) {
             ++smallestCnt;
         } else if (smallestCnt == 0 || entropies.a[i] < smallest) {
             smallest = entropies.a[i];
@@ -1346,7 +1351,7 @@ void wfc__observeOne(
         int chosenSmallestPnt = wfc__rand_i(ctx, smallestCnt);
         // Iterate through points until we get to the one we decided to observe.
         for (int i = 0; i < WFC__A2D_LEN(entropies); ++i) {
-            if (wfc__approxEq_f(entropies.a[i], smallest)) {
+            if (wfc__approxEqNonNeg_f(entropies.a[i], smallest)) {
                 chosenPnt = i;
                 if (chosenSmallestPnt == 0) break;
                 --chosenSmallestPnt;

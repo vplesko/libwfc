@@ -14,10 +14,10 @@ Result:
 
 ```
 input=external/samples/NotKnot.png repeats=5 args={n=3 opt=7 dstW=256 dstH=256}
-        avg=6.2326 min=6.1690 max=6.3180
+        avg=5.5866 min=5.5340 max=5.6560
 
 input=benchmark/test.txt repeats=5 args={n=5 opt=7 dstW=100 dstH=100}
-        avg=4.7548 min=4.7430 max=4.7670
+        avg=4.7580 min=4.7490 max=4.7680
 ```
 
 ## CLI
@@ -31,9 +31,9 @@ time .\bin\cli.exe .\external\samples\NotKnot.png -n 3 -w 256 -h 256 -o .\bin\ou
 Result (multiple runs):
 
 ```
-0:06.78
-0:06.69
-0:06.70
+0:05.98
+0:05.92
+0:05.90
 ```
 
 ```
@@ -43,9 +43,9 @@ time .\bin\cli.exe .\external\samples\Cat.png -n 3 -w 256 -h 256 -o .\bin\output
 Result (multiple runs):
 
 ```
-0:36.83
-0:36.83
-0:36.57
+0:36.12
+0:36.60
+0:36.46
 ```
 
 ```
@@ -55,7 +55,7 @@ time .\bin\cli.exe .\external\samples\BrownFox.png -n 5 -w 50 -h 50 -o .\bin\out
 Result (multiple runs):
 
 ```
-0:14.60
-0:14.61
-0:14.69
+0:14.65
+0:14.63
+0:14.63
 ```

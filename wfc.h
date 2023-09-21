@@ -1351,6 +1351,9 @@ void wfc__observeOne(
         int chosenSmallestPnt = wfc__rand_i(ctx, smallestCnt);
         // Iterate through points until we get to the one we decided to observe.
         for (int i = 0; i < WFC__A2D_LEN(entropies); ++i) {
+            // Skip collapsed points.
+            if (entropies.a[i] == 0.0f) continue;
+
             if (wfc__approxEqNonNeg_f(entropies.a[i], smallest)) {
                 chosenPnt = i;
                 if (chosenSmallestPnt == 0) break;

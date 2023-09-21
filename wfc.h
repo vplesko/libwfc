@@ -1920,6 +1920,17 @@ wfc_State* wfc_clone(const wfc_State *state) {
     return clone;
 }
 
+size_t wfc__sizeOfAllocs(wfc_State *state) {
+    return
+        (size_t)state->pattCnt * sizeof(*state->patts) +
+        WFC__A3D_SIZE(state->overlaps) +
+        WFC__A3D_SIZE(state->wave) +
+        WFC__A2D_SIZE(state->wavePattCnts) +
+        WFC__A2D_SIZE(state->entropies) +
+        WFC__A2D_SIZE(state->modified) +
+        WFC__A2D_SIZE(state->ripple);
+}
+
 void wfc_free(wfc_State *state) {
     if (state == NULL) return;
 

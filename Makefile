@@ -45,7 +45,7 @@ cli: $(BIN_DIR)/$(CLI_EXE)
 
 $(BIN_DIR)/$(CLI_EXE): cli/main.c $(HDRS) $(CLI_HDRS) $(BIN_DIR)/lib/$(STBI_OBJ)
 	@mkdir -p $(@D)
-	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) $(BIN_DIR)/lib/$(STBI_OBJ)
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(BIN_DIR)/lib/$(STBI_OBJ) $(LINK_FLAGS)
 
 gui: $(BIN_DIR)/$(GUI_EXE)
 
@@ -56,7 +56,7 @@ endif
 
 $(BIN_DIR)/$(GUI_EXE): gui/main.c $(HDRS) $(GUI_HDRS) $(BIN_DIR)/lib/$(STBI_OBJ)
 	@mkdir -p $(@D)
-	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) $(GUI_LINK_FLAGS) $(BIN_DIR)/lib/$(STBI_OBJ)
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(BIN_DIR)/lib/$(STBI_OBJ) $(LINK_FLAGS) $(GUI_LINK_FLAGS)
 
 test: $(BIN_DIR)/test/done.txt
 
@@ -105,7 +105,7 @@ $(BIN_DIR)/benchmark/done.txt: $(BIN_DIR)/benchmark/main
 
 $(BIN_DIR)/benchmark/main: benchmark/main.c $(HDRS) $(BENCHMARK_HDRS) $(BIN_DIR)/lib/$(STBI_OBJ)
 	@mkdir -p $(@D)
-	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(LINK_FLAGS) $(BIN_DIR)/lib/$(STBI_OBJ)
+	$(CC) $(BUILD_FLAGS) $(BUILD_FLAGS_REL) $< -o $@ $(BIN_DIR)/lib/$(STBI_OBJ) $(LINK_FLAGS)
 
 clean:
 	rm -rf $(BIN_DIR)

@@ -19,6 +19,7 @@
 
 void printProgress(const struct WfcWrapper wfc, int dstW, int dstH) {
     fprintf(stdout, "%d/%d\r", wfcCollapsedCount(wfc), dstW * dstH);
+    fflush(stdout);
 }
 
 int main(int argc, char *argv[]) {

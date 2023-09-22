@@ -28,7 +28,7 @@ ifdef VC
 	BUILD_FLAGS += -D_CRT_SECURE_NO_WARNINGS
 endif
 BUILD_FLAGS_DBG = -O2
-BUILD_FLAGS_REL = -O3 -mavx2
+BUILD_FLAGS_REL = -O3 -march=native
 
 LINK_FLAGS =
 ifndef VC

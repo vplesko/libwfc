@@ -806,11 +806,18 @@ void wfc__dirToOffsets(void *ctx, enum wfc__Dir dir, int *offC0, int *offC1) {
     (void)ctx;
 
     int offC0_ = 0, offC1_ = 0;
-    if (dir == wfc__dirC0Less) offC0_ = -1;
-    else if (dir == wfc__dirC0More) offC0_ = +1;
-    else if (dir == wfc__dirC1Less) offC1_ = -1;
-    else if (dir == wfc__dirC1More) offC1_ = +1;
-    else WFC_ASSERT(ctx, false);
+    if (dir == wfc__dirC0Less) {
+        offC0_ = -1;
+    } else if (dir == wfc__dirC0More) {
+        offC0_ = +1;
+    }
+    else if (dir == wfc__dirC1Less) {
+        offC1_ = -1;
+    } else if (dir == wfc__dirC1More) {
+        offC1_ = +1;
+    } else {
+        WFC_ASSERT(ctx, false);
+    }
 
     if (offC0 != NULL) *offC0 = offC0_;
     if (offC1 != NULL) *offC1 = offC1_;
@@ -819,11 +826,17 @@ void wfc__dirToOffsets(void *ctx, enum wfc__Dir dir, int *offC0, int *offC1) {
 enum wfc__Dir wfc__dirOpposite(void *ctx, enum wfc__Dir dir) {
     (void)ctx;
 
-    if (dir == wfc__dirC0Less) return wfc__dirC0More;
-    else if (dir == wfc__dirC0More) return wfc__dirC0Less;
-    else if (dir == wfc__dirC1Less) return wfc__dirC1More;
-    else if (dir == wfc__dirC1More) return wfc__dirC1Less;
-    else WFC_ASSERT(ctx, false);
+    if (dir == wfc__dirC0Less) {
+        return wfc__dirC0More;
+    } else if (dir == wfc__dirC0More) {
+        return wfc__dirC0Less;
+    } else if (dir == wfc__dirC1Less) {
+        return wfc__dirC1More;
+    } else if (dir == wfc__dirC1More) {
+        return wfc__dirC1Less;
+    } else {
+        WFC_ASSERT(ctx, false);
+    }
 
     // Unreachable.
     return (enum wfc__Dir)0;

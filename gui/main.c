@@ -93,7 +93,7 @@ bool isRectZeroSize(SDL_Rect rect) {
 }
 
 void clearSurface(SDL_Surface *surface, SDL_Rect *rect) {
-    SDL_FillRect(surface, rect, SDL_MapRGB(surface->format, 0, 0, 0));
+    SDL_FillRect(surface, rect, SDL_MapRGB(surface->format, 0xC0, 0xC0, 0xC0));
 }
 
 void incZoom(int *zoom) {

@@ -4,11 +4,13 @@ libwfc is a single-header C library for the Wave Function Collapse algorithm (WF
 
 This project also offers a CLI and a rudimentary GUI tool for the WFC process.
 
+![Example run of WFC.](misc/flowers.gif)
+
 Quite a bit of effort has gone into making this library fast. See `benchmark/` for some benchmark results.
 
-I also kept a devlog while working on this project - you can [find it here](https://www.vplesko.com/posts/wfc/devlog_0.html) if you're curious.
+![Example run with a 256x256 output.](misc/rooms.gif)
 
-![Example run of WFC.](misc/flowers.gif)
+I also kept a devlog while working on this project - you can [find it here](https://www.vplesko.com/posts/wfc/devlog_0.html) if you're curious.
 
 ## How to use the library
 

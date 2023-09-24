@@ -810,8 +810,7 @@ void wfc__dirToOffsets(void *ctx, enum wfc__Dir dir, int *offC0, int *offC1) {
         offC0_ = -1;
     } else if (dir == wfc__dirC0More) {
         offC0_ = +1;
-    }
-    else if (dir == wfc__dirC1Less) {
+    } else if (dir == wfc__dirC1Less) {
         offC1_ = -1;
     } else if (dir == wfc__dirC1More) {
         offC1_ = +1;

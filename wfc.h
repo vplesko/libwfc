@@ -150,8 +150,8 @@ typedef struct wfc_State wfc_State;
 /**
  * Runs WFC on the provided source image and blits to the destination.
  *
- * \param n Pattern size will be \c n by \c n pixels. Must be positive and not
- * greater than any dimension of source and destination images.
+ * \param n Pattern size will be n by n pixels. Must be positive and not greater
+ * than any dimension of source and destination images.
  *
  * \param options Bitmask determining how WFC will run. This should be a
  * bitwise-or of wfc_opt* values or zero.
@@ -180,7 +180,7 @@ typedef struct wfc_State wfc_State;
  * \li wfc_failed (negative) in case of contradiction;
  * \li wfc_callerError (negative) in case of argument error.
  *
- * On success, the generated image will be written to \c dst.
+ * On success, the generated image will be written to dst.
  */
 int wfc_generate(
     int n, int options, int bytesPerPixel,
@@ -191,8 +191,8 @@ int wfc_generate(
  * Runs WFC on the provided source image and blits to the destination. Same as
  * wfc_generate() except that it provides more capabilities.
  *
- * \param n Pattern size will be \c n by \c n pixels. Must be positive and not
- * greater than any dimension of source and destination images.
+ * \param n Pattern size will be n by n pixels. Must be positive and not greater
+ * than any dimension of source and destination images.
  *
  * \param options Bitmask determining how WFC will run. This should be a
  * bitwise-or of wfc_opt* values or zero.
@@ -213,17 +213,17 @@ int wfc_generate(
  * \param dstH Height in pixels of the destination image. Must be positive.
  *
  * \param dst Pointer to a row-major array of pixels comprising the destination
- * image. WFC output will be blitted here. If \c keep is non-null then this must
+ * image. WFC output will be blitted here. If keep is non-null then this must
  * not be null.
  *
  * \param ctx User context that will be passed to WFC_ASSERT(), WFC_MALLOC(),
  * WFC_FREE(), and WFC_RAND().
  *
- * \param keep If non-null, signifies that some values in \c dst are
- * pre-determined and that WFC should not modify them. WFC will attempt to
- * generate the rest of the output image, while keeping these values as they
- * are. If non-null, must be of the same dimensions as \c dst - true means keep
- * that pixel value unchanged.
+ * \param keep If non-null, signifies that some values in dst are pre-determined
+ * and that WFC should not modify them. WFC will attempt to generate the rest of
+ * the output image, while keeping these values as they are. If non-null, must
+ * be of the same dimensions as dst - true means keep that pixel value
+ * unchanged.
  *
  * \return Returns the status code of WFC, which is one of:
  *
@@ -231,7 +231,7 @@ int wfc_generate(
  * \li wfc_failed (negative) in case of contradiction;
  * \li wfc_callerError (negative) in case of argument error.
  *
- * On success, the generated image will be written to \c dst.
+ * On success, the generated image will be written to dst.
  */
 int wfc_generateEx(
     int n, int options, int bytesPerPixel,
@@ -247,8 +247,8 @@ int wfc_generateEx(
  * Consider using wfc_generate() instead if you don't need any custom handling
  * of individual steps.
  *
- * \param n Pattern size will be \c n by \c n pixels. Must be positive and not
- * greater than any dimension of source and destination images.
+ * \param n Pattern size will be n by n pixels. Must be positive and not greater
+ * than any dimension of source and destination images.
  *
  * \param options Bitmask determining how WFC will run. This should be a
  * bitwise-or of wfc_opt* values or zero.
@@ -286,8 +286,8 @@ wfc_State* wfc_init(
  * Consider using wfc_generate() instead if you don't need any custom handling
  * of individual steps.
  *
- * \param n Pattern size will be \c n by \c n pixels. Must be positive and not
- * greater than any dimension of source and destination images.
+ * \param n Pattern size will be n by n pixels. Must be positive and not greater
+ * than any dimension of source and destination images.
  *
  * \param options Bitmask determining how WFC will run. This should be a
  * bitwise-or of wfc_opt* values or zero.
@@ -309,17 +309,17 @@ wfc_State* wfc_init(
  *
  * \param dst Pointer to a row-major array of pixels comprising the destination
  * image. During initialization, destination image is only used for the sake of
- * images to be kept (see the \c keep parameter). If \c keep is non-null then
- * this must not be null.
+ * images to be kept (see the keep parameter). If keep is non-null then this
+ * must not be null.
  *
  * \param ctx User context that will be passed to WFC_ASSERT(), WFC_MALLOC(),
  * WFC_FREE(), and WFC_RAND().
  *
- * \param keep If non-null, signifies that some values in \c dst are
- * pre-determined and that WFC should not modify them. WFC will attempt to
- * generate the rest of the output image, while keeping these values as they
- * are. If non-null, must be of the same dimensions as \c dst - true means keep
- * that pixel value unchanged.
+ * \param keep If non-null, signifies that some values in dst are pre-determined
+ * and that WFC should not modify them. WFC will attempt to generate the rest of
+ * the output image, while keeping these values as they are. If non-null, must
+ * be of the same dimensions as dst - true means keep that pixel value
+ * unchanged.
  *
  * \return Returns an allocated state object to be passed to further WFC
  * functions. This object should be deallocated using wfc_free().
@@ -346,7 +346,7 @@ wfc_State* wfc_initEx(
  * \li wfc_completed (positive) in case that WFC has completed successfully;
  * \li wfc_failed (negative) in case that WFC has reached a contradiction and
  * failed to complete;
- * \li wfc_callerError (negative) in case \c state was null.
+ * \li wfc_callerError (negative) in case state was null.
 */
 int wfc_status(const wfc_State *state);
 
@@ -365,12 +365,12 @@ int wfc_status(const wfc_State *state);
  * \li wfc_completed (positive) in case that WFC has completed successfully;
  * \li wfc_failed (negative) in case that WFC has reached a contradiction and
  * failed to complete;
- * \li wfc_callerError (negative) in case \c state was null.
+ * \li wfc_callerError (negative) in case state was null.
 */
 int wfc_step(wfc_State *state);
 
 /**
- * Blits (aka. renders) the generated image to \c dst by copying in the pixel
+ * Blits (aka. renders) the generated image to dst by copying in the pixel
  * values. Should be called after WFC completes successfully (after wfc_step()
  * has returned wfc_completed).
  *
@@ -398,7 +398,7 @@ int wfc_blit(
  * \param state Pointer to the state object to be cloned.
  *
  * \return Returns a new state object that is a copy of the provided one. If
- * \c state is null, null is returned instead.
+ * state is null, null is returned instead.
 */
 wfc_State* wfc_clone(const wfc_State *state);
 
@@ -421,7 +421,7 @@ void wfc_free(wfc_State *state);
  * wave points. Must not be null.
  *
  * \return Returns the number of collapsed wave points. Returns wfc_callerError
- * (a negative value) if \c state is null.
+ * (a negative value) if state is null.
 */
 int wfc_collapsedCount(const wfc_State *state);
 
@@ -433,7 +433,7 @@ int wfc_collapsedCount(const wfc_State *state);
  * patterns. Must not be null.
  *
  * \return Returns the number of unique patterns gathered from the input image.
- * Returns wfc_callerError (a negative value) if \c state is null.
+ * Returns wfc_callerError (a negative value) if state is null.
 */
 int wfc_patternCount(const wfc_State *state);
 

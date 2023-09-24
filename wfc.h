@@ -54,7 +54,7 @@ This library does NOT handle file input/output and does NOT do backtracking on
 its own. CLI and GUI do provide that, you may look at their code to see one
 possible implementation.
 
-You can also run WFC step-by-step with:
+You can also run WFC step-by-step like this:
 
     struct wfc_State *state = wfc_init(
         n, wfc_optFlipH | wfc_optFlipV | wfc_optRotate, 4,
@@ -91,8 +91,9 @@ before including this header:
     // should yield a float value between 0 (inclusive) and 1 (exclusive)
     #define WFC_RAND(ctx) ...
 
-All macros accept a user context pointer. If you do not want it to be null, you
-need to call wfc_generateEx() or wfc_initEx().
+All macros accept a user context pointer as the first argument. If you want it
+to have a value other than null, you will need to supply that value by using
+wfc_generateEx() or wfc_initEx().
 */
 
 #ifndef INCLUDE_WFC_H

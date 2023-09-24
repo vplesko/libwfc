@@ -1,12 +1,12 @@
 # libwfc
 
-**This is a single-person project, please do not send pull requests to this repo.**
-
 libwfc is a single-header C library for the Wave Function Collapse algorithm (WFC). It (currently) only covers the 2D overlapping model. WFC accepts a small reference image and outputs a larger image that resembles the input. See https://github.com/mxgmn/WaveFunctionCollapse for more details on the algorithm.
 
 This project also offers a CLI and a rudimentary GUI tool for the WFC process.
 
-`benchmark/` contains a benchmark test and results.
+Quite a bit of effort has gone into making this library fast. See `benchmark/` for some benchmark results.
+
+I also kept a devlog while working on this project - you can [find it here](https://www.vplesko.com/posts/wfc/devlog_0.html) if you're curious.
 
 ![Example run of WFC.](misc/flowers.gif)
 
@@ -39,7 +39,7 @@ There are other functions and ways of running WFC, check out the giant comment n
 
 If you want to test the correctness of the library on your system, run `make test`.
 
-## How to use the CLI/GUI
+## How to use CLI and GUI tools
 
 The library itself does not deal with file I/O nor with backtracking in case WFC runs into a contradiction. CLI and GUI both do.
 
@@ -62,6 +62,12 @@ Simply run `bin/cli` or `bin/gui` to see the list of possible arguments.
 GUI lets you watch WFC as it runs and you can pause/unpause it. You can also erase parts of the generated image and force WFC to generate them anew.
 
 ![Example of erasing parts of image and generating again.](misc/erase.gif)
+
+## Contributing
+
+For the time being, this is a single-person project, so please do not send pull requests.
+
+If you find bugs or have suggestions, create an issue to let me know.
 
 ## Credits
 

@@ -776,6 +776,14 @@ WFC__A3D_DEF(unsigned, u);
 
 // WFC code
 
+enum {
+    // Some loop calculations are split into striped channels
+    // that each calculate their part of the result,
+    // which is then aggregated into the final result.
+    // This improves CPU instruction-level parallelism.
+    wfc__loopChannels = 4
+};
+
 // H and V are used in public API, prefer to use C0/1/... in private code.
 enum {
     wfc__optFlipC0 = wfc_optFlipV,
@@ -1216,6 +1224,37 @@ struct wfc__A3d_u wfc__calcOverlaps(
     return overlaps;
 }
 
+struct wfc__A2d_f wfc__makeEntropiesArray(void *ctx, int d0, int d1) {
+    (void)ctx;
+
+    struct wfc__A2d_f entropies;
+
+    entropies.d02 = d0;
+    entropies.d12 = d1;
+
+    // The operation of finding points tied for the smallest entropy
+    // is split into multiple loop channels.
+    // The way it's implemented means it will always pick up as many elements
+    // as there are channels at each iteration.
+    // To make that not be UB, extra float values are added
+    // to the allocated memory.
+    // The entropies array itself has the same length it would normally have.
+    // Indexing past the end of the array is safe
+    // as long as it is within the memory allocation.
+    int len = wfc__roundUpToDivBy(WFC__A2D_LEN(entropies), wfc__loopChannels);
+
+    entropies.a = (float*)WFC_MALLOC(ctx, (size_t)len * sizeof(*entropies.a));
+
+    // Extra values are set to the largest float
+    // since this value has a neutral effect
+    // in the operation mentioned above.
+    for (int i = WFC__A2D_LEN(entropies); i < len; ++i) {
+        entropies.a[i] = FLT_MAX;
+    }
+
+    return entropies;
+}
+
 bool wfc__restrictKept(
     int n,
     const struct wfc__A3d_cu8 src,
@@ -1304,18 +1343,6 @@ bool wfc__restrictEdges(
     return modif;
 }
 
-struct wfc__A2d_f wfc__makeEntropiesArray(void *ctx, int d0, int d1) {
-    (void)ctx;
-
-    struct wfc__A2d_f entropies;
-
-    entropies.d02 = d0;
-    entropies.d12 = d1;
-    entropies.a = (float*)WFC_MALLOC(ctx, WFC__A2D_SIZE(entropies));
-
-    return entropies;
-}
-
 void wfc__calcEntropies(
     int pattCnt, const struct wfc__Pattern *patts,
     const struct wfc__A3d_u wave,
@@ -1362,9 +1389,29 @@ void wfc__observeOne(
     struct wfc__A3d_u wave,
     struct wfc__A2d_u8 modified,
     int *obsC0, int *obsC1) {
-    float smallest = entropies.a[0];
-    for (int i = 1; i < WFC__A2D_LEN(entropies); ++i) {
-        smallest = wfc__min_f(smallest, entropies.a[i]);
+    float smallest;
+    {
+        // This calculation is split into multiple channels
+        // to improve CPU instruction-level parallelism.
+
+        float smallestA[wfc__loopChannels];
+        for (int c = 0; c < wfc__loopChannels; ++c) smallestA[c] = FLT_MAX;
+
+        for (int i = 0; i < WFC__A2D_LEN(entropies); i += wfc__loopChannels) {
+            // This loop may index past the end of the entropies array.
+            // However, the entropies array has been given extra memory
+            // after the end of the actual array.
+            // This memory is filled with FLT_MAXs and is safe to read.
+
+            for (int c = 0; c < wfc__loopChannels; ++c) {
+                smallestA[c] = wfc__min_f(smallestA[c], entropies.a[i + c]);
+            }
+        }
+
+        smallest = FLT_MAX;
+        for (int c = 0; c < wfc__loopChannels; ++c) {
+            smallest = wfc__min_f(smallest, smallestA[c]);
+        }
     }
 
     // The number of different wave points tied for the smallest entropy.

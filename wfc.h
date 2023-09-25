@@ -577,6 +577,10 @@ int wfc__max_i(int a, int b) {
     return a < b ? b : a;
 }
 
+float wfc__min_f(float a, float b) {
+    return a < b ? a : b;
+}
+
 // Counts the number of 1 bits in a value.
 int wfc__popcount_u(unsigned n) {
     int cnt = 0;
@@ -1346,20 +1350,19 @@ void wfc__observeOne(
     struct wfc__A3d_u wave,
     struct wfc__A2d_u8 modified,
     int *obsC0, int *obsC1) {
+    float smallest = entropies.a[0];
+    for (int i = 1; i < WFC__A2D_LEN(entropies); ++i) {
+        smallest = wfc__min_f(smallest, entropies.a[i]);
+    }
+
+    // The number of different wave points tied for the smallest entropy.
+    int smallestCnt = 0;
     // Collapsed points have entropy set to the largest float.
     // It is in practice impossible for that value
     // to end up registering as (almost) equal to real entropy values.
     // If all points are collapsed, this function will not get called.
-    float smallest = entropies.a[0];
-    // The number of different wave points tied for the smallest entropy.
-    int smallestCnt = 1;
     for (int i = 1; i < WFC__A2D_LEN(entropies); ++i) {
-        if (wfc__approxEqNonNeg_f(entropies.a[i], smallest)) {
-            ++smallestCnt;
-        } else if (entropies.a[i] < smallest) {
-            smallest = entropies.a[i];
-            smallestCnt = 1;
-        }
+        if (wfc__approxEqNonNeg_f(entropies.a[i], smallest)) ++smallestCnt;
     }
 
     int chosenC0, chosenC1;

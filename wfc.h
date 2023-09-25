@@ -1318,15 +1318,20 @@ void wfc__calcEntropies(
                 }
             }
 
-            float entropy = 0.0f;
-            // If is here to ensure entropy of collapsed points is exactly 0.
+            float entropy;
             if (presentPatts > 1) {
+                entropy = 0;
                 for (int p = 0; p < pattCnt; ++p) {
                     if (wfc__getBitA3d(wave, c0, c1, p)) {
                         float prob = (float)patts[p].freq / (float)totalFreq;
                         entropy -= prob * wfc__log2f(prob);
                     }
                 }
+            } else {
+                // Entropy of collapsed points is set to the largest float.
+                // This does not adhere to the Shannon entropy formula,
+                // but speeds up finding points tied for the smallest entropy.
+                entropy = FLT_MAX;
             }
 
             WFC__A2D_GET(entropies, c0, c1) = entropy;
@@ -1341,17 +1346,17 @@ void wfc__observeOne(
     struct wfc__A3d_u wave,
     struct wfc__A2d_u8 modified,
     int *obsC0, int *obsC1) {
-    float smallest = 0;
+    // Collapsed points have entropy set to the largest float.
+    // It is in practice impossible for that value
+    // to end up registering as (almost) equal to real entropy values.
+    // If all points are collapsed, this function will not get called.
+    float smallest = entropies.a[0];
     // The number of different wave points tied for the smallest entropy.
-    int smallestCnt = 0;
-    for (int i = 0; i < WFC__A2D_LEN(entropies); ++i) {
-        // Skip collapsed points.
-        if (entropies.a[i] == 0.0f) continue;
-
-        if (smallestCnt > 0 &&
-            wfc__approxEqNonNeg_f(entropies.a[i], smallest)) {
+    int smallestCnt = 1;
+    for (int i = 1; i < WFC__A2D_LEN(entropies); ++i) {
+        if (wfc__approxEqNonNeg_f(entropies.a[i], smallest)) {
             ++smallestCnt;
-        } else if (smallestCnt == 0 || entropies.a[i] < smallest) {
+        } else if (entropies.a[i] < smallest) {
             smallest = entropies.a[i];
             smallestCnt = 1;
         }
@@ -1364,9 +1369,6 @@ void wfc__observeOne(
         int chosenSmallestPnt = wfc__rand_i(ctx, smallestCnt);
         // Iterate through points until we get to the one we decided to observe.
         for (int i = 0; i < WFC__A2D_LEN(entropies); ++i) {
-            // Skip collapsed points.
-            if (entropies.a[i] == 0.0f) continue;
-
             if (wfc__approxEqNonNeg_f(entropies.a[i], smallest)) {
                 chosenPnt = i;
                 if (chosenSmallestPnt == 0) break;

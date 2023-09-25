@@ -1420,7 +1420,7 @@ void wfc__observeOne(
     // It is in practice impossible for that value
     // to end up registering as (almost) equal to real entropy values.
     // If all points are collapsed, this function will not get called.
-    for (int i = 1; i < WFC__A2D_LEN(entropies); ++i) {
+    for (int i = 0; i < WFC__A2D_LEN(entropies); ++i) {
         if (wfc__approxEqNonNeg_f(entropies.a[i], smallest)) ++smallestCnt;
     }
 

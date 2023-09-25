@@ -1304,6 +1304,18 @@ bool wfc__restrictEdges(
     return modif;
 }
 
+struct wfc__A2d_f wfc__makeEntropiesArray(void *ctx, int d0, int d1) {
+    (void)ctx;
+
+    struct wfc__A2d_f entropies;
+
+    entropies.d02 = d0;
+    entropies.d12 = d1;
+    entropies.a = (float*)WFC_MALLOC(ctx, WFC__A2D_SIZE(entropies));
+
+    return entropies;
+}
+
 void wfc__calcEntropies(
     int pattCnt, const struct wfc__Pattern *patts,
     const struct wfc__A3d_u wave,
@@ -1765,10 +1777,8 @@ wfc_State* wfc_initEx(
     state->wavePattCnts.a = (int*)WFC_MALLOC(
         ctx, WFC__A2D_SIZE(state->wavePattCnts));
 
-    state->entropies.d02 = state->wave.d03;
-    state->entropies.d12 = state->wave.d13;
-    state->entropies.a = (float*)WFC_MALLOC(
-        ctx, WFC__A2D_SIZE(state->entropies));
+    state->entropies = wfc__makeEntropiesArray(
+        ctx, state->wave.d03, state->wave.d13);
 
     state->modified.d02 = state->wave.d03;
     state->modified.d12 = state->wave.d13;
@@ -1920,8 +1930,8 @@ wfc_State* wfc_clone(const wfc_State *state) {
     memcpy(clone->wavePattCnts.a, state->wavePattCnts.a,
         WFC__A2D_SIZE(state->wavePattCnts));
 
-    clone->entropies.a = (float*)WFC_MALLOC(
-        state->ctx, WFC__A2D_SIZE(state->entropies));
+    clone->entropies = wfc__makeEntropiesArray(
+        state->ctx, state->entropies.d02, state->entropies.d12);
     memcpy(clone->entropies.a, state->entropies.a,
         WFC__A2D_SIZE(state->entropies));
 

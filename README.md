@@ -43,9 +43,23 @@ If you want to test the correctness of the library on your system, run `make tes
 
 ## How to use CLI and GUI tools
 
-The library itself does not deal with file I/O nor with backtracking in case WFC runs into a contradiction. CLI and GUI both do.
+### Building
 
-Run `make` to build both tools.
+Run `make` to build both tools. Alternatively, `make cli` and `make gui` build individual tools.
+
+To build and run the GUI, you'll need to have SDL2 installed on your system. You'll also need to have the `sdl2-config` program available.
+
+#### Note for Windows
+
+If you are on Windows, the process is slightly more complicated.
+
+Installing SDL2 means downloading the files and dropping them in a directory (eg. `C:\SDL2`) and then adding that directory to your PATH system variable. You'll need both the DLLs and development files.
+
+Since `sdl2-config` is not provided for Windows, I've written my own hacky version of it - check out `misc/sdl2-config`.
+
+Whenever you're running make, add `WIN=1` to the command. If you are using Microsoft's linker (and not, say, MinGW), also add `VC=1`. For example, `make cli` becomes `make WIN=1 VC=1 cli`.
+
+### Running
 
 Run the CLI with:
 
@@ -60,6 +74,8 @@ bin/gui external/samples/Angular.png -n 3 -w 64 -h 64 -o bin/gen.png
 ```
 
 Simply run `bin/cli` or `bin/gui` to see the list of possible arguments.
+
+The library itself does not deal with file I/O nor with backtracking in case WFC runs into a contradiction. CLI and GUI both do.
 
 GUI lets you watch WFC as it runs and you can pause/unpause it. You can also erase parts of the generated image and force WFC to generate them anew.
 

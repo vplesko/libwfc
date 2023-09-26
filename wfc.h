@@ -599,12 +599,12 @@ bool wfc__approxEqNonNeg_f(float a, float b) {
     const int ulpsDiff = 8;
 
     // Reinterpret floats as 32-bit ints in a standard compliant way.
-    int32_t ia, ib;
-    memcpy(&ia, &a, sizeof(a));
-    memcpy(&ib, &b, sizeof(b));
+    int32_t ai, bi;
+    memcpy(&ai, &a, sizeof(a));
+    memcpy(&bi, &b, sizeof(b));
 
     // Check that bit representations are close to each other.
-    return abs(ia - ib) < ulpsDiff;
+    return abs(ai - bi) < ulpsDiff;
 }
 
 // Approximates log2(x), where x is positive
@@ -617,16 +617,16 @@ float wfc__log2f(float x) {
     const int32_t baseExponent = -127;
 
     // Reinterpret x as int in a standard compliant way.
-    int32_t xu;
-    memcpy(&xu, &x, sizeof(xu));
+    int32_t xi;
+    memcpy(&xi, &x, sizeof(xi));
 
     // Calculate exponent of x.
-    float e = (float)((xu >> mantissaLen) + baseExponent);
+    float e = (float)((xi >> mantissaLen) + baseExponent);
 
     // Calculate mantissa of x. It will be in range [1, 2).
     float m;
-    int32_t mxu = (xu & mantissaMask) | ((-baseExponent) << mantissaLen);
-    memcpy(&m, &mxu, sizeof(m));
+    int32_t mxi = (xi & mantissaMask) | ((-baseExponent) << mantissaLen);
+    memcpy(&m, &mxi, sizeof(m));
 
     // Use Remez algorithm-generated 3rd degree approximation polynomial
     // for log2(a) where a is in range [1, 2].

@@ -1,4 +1,4 @@
-Quite a bit of effort has gone into performance improvements. If you're curious, you may read my [devlog](https://www.vplesko.com/posts/wfc/devlog_0.html) for this project - [\#2](https://www.vplesko.com/posts/wfc/devlog_2.html) is about optimizations.
+Quite a bit of effort has gone into performance improvements. If you're curious, you may read my [devlog](https://www.vplesko.com/posts/wfc/devlog_0.html) for this project - [\#2](https://www.vplesko.com/posts/wfc/devlog_2.html) and [\#4](https://www.vplesko.com/posts/wfc/devlog_4.html) are about optimizations.
 
 This directory contains a benchmark test, with results in this file. This file also lists running times of the CLI tool for some inputs.
 

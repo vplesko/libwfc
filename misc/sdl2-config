@@ -7,6 +7,8 @@
 #   -Xlinker /subsystem:console -lshell32 (to keep the terminal)
 # Executables names (specified with -o compiler flag) should end with '.exe'.
 
+# Change this value to the directory that holds SDL2 project directories.
+# Check -I and -L options below to see what directory structure is expected.
 prefix="C:\SDL2"
 exec_prefix=${prefix}
 exec_prefix_set=no

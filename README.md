@@ -83,7 +83,7 @@ GUI lets you watch WFC as it runs and you can pause/unpause it. You can also era
 
 ## Contributing
 
-For the time being, this is a single-person project, so please do not send pull requests.
+For the time being, this is a single-person project, so please do not send any pull requests.
 
 If you find bugs or have suggestions, create an issue to let me know.
 

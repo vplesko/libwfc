@@ -742,38 +742,6 @@ int wfc__coords2dToInd(int d1, int c0, int c1) {
     return c0 * d1 + c1;
 }
 
-int wfc__bitPackLen(int cnt) {
-    const int uSzBits = (int)sizeof(unsigned) * 8;
-
-    return wfc__roundUpToDivBy(cnt, uSzBits) / uSzBits;
-}
-
-bool wfc__getBit(const unsigned *a, int ind) {
-    const int uSzBits = (int)sizeof(unsigned) * 8;
-
-    const unsigned bitMask = 1u << (unsigned)(ind % uSzBits);
-
-    return a[ind / uSzBits] & bitMask;
-}
-
-void wfc__setBit(unsigned *a, int ind, bool val) {
-    const int uSzBits = (int)sizeof(unsigned) * 8;
-
-    const unsigned bitMask = 1u << (unsigned)(ind % uSzBits);
-
-    if (val) a[ind / uSzBits] |= bitMask;
-    else a[ind / uSzBits] &= ~bitMask;
-}
-
-// uint8_ts are used instead of bools for performance concerns.
-WFC__A2D_DEF(bool, b);
-WFC__A2D_DEF(uint8_t, u8);
-WFC__A2D_DEF(int, i);
-WFC__A2D_DEF(float, f);
-WFC__A3D_DEF(uint8_t, u8);
-WFC__A3D_DEF(const uint8_t, cu8);
-WFC__A3D_DEF(unsigned, u);
-
 // WFC code
 
 enum {
@@ -864,6 +832,38 @@ void wfc__coords2dPlusDir(
 
     if (rC0 != NULL) *rC0 = rC0_;
     if (rC1 != NULL) *rC1 = rC1_;
+}
+
+// uint8_ts are used instead of bools for performance concerns.
+WFC__A2D_DEF(bool, b);
+WFC__A2D_DEF(uint8_t, u8);
+WFC__A2D_DEF(int, i);
+WFC__A2D_DEF(float, f);
+WFC__A3D_DEF(uint8_t, u8);
+WFC__A3D_DEF(const uint8_t, cu8);
+WFC__A3D_DEF(unsigned, u);
+
+int wfc__bitPackLen(int cnt) {
+    const int uSzBits = (int)sizeof(unsigned) * 8;
+
+    return wfc__roundUpToDivBy(cnt, uSzBits) / uSzBits;
+}
+
+bool wfc__getBit(const unsigned *a, int ind) {
+    const int uSzBits = (int)sizeof(unsigned) * 8;
+
+    const unsigned bitMask = 1u << (unsigned)(ind % uSzBits);
+
+    return a[ind / uSzBits] & bitMask;
+}
+
+void wfc__setBit(unsigned *a, int ind, bool val) {
+    const int uSzBits = (int)sizeof(unsigned) * 8;
+
+    const unsigned bitMask = 1u << (unsigned)(ind % uSzBits);
+
+    if (val) a[ind / uSzBits] |= bitMask;
+    else a[ind / uSzBits] &= ~bitMask;
 }
 
 bool wfc__getBitA3d(
@@ -1760,6 +1760,7 @@ wfc_State* wfc_init(
 }
 
 // All allocations happen during initialization.
+// @TODO Return an error when there's not enough memory.
 wfc_State* wfc_initEx(
     int n, int options, int bytesPerPixel,
     int srcW, int srcH, const unsigned char *src,

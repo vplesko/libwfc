@@ -842,6 +842,7 @@ WFC__A2D_DEF(float, f);
 WFC__A3D_DEF(uint8_t, u8);
 WFC__A3D_DEF(const uint8_t, cu8);
 WFC__A3D_DEF(unsigned, u);
+WFC__A3D_DEF(struct { int c[wfc__dirCnt]; }, cntPerDir);
 
 int wfc__bitPackLen(int cnt) {
     const int uSzBits = (int)sizeof(unsigned) * 8;
@@ -937,6 +938,65 @@ void wfc__coordsPattToSrc(
 
     if (sC0 != NULL) *sC0 = sC0_;
     if (sC1 != NULL) *sC1 = sC1_;
+}
+
+struct wfc__PendingEntry {
+    int ind, patt;
+};
+
+// Circular queue of coordinate-pattern pairs
+// that are pending to be propagated from,
+// as described by Arc Consistency 4 algorithm (AC-4).
+// Capacity is the theoretical upper bound,
+// so the queue doesn't need to be resized when adding new elements.
+struct wfc__Pending {
+    int cap;
+    struct wfc__PendingEntry *a;
+    int head, tail;
+};
+
+struct wfc__Pending wfc__makePending(
+    void *ctx, int dstD0, int dstD1, int pattCnt) {
+    (void)ctx;
+
+    struct wfc__Pending pending;
+
+    // @TODO Can the capacity be reduced and still not require resizing?
+    // High-end counter-example: using keep to restrict ALL pixels.
+    pending.cap = dstD0 * dstD1 * pattCnt;
+    pending.a = (struct wfc__PendingEntry*)WFC_MALLOC(ctx,
+        (size_t)pending.cap * sizeof(*pending.a));
+
+    pending.head = pending.tail = 0;
+
+    return pending;
+}
+
+bool wfc__pendingIsEmpty(const struct wfc__Pending pending) {
+    return pending.head == pending.tail;
+}
+
+void wfc__pendingPush(
+    struct wfc__Pending *pending, struct wfc__PendingEntry entry) {
+    pending->a[pending->tail] = entry;
+
+    ++pending->tail;
+    if (pending->tail == pending->cap) pending->tail = 0;
+}
+
+struct wfc__PendingEntry wfc__pendingPop(struct wfc__Pending *pending) {
+    struct wfc__PendingEntry entry = pending->a[pending->head];
+
+    ++pending->head;
+    if (pending->head == pending->cap) pending->head = 0;
+
+    return entry;
+}
+
+void wfc__freePending(void *ctx, struct wfc__Pending pending) {
+    (void)ctx;
+
+    WFC_FREE(ctx, pending.a);
 }
 
 // Fill in edge info in a pattern.

@@ -19,7 +19,7 @@ int wfcInit(
 
     wfc->len = 0;
     // @TODO Create a flag for backtrack capacity.
-    wfc->cap = 50;
+    wfc->cap = 10;
     wfc->states = malloc((size_t)wfc->cap * sizeof(*wfc->states));
 
     struct wfc_State *state = wfc_initEx(n, options, bytesPerPixel,
@@ -55,7 +55,7 @@ int wfcStep(struct WfcWrapper *wfc) {
 
     if (wfc->len < wfc->cap) {
         // @TODO Create a flag for step duration between checkpoints.
-        if (++wfc->counter == 100) {
+        if (++wfc->counter == 1000) {
             wfc->states[wfc->len] = wfc_clone(wfc->states[wfc->len - 1]);
             ++wfc->len;
 

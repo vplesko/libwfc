@@ -834,6 +834,8 @@ void wfc__coords2dPlusDir(
     if (rC1 != NULL) *rC1 = rC1_;
 }
 
+struct wfc__IPerDir { int i[wfc__dirCnt]; };
+
 // uint8_ts are used instead of bools for performance concerns.
 WFC__A2D_DEF(bool, b);
 WFC__A2D_DEF(uint8_t, u8);
@@ -842,7 +844,7 @@ WFC__A2D_DEF(float, f);
 WFC__A3D_DEF(uint8_t, u8);
 WFC__A3D_DEF(const uint8_t, cu8);
 WFC__A3D_DEF(unsigned, u);
-WFC__A3D_DEF(struct { int c[wfc__dirCnt]; }, cntPerDir);
+WFC__A3D_DEF(struct wfc__IPerDir, iPerDir);
 
 int wfc__bitPackLen(int cnt) {
     const int uSzBits = (int)sizeof(unsigned) * 8;
@@ -895,6 +897,98 @@ int wfc__popcountBitPackA3d(
     return cnt;
 }
 
+struct wfc__PendingEntry {
+    // @TODO Store a 1D index instead of 2D coordinates to save on memory.
+    int c0, c1;
+    int patt;
+};
+
+// Circular queue of coordinate-pattern pairs
+// that are pending to be propagated from,
+// as described by Arc Consistency 4 algorithm (AC-4).
+// Capacity is the theoretical upper bound,
+// so the queue doesn't need to be resized when adding new elements.
+struct wfc__Pending {
+    int cap;
+    struct wfc__PendingEntry *a;
+    int head, tail;
+};
+
+size_t wfc__sizeOfAllocPending(const struct wfc__Pending pending) {
+    return (size_t)pending.cap * sizeof(*pending.a);
+}
+
+struct wfc__Pending wfc__makePending(
+    void *ctx, int dstD0, int dstD1, int pattCnt) {
+    (void)ctx;
+
+    struct wfc__Pending pending;
+
+    // One extra is there to help distinguish the empty state from full.
+    // @TODO Can the capacity be reduced and still not require resizing?
+    // High-end counter-example: using keep to restrict ALL pixels.
+    pending.cap = dstD0 * dstD1 * pattCnt + 1;
+
+    pending.a = (struct wfc__PendingEntry*)WFC_MALLOC(
+        ctx, wfc__sizeOfAllocPending(pending));
+
+    pending.head = pending.tail = 0;
+
+    return pending;
+}
+
+struct wfc__Pending wfc__clonePending(
+    void *ctx, const struct wfc__Pending pending) {
+    (void)ctx;
+
+    size_t size = wfc__sizeOfAllocPending(pending);
+
+    struct wfc__Pending clone = pending;
+    clone.a = (struct wfc__PendingEntry*)WFC_MALLOC(ctx, size);
+    // @TODO Could this result in UB due to uninitialized reads?
+    memcpy(clone.a, pending.a, size);
+
+    return clone;
+}
+
+bool wfc__pendingIsEmpty(const struct wfc__Pending pending) {
+    return pending.head == pending.tail;
+}
+
+void wfc__pendingPush(
+    void *ctx,
+    struct wfc__Pending *pending, int c0, int c1, int patt) {
+    (void)ctx;
+
+    pending->a[pending->tail].c0 = c0;
+    pending->a[pending->tail].c1 = c1;
+    pending->a[pending->tail].patt = patt;
+
+    ++pending->tail;
+    if (pending->tail == pending->cap) pending->tail = 0;
+    WFC_ASSERT(ctx, !wfc__pendingIsEmpty(*pending));
+}
+
+struct wfc__PendingEntry wfc__pendingPop(
+    void *ctx, struct wfc__Pending *pending) {
+    (void)ctx;
+
+    WFC_ASSERT(ctx, !wfc__pendingIsEmpty(*pending));
+
+    struct wfc__PendingEntry entry = pending->a[pending->head];
+
+    ++pending->head;
+    if (pending->head == pending->cap) pending->head = 0;
+
+    return entry;
+}
+
+void wfc__freePending(void *ctx, struct wfc__Pending pending) {
+    (void)ctx;
+
+    WFC_FREE(ctx, pending.a);
+}
+
 struct wfc__Pattern {
     // Coordinates of the top-left pixel in the source image.
     int c0, c1;
@@ -938,65 +1032,6 @@ void wfc__coordsPattToSrc(
 
     if (sC0 != NULL) *sC0 = sC0_;
     if (sC1 != NULL) *sC1 = sC1_;
-}
-
-struct wfc__PendingEntry {
-    int ind, patt;
-};
-
-// Circular queue of coordinate-pattern pairs
-// that are pending to be propagated from,
-// as described by Arc Consistency 4 algorithm (AC-4).
-// Capacity is the theoretical upper bound,
-// so the queue doesn't need to be resized when adding new elements.
-struct wfc__Pending {
-    int cap;
-    struct wfc__PendingEntry *a;
-    int head, tail;
-};
-
-struct wfc__Pending wfc__makePending(
-    void *ctx, int dstD0, int dstD1, int pattCnt) {
-    (void)ctx;
-
-    struct wfc__Pending pending;
-
-    // @TODO Can the capacity be reduced and still not require resizing?
-    // High-end counter-example: using keep to restrict ALL pixels.
-    pending.cap = dstD0 * dstD1 * pattCnt;
-    pending.a = (struct wfc__PendingEntry*)WFC_MALLOC(ctx,
-        (size_t)pending.cap * sizeof(*pending.a));
-
-    pending.head = pending.tail = 0;
-
-    return pending;
-}
-
-bool wfc__pendingIsEmpty(const struct wfc__Pending pending) {
-    return pending.head == pending.tail;
-}
-
-void wfc__pendingPush(
-    struct wfc__Pending *pending, struct wfc__PendingEntry entry) {
-    pending->a[pending->tail] = entry;
-
-    ++pending->tail;
-    if (pending->tail == pending->cap) pending->tail = 0;
-}
-
-struct wfc__PendingEntry wfc__pendingPop(struct wfc__Pending *pending) {
-    struct wfc__PendingEntry entry = pending->a[pending->head];
-
-    ++pending->head;
-    if (pending->head == pending->cap) pending->head = 0;
-
-    return entry;
-}
-
-void wfc__freePending(void *ctx, struct wfc__Pending pending) {
-    (void)ctx;
-
-    WFC_FREE(ctx, pending.a);
 }
 
 // Fill in edge info in a pattern.
@@ -1059,7 +1094,7 @@ void wfc__fillPattEdges(
 // but with different offsets.
 void wfc__coordsDstToWave(
     int dC0, int dC1,
-    const struct wfc__A3d_u wave,
+    const struct wfc__A3d_iPerDir wave,
     int *wC0, int *wC1,
     int *offC0, int *offC1) {
     int wC0_ = wfc__min_i(dC0, wave.d03 - 1);
@@ -1315,16 +1350,112 @@ struct wfc__A2d_f wfc__makeEntropiesArray(void *ctx, int d0, int d1) {
     return entropies;
 }
 
-bool wfc__restrictKept(
-    int n,
+bool wfc__patternPresentAt(
+    const struct wfc__A3d_iPerDir wave, int c0, int c1, int p) {
+    // When one counter gets set to zero, they will all be set to zero.
+    // Therefore, it's enough to check only one of the counters.
+    return WFC__A3D_GET(wave, c0, c1, p).i[0] != 0;
+}
+
+void wfc__removePatternAndAddToPending(
+    void *ctx,
+    struct wfc__A3d_iPerDir wave, int c0, int c1, int p,
+    struct wfc__Pending *pending) {
+    (void)ctx;
+
+    for (int dir = 0; dir < wfc__dirCnt; ++dir) {
+        WFC__A3D_GET(wave, c0, c1, p).i[dir] = 0;
+    }
+
+    wfc__pendingPush(ctx, pending, c0, c1, p);
+}
+
+// Fill in the starting counter values of the wave.
+// In some cases, some patterns will be removed from certain points.
+// Those will get added to the pending queue for initial propagation.
+void wfc__calcStartWave(
+    void *ctx, int options, int pattCnt,
+    const struct wfc__A3d_u overlaps,
+    struct wfc__A3d_iPerDir wave,
+    struct wfc__Pending *pending) {
+    (void)ctx;
+
+    for (int p = 0; p < pattCnt; ++p) {
+        for (int dir = 0; dir < wfc__dirCnt; ++dir) {
+            int support = 0;
+            for (int i = 0; i < pattCnt; ++i) {
+                if (wfc__getBitA3d(overlaps, dir, p, i)) ++support;
+            }
+
+            WFC__A3D_GET(wave, 0, 0, p).i[dir] = support;
+        }
+    }
+
+    // All wave points will have the same starting counter values.
+    // If edges are fixed, this may end up not being true.
+    for (int c0 = 0; c0 < wave.d03; ++c0) {
+        for (int c1 = 0; c1 < wave.d13; ++c1) {
+            for (int p = 0; p < pattCnt; ++p) {
+                WFC__A3D_GET(wave, c0, c1, p) = WFC__A3D_GET(wave, 0, 0, p);
+            }
+        }
+    }
+
+    for (int c0 = 0; c0 < wave.d03; ++c0) {
+        for (int c1 = 0; c1 < wave.d13; ++c1) {
+            for (int p = 0; p < pattCnt; ++p) {
+                // If a pattern has no support from either direction, remove it.
+                // Exception are cases when edge fixing is enabled
+                // and support is being given across that edge.
+                for (int dir = 0; dir < wfc__dirCnt; ++dir) {
+                    if (WFC__A3D_GET(wave, c0, c1, p).i[dir] != 0) continue;
+
+                    bool edgeFixException = false;
+                    if (options & wfc__optEdgeFixC0) {
+                        if ((c0 == 0 && dir == wfc__dirC0Less) ||
+                            (c0 + 1 == wave.d03 && dir == wfc__dirC0More)) {
+                            edgeFixException = true;
+                        }
+                    }
+                    if (options & wfc__optEdgeFixC1) {
+                        if ((c1 == 0 && dir == wfc__dirC1Less) ||
+                            (c1 + 1 == wave.d13 && dir == wfc__dirC1More)) {
+                            edgeFixException = true;
+                        }
+                    }
+
+                    if (edgeFixException) {
+                        // Even though this pattern has no support
+                        // from this direction,
+                        // it can still be found at this point.
+                        // Think of it as being supported by the fixed edge.
+                        // Other parts of the code assume
+                        // that either all or none of the direction counters
+                        // are set to zero,
+                        // so this counter gets set to a non-zero value.
+                        WFC__A3D_GET(wave, c0, c1, p).i[dir] = 1;
+                    } else {
+                        wfc__removePatternAndAddToPending(
+                            ctx, wave, c0, c1, p, pending);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void wfc__restrictKept(
+    void *ctx, int n,
     const struct wfc__A3d_cu8 src,
     int pattCnt, const struct wfc__Pattern *patts,
     const struct wfc__A3d_cu8 dst,
     const struct wfc__A2d_b keep,
-    struct wfc__A3d_u wave) {
-    const int bytesPerPixel = dst.d23;
+    struct wfc__A3d_iPerDir wave,
+    struct wfc__Pending *pending) {
+    (void)ctx;
 
-    bool modif = false;
+    const int bytesPerPixel = dst.d23;
 
     for (int wC0 = 0; wC0 < wave.d03; ++wC0) {
         for (int wC1 = 0; wC1 < wave.d13; ++wC1) {
@@ -1338,7 +1469,7 @@ bool wfc__restrictKept(
                     const unsigned char *dPx = &WFC__A3D_GET(dst, dC0, dC1, 0);
 
                     for (int p = 0; p < pattCnt; ++p) {
-                        if (!wfc__getBitA3d(wave, wC0, wC1, p)) continue;
+                        if (!wfc__patternPresentAt(wave, wC0, wC1, p)) continue;
 
                         int sC0, sC1;
                         wfc__coordsPattToSrc(
@@ -1351,36 +1482,37 @@ bool wfc__restrictKept(
                             &WFC__A3D_GET(src, sC0, sC1, 0);
 
                         if (memcmp(dPx, sPx, (size_t)bytesPerPixel) != 0) {
-                            wfc__setBitA3d(wave, wC0, wC1, p, false);
-                            modif = true;
+                            wfc__removePatternAndAddToPending(
+                                ctx, wave, wC0, wC1, p, pending);
                         }
                     }
                 }
             }
         }
     }
-
-    return modif;
 }
 
-bool wfc__restrictEdges(
-    int options,
+void wfc__restrictEdges(
+    void *ctx, int options,
     int pattCnt, const struct wfc__Pattern *patts,
-    struct wfc__A3d_u wave) {
-    const int d0 = wave.d03, d1 = wave.d13;
+    struct wfc__A3d_iPerDir wave,
+    struct wfc__Pending *pending) {
+    (void)ctx;
 
-    bool modif = false;
+    const int d0 = wave.d03, d1 = wave.d13;
 
     if (options & wfc__optEdgeFixC0) {
         for (int i = 0; i < d1; ++i) {
             for (int p = 0; p < pattCnt; ++p) {
-                if (wfc__getBitA3d(wave, 0, i, p) && !patts[p].edgeC0Lo) {
-                    wfc__setBitA3d(wave, 0, i, p, false);
-                    modif = true;
+                if (wfc__patternPresentAt(wave, 0, i, p) &&
+                    !patts[p].edgeC0Lo) {
+                    wfc__removePatternAndAddToPending(
+                        ctx, wave, 0, i, p, pending);
                 }
-                if (wfc__getBitA3d(wave, d0 - 1, i, p) && !patts[p].edgeC0Hi) {
-                    wfc__setBitA3d(wave, d0 - 1, i, p, false);
-                    modif = true;
+                if (wfc__patternPresentAt(wave, d0 - 1, i, p) &&
+                    !patts[p].edgeC0Hi) {
+                    wfc__removePatternAndAddToPending(
+                        ctx, wave, d0 - 1, i, p, pending);
                 }
             }
         }
@@ -1388,24 +1520,24 @@ bool wfc__restrictEdges(
     if (options & wfc__optEdgeFixC1) {
         for (int i = 0; i < d0; ++i) {
             for (int p = 0; p < pattCnt; ++p) {
-                if (wfc__getBitA3d(wave, i, 0, p) && !patts[p].edgeC1Lo) {
-                    wfc__setBitA3d(wave, i, 0, p, false);
-                    modif = true;
+                if (wfc__patternPresentAt(wave, i, 0, p) &&
+                    !patts[p].edgeC1Lo) {
+                    wfc__removePatternAndAddToPending(
+                        ctx, wave, i, 0, p, pending);
                 }
-                if (wfc__getBitA3d(wave, i, d1 - 1, p) && !patts[p].edgeC1Hi) {
-                    wfc__setBitA3d(wave, i, d1 - 1, p, false);
-                    modif = true;
+                if (wfc__patternPresentAt(wave, i, d1 - 1, p) &&
+                    !patts[p].edgeC1Hi) {
+                    wfc__removePatternAndAddToPending(
+                        ctx, wave, i, d1 - 1, p, pending);
                 }
             }
         }
     }
-
-    return modif;
 }
 
 void wfc__calcEntropies(
     int pattCnt, const struct wfc__Pattern *patts,
-    const struct wfc__A3d_u wave,
+    const struct wfc__A3d_iPerDir wave,
     const struct wfc__A2d_u8 modified,
     struct wfc__A2d_f entropies) {
     for (int c0 = 0; c0 < wave.d03; ++c0) {
@@ -1415,7 +1547,7 @@ void wfc__calcEntropies(
             int totalFreq = 0;
             int presentPatts = 0;
             for (int p = 0; p < pattCnt; ++p) {
-                if (wfc__getBitA3d(wave, c0, c1, p)) {
+                if (wfc__patternPresentAt(wave, c0, c1, p)) {
                     totalFreq += patts[p].freq;
                     ++presentPatts;
                 }
@@ -1425,7 +1557,7 @@ void wfc__calcEntropies(
             if (presentPatts > 1) {
                 entropy = 0;
                 for (int p = 0; p < pattCnt; ++p) {
-                    if (wfc__getBitA3d(wave, c0, c1, p)) {
+                    if (wfc__patternPresentAt(wave, c0, c1, p)) {
                         float prob = (float)patts[p].freq / (float)totalFreq;
                         entropy -= prob * wfc__log2f(prob);
                     }
@@ -1446,9 +1578,9 @@ void wfc__observeOne(
     void *ctx,
     int pattCnt, const struct wfc__Pattern *patts,
     const struct wfc__A2d_f entropies,
-    struct wfc__A3d_u wave,
+    struct wfc__A3d_iPerDir wave,
     struct wfc__A2d_u8 modified,
-    int *obsC0, int *obsC1) {
+    struct wfc__Pending *pending) {
     float smallest;
     {
         // This calculation is split into multiple channels
@@ -1506,14 +1638,14 @@ void wfc__observeOne(
     {
         int totalFreq = 0;
         for (int i = 0; i < pattCnt; ++i) {
-            if (wfc__getBitA3d(wave, chosenC0, chosenC1, i)) {
+            if (wfc__patternPresentAt(wave, chosenC0, chosenC1, i)) {
                 totalFreq += patts[i].freq;
             }
         }
         int chosenInst = wfc__rand_i(ctx, totalFreq);
 
         for (int i = 0; i < pattCnt; ++i) {
-            if (wfc__getBitA3d(wave, chosenC0, chosenC1, i)) {
+            if (wfc__patternPresentAt(wave, chosenC0, chosenC1, i)) {
                 if (chosenInst < patts[i].freq) {
                     chosenPatt = i;
                     break;
@@ -1523,174 +1655,73 @@ void wfc__observeOne(
         }
     }
 
-    *obsC0 = chosenC0;
-    *obsC1 = chosenC1;
-    wfc__clearBitPackA3d(wave, chosenC0, chosenC1);
-    wfc__setBitA3d(wave, chosenC0, chosenC1, chosenPatt, true);
+    for (int p = 0; p < pattCnt; ++p) {
+        if (wfc__patternPresentAt(wave, chosenC0, chosenC1, p) &&
+            p != chosenPatt) {
+            wfc__removePatternAndAddToPending(
+                ctx, wave, chosenC0, chosenC1, p, pending);
+        }
+    }
+
     WFC__A2D_GET(modified, chosenC0, chosenC1) = 1;
 }
 
-// Propagate constraints from a recently modified point
-// onto the neighbouring one in a particular direction.
-// Returns whether the neighbouring point was modified.
-bool wfc__propagateOntoDirection(
-    void *ctx, int options, int pattCnt,
-    int c0, int c1, enum wfc__Dir dir,
-    const struct wfc__A3d_u overlaps,
-    struct wfc__A3d_u wave) {
-    int nC0, nC1;
-    wfc__coords2dPlusDir(ctx, c0, c1, dir, &nC0, &nC1);
-
-    // Constraints are not propagated along fixed edges.
-    if (((options & wfc__optEdgeFixC0) && (nC0 < 0 || nC0 >= wave.d03)) ||
-        ((options & wfc__optEdgeFixC1) && (nC1 < 0 || nC1 >= wave.d13))) {
-        return false;
-    }
-
-    nC0 = wfc__indWrap(nC0, wave.d03);
-    nC1 = wfc__indWrap(nC1, wave.d13);
-
-    int dirOpposite = (int)wfc__dirOpposite(ctx, dir);
-
-    // We will compare the old and new pattern count at the neighbouring point
-    // to know whether we modified it.
-    int oldPresentPattCnt = wfc__popcountBitPackA3d(wave, nC0, nC1);
-
-    // For each pattern at the neighbouring point
-    // figure out whether it can be kept,
-    // which is the case if there is a pattern at starting point
-    // whose overlap matches.
-    for (int p = 0; p < pattCnt; ++p) {
-        if (!wfc__getBitA3d(wave, nC0, nC1, p)) continue;
-
-        // This is a very nested and hot loop in the code,
-        // so a few optimizations were made.
-        // All changes should be verified with benchmarks.
-        unsigned total = 0;
-        for (int i = 0; i < wave.d23; ++i) {
-            total |= WFC__A3D_GET(wave, c0, c1, i) &
-                WFC__A3D_GET(overlaps, dirOpposite, p, i);
-        }
-
-        wfc__setBitA3d(wave, nC0, nC1, p, total);
-    }
-
-    int newPresentPattCnt = wfc__popcountBitPackA3d(wave, nC0, nC1);
-
-    return oldPresentPattCnt != newPresentPattCnt;
-}
-
-void wfc__propagateFromRipple(
+void wfc__propagate(
     void *ctx, int n, int options, int pattCnt,
     const struct wfc__A3d_u overlaps,
-    int head, int tail, struct wfc__A2d_i ripple,
-    struct wfc__A3d_u wave,
-    struct wfc__A2d_u8 modified) {
+    struct wfc__A3d_iPerDir wave,
+    struct wfc__A2d_u8 modified,
+    struct wfc__Pending *pending) {
     // If patterns are 1x1, they never overlap
     // and points never constrain each other.
     if (n == 1) return;
 
-    // Constraints only need to be propagated from recently modified points.
-    // As additional wave points are constrained,
-    // constraint propagation repeats from those points
-    // causing the propagation to keep going.
-
-    // The way ripple is used is as a linked list represented with an array
-    // whose elements contain indexes of the next linked element.
-    // Negative index means no next elements (sort of like a null pointer).
-    // Each element corresponds to a wave point with the same coordinates.
-    // If a point is inside this linked list,
-    // that means constraints need to be propagated from that point.
-
-    // In each iteration, constraints are propagated from head.
-    // New points are added after tail
-    // if they become modified and are not already in the list.
-    // Propagation ends when the list is empty.
-    while (head >= 0) {
-        // This function uses both raw 1D array indexes and full coordinates.
-        int headC0, headC1;
-        wfc__indToCoords2d(ripple.d12, head, &headC0, &headC1);
+    // This implementation follows the Arc Consistency 4 algorithm.
+    while (!wfc__pendingIsEmpty(*pending)) {
+        struct wfc__PendingEntry entry = wfc__pendingPop(ctx, pending);
 
         // Only propagate to the cardinally adjacent neighbours.
         // All constraints will eventually be propagated,
         // but with extra iterations in between.
         // This is still a significant performance improvement.
         for (int dir = 0; dir < wfc__dirCnt; ++dir) {
-            if (wfc__propagateOntoDirection(
-                    ctx, options, pattCnt,
-                    headC0, headC1, (enum wfc__Dir)dir,
-                    overlaps, wave)) {
-                int nextC0, nextC1;
-                wfc__coords2dPlusDir(
-                    ctx, headC0, headC1, (enum wfc__Dir)dir, &nextC0, &nextC1);
-                nextC0 = wfc__indWrap(nextC0, ripple.d02);
-                nextC1 = wfc__indWrap(nextC1, ripple.d12);
+            int nC0, nC1;
+            wfc__coords2dPlusDir(
+                ctx, entry.c0, entry.c1, (enum wfc__Dir)dir, &nC0, &nC1);
 
-                int next = wfc__coords2dToInd(ripple.d12, nextC0, nextC1);
+            // Constraints are not propagated along fixed edges.
+            if (((options & wfc__optEdgeFixC0) &&
+                    (nC0 < 0 || nC0 >= wave.d03)) ||
+                ((options & wfc__optEdgeFixC1) &&
+                    (nC1 < 0 || nC1 >= wave.d13))) {
+                continue;
+            }
 
-                // If next was modified and is not in the list,
-                // add it to the list to be propagated from later on.
-                // We know that an element is not in the list
-                // if it's not pointing to anything and is not the tail.
-                if (ripple.a[next] < 0 && next != tail) {
-                    ripple.a[tail] = next;
-                    tail = next;
+            nC0 = wfc__indWrap(nC0, wave.d03);
+            nC1 = wfc__indWrap(nC1, wave.d13);
+
+            int dirOpposite = (int)wfc__dirOpposite(ctx, (enum wfc__Dir)dir);
+
+            // For each pattern at the neighbouring point
+            // that is present and supported by the entry's point-pattern pair,
+            // reduce its support by one.
+            for (int p = 0; p < pattCnt; ++p) {
+                if (!wfc__patternPresentAt(wave, nC0, nC1, p)) continue;
+                if (!wfc__getBitA3d(overlaps, dir, entry.patt, p)) continue;
+
+                if (--WFC__A3D_GET(wave, nC0, nC1, p).i[dirOpposite] == 0) {
+                    wfc__removePatternAndAddToPending(
+                        ctx, wave, nC0, nC1, p, pending);
+                    WFC__A2D_GET(modified, nC0, nC1) = 1;
                 }
-
-                WFC__A2D_GET(modified, nextC0, nextC1) = 1;
             }
         }
-
-        // Remove head from the list
-        // as we just propagated all we wanted from it.
-        // Remove it by setting head to its next element
-        // and having the old head no longer point to anything.
-        int newHead = ripple.a[head];
-        ripple.a[head] = -1;
-        head = newHead;
     }
-}
-
-void wfc__propagateFromAll(
-    void *ctx, int n, int options, int pattCnt,
-    const struct wfc__A3d_u overlaps,
-    struct wfc__A2d_i ripple,
-    struct wfc__A3d_u wave,
-    struct wfc__A2d_u8 modified) {
-    // The linked list will contain all elements in order.
-    // Each element will point to the next one,
-    // except for the last element, which will be the tail.
-    int head = 0, tail = WFC__A2D_LEN(ripple) - 1;
-    for (int i = head; i < tail; ++i) {
-        ripple.a[i] = i + 1;
-    }
-    ripple.a[tail] = -1;
-
-    wfc__propagateFromRipple(
-        ctx, n, options, pattCnt, overlaps, head, tail, ripple, wave, modified);
-}
-
-void wfc__propagateFromSeed(
-    void *ctx, int n, int options, int pattCnt,
-    int seedC0, int seedC1,
-    const struct wfc__A3d_u overlaps,
-    struct wfc__A2d_i ripple,
-    struct wfc__A3d_u wave,
-    struct wfc__A2d_u8 modified) {
-    // Only one element will be in the linked list
-    // and will be both the head and the tail.
-    // No one has a next element to point to.
-    for (int i = 0; i < WFC__A2D_LEN(ripple); ++i) {
-        ripple.a[i] = -1;
-    }
-    int head = wfc__coords2dToInd(ripple.d12, seedC0, seedC1), tail = head;
-
-    wfc__propagateFromRipple(
-        ctx, n, options, pattCnt, overlaps, head, tail, ripple, wave, modified);
 }
 
 void wfc__updateCnts(
-    const struct wfc__A3d_u wave,
+    int pattCnt,
+    const struct wfc__A3d_iPerDir wave,
     const struct wfc__A2d_u8 modified,
     struct wfc__A2d_i wavePattCnts,
     int *collapsedCnt) {
@@ -1698,7 +1729,10 @@ void wfc__updateCnts(
         for (int c1 = 0; c1 < wave.d13; ++c1) {
             if (!WFC__A2D_GET(modified, c0, c1)) continue;
 
-            int cntPatts = wfc__popcountBitPackA3d(wave, c0, c1);
+            int cntPatts = 0;
+            for (int p = 0; p < pattCnt; ++p) {
+                if (wfc__patternPresentAt(wave, c0, c1, p)) ++cntPatts;
+            }
 
             WFC__A2D_GET(wavePattCnts, c0, c1) = cntPatts;
             if (cntPatts == 1) ++(*collapsedCnt);
@@ -1748,13 +1782,15 @@ struct wfc_State {
     // Ergo, booleans are represented as bits and tightly packed.
     // Use bit pack utility functions when working with this array.
     struct wfc__A3d_u overlaps;
-    // Whether, for each point (first two coordinates),
-    // a particular pattern (bit pack position)
-    // is still present.
-    // This is a series of bit packs stored as arrays of unsigned.
-    // Ergo, booleans are represented as bits and tightly packed.
-    // Use bit pack utility functions when working with this array.
-    struct wfc__A3d_u wave;
+    // For each point (first two indexes),
+    // a particular pattern (third index)
+    // is supported from a direction (added index)
+    // with a specified number of patterns
+    // from the adjacent point in that direction.
+    // If a pattern is not present at a point
+    // (no matter from which direction it lost all support),
+    // its counters for all directions will be set to zero.
+    struct wfc__A3d_iPerDir wave;
     // Number of remaining patterns on corresponding wave points.
     struct wfc__A2d_i wavePattCnts;
     // Allocated once and reused when new entropy values are calculated.
@@ -1763,10 +1799,9 @@ struct wfc_State {
     // in the last round of observation and propagation.
     // Allocated once and reused in all propagation calls.
     struct wfc__A2d_u8 modified;
-    // Scratch space used for constraint propagation.
-    // Check out propagation code to understand how it's used.
-    // Allocated once and reused in all propagation calls.
-    struct wfc__A2d_i ripple;
+    // Queue of points from which to propagate constraints.
+    // There are dedicated functions for dealing with this type.
+    struct wfc__Pending pending;
 };
 
 int wfc_generate(
@@ -1862,23 +1897,9 @@ wfc_State* wfc_initEx(
     if (options & wfc__optEdgeFixC0) state->wave.d03 -= n - 1;
     state->wave.d13 = dstW;
     if (options & wfc__optEdgeFixC1) state->wave.d13 -= n - 1;
-    state->wave.d23 = wfc__bitPackLen(state->pattCnt);
-    state->wave.a = (unsigned*)WFC_MALLOC(ctx, WFC__A3D_SIZE(state->wave));
-    // Set all patterns as present.
-    memset(state->wave.a, 0xFF, WFC__A3D_SIZE(state->wave));
-    // Surplus bit pack positions don't correspond to any real patterns
-    // so they get set to false.
-    {
-        const int pLo = state->pattCnt;
-        const int pHi = state->wave.d23 * (int)sizeof(*state->wave.a) * 8;
-        for (int c0 = 0; c0 < state->wave.d03; ++c0) {
-            for (int c1 = 0; c1 < state->wave.d13; ++c1) {
-                for (int p = pLo; p < pHi; ++p) {
-                    wfc__setBitA3d(state->wave, c0, c1, p, false);
-                }
-            }
-        }
-    }
+    state->wave.d23 = state->pattCnt;
+    state->wave.a = (struct wfc__IPerDir*)WFC_MALLOC(
+        ctx, WFC__A3D_SIZE(state->wave));
 
     state->wavePattCnts.d02 = state->wave.d03;
     state->wavePattCnts.d12 = state->wave.d13;
@@ -1894,42 +1915,37 @@ wfc_State* wfc_initEx(
         ctx, WFC__A2D_SIZE(state->modified));
     memset(state->modified.a, 1, WFC__A2D_SIZE(state->modified));
 
-    state->ripple.d02 = state->wave.d03;
-    state->ripple.d12 = state->wave.d13;
-    state->ripple.a = (int*)WFC_MALLOC(ctx, WFC__A2D_SIZE(state->ripple));
+    state->pending = wfc__makePending(
+        ctx, state->wave.d03, state->wave.d13, state->pattCnt);
 
-    // Usually, all patterns are present in all wave points,
-    // unless some extra options were used.
-    // Don't needlessly try to propagate in the usual case.
-    bool propagate = false;
+    wfc__calcStartWave(
+        ctx, options, state->pattCnt, state->overlaps,
+        state->wave, &state->pending);
 
     if (keep != NULL) {
         struct wfc__A3d_cu8 dstA =
             {state->dstD0, state->dstD1, state->bytesPerPixel, dst};
         struct wfc__A2d_b keepA = {state->dstD0, state->dstD1, keep};
 
-        if (wfc__restrictKept(
-                n, srcA,
-                state->pattCnt, state->patts,
-                dstA, keepA, state->wave)) {
-            propagate = true;
-        }
+        wfc__restrictKept(
+            ctx, n, srcA, state->pattCnt, state->patts, dstA, keepA,
+            state->wave, &state->pending);
     }
 
     if (options & (wfc__optEdgeFixC0 | wfc__optEdgeFixC1)) {
-        if (wfc__restrictEdges(
-                options, state->pattCnt, state->patts, state->wave)) {
-            propagate = true;
-        }
+        wfc__restrictEdges(
+            ctx, options, state->pattCnt, state->patts,
+            state->wave, &state->pending);
     }
 
-    if (propagate) {
-        wfc__propagateFromAll(
+    if (!wfc__pendingIsEmpty(state->pending)) {
+        wfc__propagate(
             ctx, n, options, state->pattCnt,
-            state->overlaps, state->ripple, state->wave, state->modified);
+            state->overlaps, state->wave, state->modified, &state->pending);
     }
 
-    wfc__updateCnts(state->wave, state->modified,
+    wfc__updateCnts(
+        state->pattCnt, state->wave, state->modified,
         state->wavePattCnts, &state->collapsedCnt);
     state->status = wfc__calcStatus(state->pattCnt, state->wavePattCnts);
 
@@ -1953,18 +1969,16 @@ int wfc_step(wfc_State *state) {
 
     memset(state->modified.a, 0, WFC__A2D_SIZE(state->modified));
 
-    int obsC0, obsC1;
     wfc__observeOne(
         state->ctx, state->pattCnt, state->patts, state->entropies,
-        state->wave, state->modified,
-        &obsC0, &obsC1);
+        state->wave, state->modified, &state->pending);
 
-    wfc__propagateFromSeed(
+    wfc__propagate(
         state->ctx, state->n, state->options, state->pattCnt,
-        obsC0, obsC1,
-        state->overlaps, state->ripple, state->wave, state->modified);
+        state->overlaps, state->wave, state->modified, &state->pending);
 
-    wfc__updateCnts(state->wave, state->modified,
+    wfc__updateCnts(
+        state->pattCnt, state->wave, state->modified,
         state->wavePattCnts, &state->collapsedCnt);
     state->status = wfc__calcStatus(state->pattCnt, state->wavePattCnts);
 
@@ -1991,7 +2005,7 @@ int wfc_blit(
 
             int patt = 0;
             for (int p = 0; p < state->pattCnt; ++p) {
-                if (wfc__getBitA3d(state->wave, wC0, wC1, p)) {
+                if (wfc__patternPresentAt(state->wave, wC0, wC1, p)) {
                     patt = p;
                     break;
                 }
@@ -2028,7 +2042,7 @@ wfc_State* wfc_clone(const wfc_State *state) {
     memcpy(clone->overlaps.a, state->overlaps.a,
         WFC__A3D_SIZE(state->overlaps));
 
-    clone->wave.a = (unsigned*)WFC_MALLOC(
+    clone->wave.a = (struct wfc__IPerDir*)WFC_MALLOC(
         state->ctx, WFC__A3D_SIZE(state->wave));
     memcpy(clone->wave.a, state->wave.a,
         WFC__A3D_SIZE(state->wave));
@@ -2048,10 +2062,7 @@ wfc_State* wfc_clone(const wfc_State *state) {
     memcpy(clone->modified.a, state->modified.a,
         WFC__A2D_SIZE(state->modified));
 
-    clone->ripple.a = (int*)WFC_MALLOC(
-        state->ctx, WFC__A2D_SIZE(state->ripple));
-    memcpy(clone->ripple.a, state->ripple.a,
-        WFC__A2D_SIZE(state->ripple));
+    clone->pending = wfc__clonePending(state->ctx, state->pending);
 
     return clone;
 }
@@ -2064,7 +2075,7 @@ size_t wfc__sizeOfAllocs(wfc_State *state) {
         WFC__A2D_SIZE(state->wavePattCnts) +
         WFC__A2D_SIZE(state->entropies) +
         WFC__A2D_SIZE(state->modified) +
-        WFC__A2D_SIZE(state->ripple);
+        wfc__sizeOfAllocPending(state->pending);
 }
 
 void wfc_free(wfc_State *state) {
@@ -2073,7 +2084,7 @@ void wfc_free(wfc_State *state) {
     void *ctx = state->ctx;
     (void)ctx;
 
-    WFC_FREE(ctx, state->ripple.a);
+    wfc__freePending(ctx, state->pending);
     WFC_FREE(ctx, state->modified.a);
     WFC_FREE(ctx, state->entropies.a);
     WFC_FREE(ctx, state->wavePattCnts.a);
@@ -2111,7 +2122,7 @@ int wfc_patternPresentAt(const wfc_State *state, int patt, int x, int y) {
     int wC0, wC1;
     wfc__coordsDstToWave(y, x, state->wave, &wC0, &wC1, NULL, NULL);
 
-    return wfc__getBitA3d(state->wave, wC0, wC1, patt);
+    return wfc__patternPresentAt(state->wave, wC0, wC1, patt);
 }
 
 int wfc_modifiedAt(const wfc_State *state, int x, int y) {

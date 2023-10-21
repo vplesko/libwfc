@@ -945,6 +945,41 @@ static int testKeep(void) {
     return 0;
 }
 
+static int testKeepAll(void) {
+    enum { n = 3, srcW = 3, srcH = 3, dstW = 8, dstH = 8 };
+
+    uint32_t src[srcW * srcH] = {
+        5,5,5,
+        5,5,5,
+        5,5,5,
+    };
+    uint32_t dst[dstW * dstH];
+    for (int i = 0; i < dstW * dstH; ++i) dst[i] = 5;
+    bool keep[dstW * dstH];
+    for (int i = 0; i < dstW * dstH; ++i) keep[i] = true;
+
+    uint32_t kept[dstW * dstH];
+    for (int i = 0; i < dstW * dstH; ++i) kept[i] = dst[i];
+
+    if (wfc_generateEx(
+        n, 0, sizeof(*src),
+        srcW, srcH, (unsigned char*)&src,
+        dstW, dstH, (unsigned char*)&dst,
+        NULL, keep) != 0) {
+        PRINT_TEST_FAIL();
+        return -1;
+    }
+
+    for (int i = 0; i < dstW * dstH; ++i) {
+        if (keep[i] && dst[i] != kept[i]) {
+            PRINT_TEST_FAIL();
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static int testCallerError(void) {
     enum { n = 3, srcW = 4, srcH = 4, dstW = 16, dstH = 16 };
 
@@ -1216,6 +1251,7 @@ int main(void) {
         testClone() != 0 ||
         testCollapsedCount() != 0 ||
         testKeep() != 0 ||
+        testKeepAll() != 0 ||
         testCallerError() != 0) {
         printf("Seed was: %u\n", seed);
         return 1;

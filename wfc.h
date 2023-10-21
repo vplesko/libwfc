@@ -1270,6 +1270,8 @@ bool wfc__restrictKept(
         for (int wC1 = 0; wC1 < wave.d13; ++wC1) {
             for (int i = 0; i < n; ++i) {
                 for (int j = 0; j < n; ++j) {
+                    // Wrapping is required for when wave's size is reduced
+                    // due to edge fixing being enabled.
                     int dC0 = wfc__indWrap(wC0 + i, dst.d03);
                     int dC1 = wfc__indWrap(wC1 + j, dst.d13);
 

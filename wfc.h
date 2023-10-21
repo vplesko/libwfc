@@ -1683,12 +1683,14 @@ struct wfc_State {
     // Whether, in a particular direction (first index),
     // two patterns (second index and bit pack position)
     // have matching subimage pixel values.
+    // Second pattern is directly at the given direction
+    // away from the first pattern.
     // wfc__Dir is used for the first index.
     // This is a series of bit packs stored as arrays of unsigned.
     // Ergo, booleans are represented as bits and tightly packed.
     // Use bit pack utility functions when working with this array.
     struct wfc__A3d_u overlaps;
-    // Whether, for each point (first two coordinates),
+    // Whether, for each point (first two indexes),
     // a particular pattern (bit pack position)
     // is still present.
     // This is a series of bit packs stored as arrays of unsigned.

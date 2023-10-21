@@ -1873,7 +1873,8 @@ wfc_State* wfc_initEx(
             state->overlaps, state->ripple, state->wave, state->modified);
     }
 
-    wfc__updateCnts(state->wave, state->modified,
+    wfc__updateCnts(
+        state->wave, state->modified,
         state->wavePattCnts, &state->collapsedCnt);
     state->status = wfc__calcStatus(state->pattCnt, state->wavePattCnts);
 
@@ -1908,7 +1909,8 @@ int wfc_step(wfc_State *state) {
         obsC0, obsC1,
         state->overlaps, state->ripple, state->wave, state->modified);
 
-    wfc__updateCnts(state->wave, state->modified,
+    wfc__updateCnts(
+        state->wave, state->modified,
         state->wavePattCnts, &state->collapsedCnt);
     state->status = wfc__calcStatus(state->pattCnt, state->wavePattCnts);
 

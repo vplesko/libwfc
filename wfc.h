@@ -843,6 +843,7 @@ WFC__A2D_DEF(int, i);
 WFC__A2D_DEF(float, f);
 WFC__A3D_DEF(uint8_t, u8);
 WFC__A3D_DEF(const uint8_t, cu8);
+WFC__A3D_DEF(int, i);
 WFC__A3D_DEF(unsigned, u);
 WFC__A3D_DEF(struct wfc__IPerDir, iPerDir);
 
@@ -1669,8 +1670,10 @@ void wfc__observeOne(
 }
 
 void wfc__propagate(
-    void *ctx, int n, int options, int pattCnt,
+    void *ctx, int n, int options,
     const struct wfc__A3d_u overlaps,
+    const struct wfc__A2d_i wavePattCnts,
+    const struct wfc__A3d_i wavePatts,
     struct wfc__A3d_iPerDir wave,
     struct wfc__A2d_u8 modified,
     struct wfc__Pending *pending) {
@@ -1707,14 +1710,16 @@ void wfc__propagate(
             // For each pattern at the neighbouring point
             // that is present and supported by the entry's point-pattern pair,
             // reduce its support by one.
-            for (int p = 0; p < pattCnt; ++p) {
-                if (!wfc__getBitA3d(overlaps, dir, entry.patt, p)) continue;
+            // wavePatts may not be quite up-to-date at all times
+            // and may state that a pattern is present when it isn't.
+            // That's ok, because then a wave counter will just go below zero.
+            // Any non-positive value in a wave counter
+            // means the pattern is not present,
+            // so there's no difference there.
+            for (int i = 0; i < WFC__A2D_GET(wavePattCnts, nC0, nC1); ++i) {
+                int p = WFC__A3D_GET(wavePatts, nC0, nC1, i);
 
-                // There's no need to check if the pattern is present,
-                // because in that case a counter will just go below zero.
-                // Any non-positive value in a counter
-                // means the pattern is not present.
-                // This trick is used to reduce branch mispredicts.
+                if (!wfc__getBitA3d(overlaps, dir, entry.patt, p)) continue;
 
                 if (--WFC__A3D_GET(wave, nC0, nC1, p).i[dirOpposite] == 0) {
                     wfc__removePatternAndAddToPending(
@@ -1726,11 +1731,12 @@ void wfc__propagate(
     }
 }
 
-void wfc__updateCnts(
+void wfc__updateWavePattsAndCnts(
     int pattCnt,
     const struct wfc__A3d_iPerDir wave,
     const struct wfc__A2d_u8 modified,
     struct wfc__A2d_i wavePattCnts,
+    struct wfc__A3d_i wavePatts,
     int *collapsedCnt) {
     for (int c0 = 0; c0 < wave.d03; ++c0) {
         for (int c1 = 0; c1 < wave.d13; ++c1) {
@@ -1738,11 +1744,14 @@ void wfc__updateCnts(
 
             int cntPatts = 0;
             for (int p = 0; p < pattCnt; ++p) {
-                if (wfc__patternPresentAt(wave, c0, c1, p)) ++cntPatts;
+                if (wfc__patternPresentAt(wave, c0, c1, p)) {
+                    WFC__A3D_GET(wavePatts, c0, c1, cntPatts) = p;
+                    ++cntPatts;
+                }
             }
 
             WFC__A2D_GET(wavePattCnts, c0, c1) = cntPatts;
-            if (cntPatts == 1) ++(*collapsedCnt);
+            if (collapsedCnt != NULL && cntPatts == 1) ++(*collapsedCnt);
         }
     }
 }
@@ -1799,7 +1808,14 @@ struct wfc_State {
     // its counters for all directions will be set to zero.
     struct wfc__A3d_iPerDir wave;
     // Number of remaining patterns on corresponding wave points.
+    // May not be up-to-date in the period during a single step,
+    // but will be up-to-date after initialization and after each step.
     struct wfc__A2d_i wavePattCnts;
+    // Arrays of pattern indexes present at each wave point.
+    // wavePattCnts contains the lengths of each array.
+    // May not be up-to-date in the period during a single step,
+    // but will be up-to-date after initialization and after each step.
+    struct wfc__A3d_i wavePatts;
     // Allocated once and reused when new entropy values are calculated.
     struct wfc__A2d_f entropies;
     // Array of bools that tells which wave points were modified
@@ -1913,6 +1929,12 @@ wfc_State* wfc_initEx(
     state->wavePattCnts.a = (int*)WFC_MALLOC(
         ctx, WFC__A2D_SIZE(state->wavePattCnts));
 
+    state->wavePatts.d03 = state->wave.d03;
+    state->wavePatts.d13 = state->wave.d13;
+    state->wavePatts.d23 = state->pattCnt;
+    state->wavePatts.a = (int*)WFC_MALLOC(
+        ctx, WFC__A3D_SIZE(state->wavePatts));
+
     state->entropies = wfc__makeEntropiesArray(
         ctx, state->wave.d03, state->wave.d13);
 
@@ -1946,14 +1968,19 @@ wfc_State* wfc_initEx(
     }
 
     if (!wfc__pendingIsEmpty(state->pending)) {
+        wfc__updateWavePattsAndCnts(
+            state->pattCnt, state->wave, state->modified,
+            state->wavePattCnts, state->wavePatts, NULL);
+
         wfc__propagate(
-            ctx, n, options, state->pattCnt,
-            state->overlaps, state->wave, state->modified, &state->pending);
+            ctx, n, options,
+            state->overlaps, state->wavePattCnts, state->wavePatts,
+            state->wave, state->modified, &state->pending);
     }
 
-    wfc__updateCnts(
+    wfc__updateWavePattsAndCnts(
         state->pattCnt, state->wave, state->modified,
-        state->wavePattCnts, &state->collapsedCnt);
+        state->wavePattCnts, state->wavePatts, &state->collapsedCnt);
     state->status = wfc__calcStatus(state->pattCnt, state->wavePattCnts);
 
     return state;
@@ -1980,13 +2007,18 @@ int wfc_step(wfc_State *state) {
         state->ctx, state->pattCnt, state->patts, state->entropies,
         state->wave, state->modified, &state->pending);
 
-    wfc__propagate(
-        state->ctx, state->n, state->options, state->pattCnt,
-        state->overlaps, state->wave, state->modified, &state->pending);
-
-    wfc__updateCnts(
+    wfc__updateWavePattsAndCnts(
         state->pattCnt, state->wave, state->modified,
-        state->wavePattCnts, &state->collapsedCnt);
+        state->wavePattCnts, state->wavePatts, NULL);
+
+    wfc__propagate(
+        state->ctx, state->n, state->options,
+        state->overlaps, state->wavePattCnts, state->wavePatts,
+        state->wave, state->modified, &state->pending);
+
+    wfc__updateWavePattsAndCnts(
+        state->pattCnt, state->wave, state->modified,
+        state->wavePattCnts, state->wavePatts, &state->collapsedCnt);
     state->status = wfc__calcStatus(state->pattCnt, state->wavePattCnts);
 
     return state->status;
@@ -2059,6 +2091,11 @@ wfc_State* wfc_clone(const wfc_State *state) {
     memcpy(clone->wavePattCnts.a, state->wavePattCnts.a,
         WFC__A2D_SIZE(state->wavePattCnts));
 
+    clone->wavePatts.a = (int*)WFC_MALLOC(
+        state->ctx, WFC__A3D_SIZE(state->wavePatts));
+    memcpy(clone->wavePatts.a, state->wavePatts.a,
+        WFC__A3D_SIZE(state->wavePatts));
+
     clone->entropies = wfc__makeEntropiesArray(
         state->ctx, state->entropies.d02, state->entropies.d12);
     memcpy(clone->entropies.a, state->entropies.a,
@@ -2080,6 +2117,7 @@ size_t wfc__sizeOfAllocs(wfc_State *state) {
         WFC__A3D_SIZE(state->overlaps) +
         WFC__A3D_SIZE(state->wave) +
         WFC__A2D_SIZE(state->wavePattCnts) +
+        WFC__A3D_SIZE(state->wavePatts) +
         WFC__A2D_SIZE(state->entropies) +
         WFC__A2D_SIZE(state->modified) +
         wfc__sizeOfAllocPending(state->pending);
@@ -2094,6 +2132,7 @@ void wfc_free(wfc_State *state) {
     wfc__freePending(ctx, state->pending);
     WFC_FREE(ctx, state->modified.a);
     WFC_FREE(ctx, state->entropies.a);
+    WFC_FREE(ctx, state->wavePatts.a);
     WFC_FREE(ctx, state->wavePattCnts.a);
     WFC_FREE(ctx, state->wave.a);
     WFC_FREE(ctx, state->overlaps.a);

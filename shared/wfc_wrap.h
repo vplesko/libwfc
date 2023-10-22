@@ -36,6 +36,8 @@ int wfcInit(
 
     wfc->bytesPerPixel = bytesPerPixel;
 
+    printf("!!! %zu\n", wfc__sizeOfAllocs(state));
+
     return 0;
 }
 

@@ -1,3 +1,7 @@
+# What you are looking at is an alernate implementation that uses [the Arc Consistency 4 algorithm](https://www.boristhebrave.com/2021/08/30/arc-consistency-explained) (the main branch uses AC-3). This implementation is much slower (compare benchmark results) and uses hundreds of times as much memory. I tried optimizing it, but it's still very slow.
+
+---
+
 # libwfc
 
 libwfc is a single-header C library for the Wave Function Collapse algorithm (WFC). It (currently) only covers the 2D overlapping model. WFC accepts a small reference image and outputs a larger image that resembles the input. See https://github.com/mxgmn/WaveFunctionCollapse for more details on the algorithm.

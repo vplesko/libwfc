@@ -1354,7 +1354,9 @@ bool wfc__patternPresentAt(
     const struct wfc__A3d_iPerDir wave, int c0, int c1, int p) {
     // When one counter gets set to zero, they will all be set to zero.
     // Therefore, it's enough to check only one of the counters.
-    return WFC__A3D_GET(wave, c0, c1, p).i[0] != 0;
+    // They may afterwards get reduced below zero,
+    // which still means the pattern is not present.
+    return WFC__A3D_GET(wave, c0, c1, p).i[0] > 0;
 }
 
 void wfc__removePatternAndAddToPending(
@@ -1706,8 +1708,13 @@ void wfc__propagate(
             // that is present and supported by the entry's point-pattern pair,
             // reduce its support by one.
             for (int p = 0; p < pattCnt; ++p) {
-                if (!wfc__patternPresentAt(wave, nC0, nC1, p)) continue;
                 if (!wfc__getBitA3d(overlaps, dir, entry.patt, p)) continue;
+
+                // There's no need to check if the pattern is present,
+                // because in that case a counter will just go below zero.
+                // Any non-positive value in a counter
+                // means the pattern is not present.
+                // This trick is used to reduce branch mispredicts.
 
                 if (--WFC__A3D_GET(wave, nC0, nC1, p).i[dirOpposite] == 0) {
                     wfc__removePatternAndAddToPending(

@@ -1716,8 +1716,13 @@ void wfc__propagate(
             // Any non-positive value in a wave counter
             // means the pattern is not present,
             // so there's no difference there.
-            for (int i = 0; i < WFC__A2D_GET(wavePattCnts, nC0, nC1); ++i) {
-                int p = WFC__A3D_GET(wavePatts, nC0, nC1, i);
+
+            // Pre-calculating these values
+            // has shown better performance results.
+            int nPattCnt = WFC__A2D_GET(wavePattCnts, nC0, nC1);
+            int *nPatts = &WFC__A3D_GET(wavePatts, nC0, nC1, 0);
+            for (int i = 0; i < nPattCnt; ++i) {
+                int p = nPatts[i];
 
                 if (!wfc__getBitA3d(overlaps, dir, entry.patt, p)) continue;
 

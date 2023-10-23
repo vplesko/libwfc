@@ -1717,7 +1717,7 @@ void wfc__propagate(
             // means the pattern is not present,
             // so there's no difference there.
 
-            // Pre-calculating these values
+            // Pre-fetching these values
             // has shown better performance results.
             int nPattCnt = WFC__A2D_GET(wavePattCnts, nC0, nC1);
             int *nPatts = &WFC__A3D_GET(wavePatts, nC0, nC1, 0);
